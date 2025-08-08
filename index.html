@@ -1,9 +1,33 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Example</title>
-    </head>
-    <body>
-        <p>This is an example of a simple HTML page with one paragraph.</p>
-    </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login Redirect</title>
+</head>
+<body>
+  <div id="login-message">Loading login info...</div>
+
+  <script>
+    async function fetchLoginInfo() {
+      try {
+        const res = await fetch('/.netlify/functions/saml-login');
+        const text = await res.text();
+
+        // Show the login message returned by saml-login.js
+        document.getElementById('login-message').innerHTML = text;
+
+        // Wait 3 seconds, then redirect to chatbot page
+        setTimeout(() => {
+          window.location.href = '/chatbot.html';
+        }, 3000);
+
+      } catch (err) {
+        document.getElementById('login-message').textContent = 'Error loading login info.';
+        console.error(err);
+      }
+    }
+
+    fetchLoginInfo();
+  </script>
+</body>
 </html>
