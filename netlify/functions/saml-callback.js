@@ -1,6 +1,6 @@
 // netlify/functions/saml-callback.js
 const { parseStringPromise } = require('xml2js');
-const jwt = require('jsonwebtoken'); // Optional: if you want to create your own tokens
+//const jwt = require('jsonwebtoken'); // Optional: if you want to create your own tokens
 
 exports.handler = async (event) => {
   const body = event.body;
