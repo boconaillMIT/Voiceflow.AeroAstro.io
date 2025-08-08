@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Login with PKCE</title>
+  <title>Login with Okta (OIDC + PKCE)</title>
 </head>
 <body>
-  <h2>Logging you in...</h2>
-
+  <h2>Redirecting to Okta login...</h2>
   <script>
     async function generateCodeVerifier() {
       const array = new Uint8Array(56);
@@ -13,7 +12,6 @@
       return btoa(String.fromCharCode(...array))
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
-
     async function generateCodeChallenge(verifier) {
       const encoder = new TextEncoder();
       const data = encoder.encode(verifier);
@@ -25,26 +23,24 @@
     async function startLogin() {
       const verifier = await generateCodeVerifier();
       const challenge = await generateCodeChallenge(verifier);
-
       const encodedVerifier = encodeURIComponent(verifier);
-      // Save verifier locally (optional, but mainly passed via state param)
+
       localStorage.setItem('pkce_verifier', verifier);
 
       const params = new URLSearchParams({
-        client_id: '0oau0gmdr7C5GxVcq697',
+        client_id: 'YOUR_CLIENT_ID',
         response_type: 'code',
         scope: 'openid profile email',
-        redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',
+        redirect_uri: 'YOUR_REDIRECT_URI',
         state: encodedVerifier,
         nonce: Math.random().toString(36).substring(2),
         code_challenge_method: 'S256',
         code_challenge: challenge,
       });
 
-      window.location.href = `https://trial-2518356.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+      window.location.href = `https://YOUR_OKTA_DOMAIN/oauth2/default/v1/authorize?${params.toString()}`;
     }
 
-    // Start login on page load
     startLogin();
   </script>
 </body>
