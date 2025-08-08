@@ -10,6 +10,7 @@
     return btoa(String.fromCharCode(...array))
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
+
   async function generateChallenge(verifier) {
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
@@ -21,14 +22,19 @@
   async function login() {
     const verifier = await generateVerifier();
     const challenge = await generateChallenge(verifier);
+
+    // Save verifier locally if you want
     localStorage.setItem('pkce_verifier', verifier);
+
+    // Use the verifier itself as the 'state' parameter (URL-encoded)
+    const state = encodeURIComponent(verifier);
 
     const params = new URLSearchParams({
       client_id: 'YOUR_CLIENT_ID',
       response_type: 'code',
       scope: 'openid profile email',
       redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',
-      state: Math.random().toString(36).slice(2),
+      state: state,
       nonce: Math.random().toString(36).slice(2),
       code_challenge_method: 'S256',
       code_challenge: challenge,
