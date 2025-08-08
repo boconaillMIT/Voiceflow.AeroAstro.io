@@ -1,49 +1,61 @@
 <!DOCTYPE html>
-<html>
-<head><title>Login with MIT Okta</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AeroAstro Chatbot Login</title>
+</head>
 <body>
-<h2>Redirecting to MIT SSO...</h2>
-<script>
-  async function generateVerifier() {
-    const array = new Uint8Array(56);
-    crypto.getRandomValues(array);
-    return btoa(String.fromCharCode(...array))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
+  <h2>Redirecting to MIT Okta SSO...</h2>
+  <script>
+    // Helper: encode ArrayBuffer to base64url string
+    function base64UrlEncode(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
 
-  async function generateChallenge(verifier) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(verifier);
-    const digest = await crypto.subtle.digest('SHA-256', data);
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
+    // Generate PKCE code challenge from verifier
+    async function generateChallenge(verifier) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      return base64UrlEncode(digest);
+    }
 
-  async function login() {
-    const verifier = await generateVerifier();
-    const challenge = await generateChallenge(verifier);
+    // Generate random string for PKCE verifier
+    async function generateVerifier() {
+      const array = new Uint8Array(56);
+      crypto.getRandomValues(array);
+      return btoa(String.fromCharCode(...array))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
 
-    // Save verifier locally if you want
-    localStorage.setItem('pkce_verifier', verifier);
+    async function login() {
+      const verifier = await generateVerifier();
+      const challenge = await generateChallenge(verifier);
 
-    // Use the verifier itself as the 'state' parameter (URL-encoded)
-    const state = encodeURIComponent(verifier);
+      // Save verifier for token exchange later
+      localStorage.setItem('pkce_verifier', verifier);
 
-    const params = new URLSearchParams({
-      client_id: '0oau0gmdr7C5GxVcq697',
-      response_type: 'code',
-      scope: 'openid profile email',
-      redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',
-      state: state,
-      nonce: Math.random().toString(36).slice(2),
-      code_challenge_method: 'S256',
-      code_challenge: challenge,
-    });
+      const params = new URLSearchParams({
+        client_id: '0oau0gmdr7C5GxVcq697',
+        response_type: 'code',
+        scope: 'openid profile email',
+        redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',
+        state: verifier,  // can also use random string here
+        nonce: Math.random().toString(36).slice(2),
+        code_challenge_method: 'S256',
+        code_challenge: challenge,
+      });
 
-    window.location.href = `https://trial-2518356.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
-  }
+      // Redirect to Okta authorization endpoint
+      window.location.href = `https://trial-2518356.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+    }
 
-  login();
-</script>
+    login();
+  </script>
 </body>
 </html>
