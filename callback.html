@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Processing Login...</title>
+</head>
+<body>
+  <p>Logging in, please wait...</p>
+  <script>
+    (async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const verifier = localStorage.getItem('pkce_verifier');
+      const savedState = localStorage.getItem('pkce_state');
+
+      if (!code || !state || !verifier || state !== savedState) {
+        document.body.textContent = 'Login failed: missing or invalid parameters.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/.netlify/functions/oidc-callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, verifier }),
+        });
+
+        if (!res.ok) {
+          throw new Error('Token exchange failed');
+        }
+
+        const json = await res.json();
+
+        // Redirect to chatbot page with user info in query params
+        window.location.href = `/chatbot.html?name=${encodeURIComponent(json.name)}&email=${encodeURIComponent(json.email)}&username=${encodeURIComponent(json.username)}`;
+      } catch (err) {
+        document.body.textContent = 'Login failed during token exchange.';
+        console.error(err);
+      }
+    })();
+  </script>
+</body>
+</html>
