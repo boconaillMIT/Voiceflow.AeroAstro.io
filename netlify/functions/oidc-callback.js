@@ -1,42 +1,29 @@
-// netlify/functions/oidc-callback.js
-
-const fetch = require('node-fetch'); // make sure to add "node-fetch" in your package.json dependencies
+const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
   const clientId = process.env.OKTA_CLIENT_ID;
-  const clientSecret = process.env.OKTA_CLIENT_SECRET; // needed if using confidential client
+  const clientSecret = process.env.OKTA_CLIENT_SECRET; // Optional for public apps
   const issuer = process.env.OKTA_ISSUER;
-  const redirectUri = process.env.OKTA_REDIRECT_URI || 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback';
+  const redirectUri = process.env.OKTA_REDIRECT_URI;
 
-  // Parse query params
   const params = new URLSearchParams(event.rawQuery || '');
   const code = params.get('code');
-  const state = params.get('state');
+  const verifier = decodeURIComponent(params.get('state'));
 
-  if (!code) {
-    return {
-      statusCode: 400,
-      body: 'Authorization code missing from callback',
-    };
+  if (!code || !verifier) {
+    return { statusCode: 400, body: 'Missing code or PKCE verifier' };
   }
 
   try {
-    // Exchange code for tokens
-    const tokenEndpoint = `${issuer}/v1/token`;
-    const tokenResponse = await fetch(tokenEndpoint, {
+    const tokenResponse = await fetch(`${issuer}/v1/token`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        // Basic Auth header if clientSecret is present
-        ...(clientSecret && {
-          Authorization: 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
-        }),
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
+        client_id: clientId,
         code,
         redirect_uri: redirectUri,
-        client_id: clientId,
+        code_verifier: verifier,
       }),
     });
 
@@ -45,30 +32,23 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: `Token exchange failed: ${errorText}` };
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokens = await tokenResponse.json();
 
-    // Decode ID token (JWT) to extract user info (simplified: not verifying here)
-    const idToken = tokenData.id_token;
-    const base64Payload = idToken.split('.')[1];
-    const payloadJson = Buffer.from(base64Payload, 'base64').toString('utf-8');
-    const userInfo = JSON.parse(payloadJson);
+    // Decode ID token payload (simple base64 decode, no validation)
+    const idTokenPayload = JSON.parse(Buffer.from(tokens.id_token.split('.')[1], 'base64').toString('utf-8'));
 
-    // Redirect to chatbot with user info as query params (you can adjust this)
+    // Redirect to chatbot with user info in URL params
     const chatbotUrl = new URL('https://aeroastrovfbot.netlify.app/chatbot.html');
-    chatbotUrl.searchParams.set('name', userInfo.name || '');
-    chatbotUrl.searchParams.set('email', userInfo.email || '');
-    chatbotUrl.searchParams.set('sub', userInfo.sub || '');
+    chatbotUrl.searchParams.set('name', idTokenPayload.name || '');
+    chatbotUrl.searchParams.set('email', idTokenPayload.email || '');
+    chatbotUrl.searchParams.set('sub', idTokenPayload.sub || '');
 
     return {
       statusCode: 302,
-      headers: {
-        Location: chatbotUrl.toString(),
-      },
+      headers: { Location: chatbotUrl.toString() },
     };
+
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: `Callback processing error: ${err.message}`,
-    };
+    return { statusCode: 500, body: `Callback error: ${err.message}` };
   }
 };
