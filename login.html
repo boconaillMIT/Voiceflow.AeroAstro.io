@@ -7,6 +7,7 @@
 <body>
   <h2>Redirecting to MIT Okta SSO...</h2>
   <script>
+    // Helper: encode ArrayBuffer to base64url string
     function base64UrlEncode(arrayBuffer) {
       const bytes = new Uint8Array(arrayBuffer);
       let binary = '';
@@ -16,6 +17,7 @@
       return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
+    // Generate PKCE code challenge from verifier
     async function generateChallenge(verifier) {
       const encoder = new TextEncoder();
       const data = encoder.encode(verifier);
@@ -23,23 +25,37 @@
       return base64UrlEncode(digest);
     }
 
-    function generateRandomString(length = 56) {
-      const array = new Uint8Array(length);
+    // Generate random string for PKCE verifier
+    async function generateVerifier() {
+      const array = new Uint8Array(56);
       crypto.getRandomValues(array);
       return btoa(String.fromCharCode(...array))
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
     async function login() {
-      const verifier = generateRandomString();
+      const verifier = await generateVerifier();
       const challenge = await generateChallenge(verifier);
-      const state = Math.random().toString(36).substring(2);
 
+      // Save verifier for token exchange later
       localStorage.setItem('pkce_verifier', verifier);
-      localStorage.setItem('pkce_state', state);
 
       const params = new URLSearchParams({
         client_id: '0oau0gmdr7C5GxVcq697',
         response_type: 'code',
         scope: 'openid profile email',
-        redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
+        redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',
+        state: verifier,  // can also use random string here
+        nonce: Math.random().toString(36).slice(2),
+        code_challenge_method: 'S256',
+        code_challenge: challenge,
+      });
+
+      // Redirect to Okta authorization endpoint
+      window.location.href = `https://trial-2518356.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+    }
+
+    login();
+  </script>
+</body>
+</html>
