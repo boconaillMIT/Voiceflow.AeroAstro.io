@@ -1,5 +1,6 @@
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
+
 exports.handler = async (event) => {
   const clientId = process.env.OKTA_CLIENT_ID;
   const issuer = process.env.OKTA_ISSUER;
