@@ -7,24 +7,20 @@
 <body>
   <h2>Redirecting to MIT Okta SSO...</h2>
   <script>
-    // Helper: base64 URL encode
+    // base64(url) helper
     function base64UrlEncode(arrayBuffer) {
       const bytes = new Uint8Array(arrayBuffer);
       let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
       return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
-    // Generate random code verifier
     function generateVerifier() {
       const array = new Uint8Array(56);
       crypto.getRandomValues(array);
       return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
-    // Generate code challenge from verifier
     async function generateChallenge(verifier) {
       const encoder = new TextEncoder();
       const data = encoder.encode(verifier);
@@ -35,26 +31,28 @@
     async function startLogin() {
       const verifier = generateVerifier();
       const challenge = await generateChallenge(verifier);
+      const state = Math.random().toString(36).substring(2);
 
-      // Save verifier to localStorage for callback token exchange
+      // store for callback verification
       localStorage.setItem('pkce_verifier', verifier);
+      localStorage.setItem('pkce_state', state);
 
       const params = new URLSearchParams({
-        client_id: '0oau0gmdr7C5GxVcq697',
+        client_id: '0oau3bha34MtNzb6U697',
         response_type: 'code',
         scope: 'openid profile email',
-        redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',
-        state: Math.random().toString(36).substring(2),
+        redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
+        state: state,
         nonce: Math.random().toString(36).substring(2),
         code_challenge: challenge,
         code_challenge_method: 'S256',
       });
 
-      // Redirect user to Okta login page
-      window.location.href = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+      const url = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+      console.log('Redirecting to:', url);
+      window.location.href = url;
     }
 
-    // Start the login flow on page load
     startLogin();
   </script>
 </body>
