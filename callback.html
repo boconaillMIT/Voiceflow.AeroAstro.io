@@ -1,11 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Processing Login...</title>
-</head>
+<html>
+<head><meta charset="utf-8"><title>Processing login</title></head>
 <body>
-  <p>Logging in, please wait...</p>
+  <p>Finishing login…</p>
   <script>
     (async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -16,6 +13,7 @@
 
       if (!code || !state || !verifier || state !== savedState) {
         document.body.textContent = 'Login failed: missing or invalid parameters.';
+        console.error({ code, state, verifier, savedState });
         return;
       }
 
@@ -27,13 +25,14 @@
         });
 
         if (!res.ok) {
-          throw new Error('Token exchange failed');
+          const t = await res.text();
+          throw new Error(`Token exchange failed: ${t}`);
         }
 
         const json = await res.json();
-
-        // Redirect to chatbot page with user info in query params
-        window.location.href = `/chatbot.html?name=${encodeURIComponent(json.name)}&email=${encodeURIComponent(json.email)}&username=${encodeURIComponent(json.username)}`;
+        // redirect to chatbot with the user info returned by the function
+        window.location.href =
+          `/chatbot.html?name=${encodeURIComponent(json.name)}&email=${encodeURIComponent(json.email)}&kerberos=${encodeURIComponent(json.kerberos)}`;
       } catch (err) {
         document.body.textContent = 'Login failed during token exchange.';
         console.error(err);
