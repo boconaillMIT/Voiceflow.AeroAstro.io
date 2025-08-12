@@ -37,16 +37,18 @@
       localStorage.setItem('pkce_verifier', verifier);
       localStorage.setItem('pkce_state', state);
 
-      const params = new URLSearchParams({
-        client_id: '0oau3bha34MtNzb6U697',
-        response_type: 'code',
-        scope: 'openid profile email',
-        redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
-        state: state,
-        nonce: Math.random().toString(36).substring(2),
-        code_challenge: challenge,
-        code_challenge_method: 'S256',
-      });
+  const params = new URLSearchParams({
+    client_id: '0oau3bha34MtNzb6U697',           // NEW Client ID
+    response_type: 'code',
+    scope: 'openid profile email',
+    redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',  // Confirmed URI
+    state: verifier,
+    nonce: Math.random().toString(36).slice(2),
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+  });
+  window.location.href = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`; // NEW issuer base URL
+
 
       const url = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
       console.log('Redirecting to:', url);
