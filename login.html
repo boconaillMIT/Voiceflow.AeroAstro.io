@@ -1,22 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>AeroAstro Chatbot Login</title>
+  <meta charset="utf-8">
+  <title>Processing login</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
     .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
     .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
     .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
     .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
     .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-    pre { background: #f8f9fa; padding: 10px; border-radius: 3px; font-size: 12px; overflow-x: auto; }
+    pre { background: #f8f9fa; padding: 10px; border-radius: 3px; font-size: 12px; overflow-x: auto; max-height: 300px; }
+    .debug-section { margin: 20px 0; }
   </style>
 </head>
 <body>
-  <h2>AeroAstro Chatbot Login</h2>
+  <h2>Processing Login...</h2>
   <div id="status"></div>
-  <div id="debug-info"></div>
+  
+  <div class="debug-section">
+    <h3>Debug Information</h3>
+    <div id="debug-info"></div>
+  </div>
 
   <script>
     function addStatus(message, type = 'info') {
@@ -30,125 +35,149 @@
       document.getElementById('debug-info').innerHTML = `<pre>${JSON.stringify(info, null, 2)}</pre>`;
     }
 
-    // base64(url) helper
-    function base64UrlEncode(arrayBuffer) {
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
-    function generateVerifier() {
-      addStatus('Generating PKCE verifier...', 'info');
-      const array = new Uint8Array(56);
-      crypto.getRandomValues(array);
-      const verifier = btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      addStatus(`Generated verifier (${verifier.length} chars)`, 'success');
-      return verifier;
-    }
-
-    async function generateChallenge(verifier) {
-      addStatus('Generating PKCE challenge...', 'info');
+    (async () => {
       try {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(verifier);
-        const digest = await crypto.subtle.digest('SHA-256', data);
-        const challenge = base64UrlEncode(digest);
-        addStatus(`Generated challenge (${challenge.length} chars)`, 'success');
-        return challenge;
-      } catch (error) {
-        addStatus(`Error generating challenge: ${error.message}`, 'error');
-        throw error;
-      }
-    }
+        addStatus('Starting callback processing...', 'info');
 
-    async function startLogin() {
-      try {
-        addStatus('Starting login process...', 'info');
-        
-        // Generate PKCE parameters
-        const verifier = generateVerifier();
-        const challenge = await generateChallenge(verifier);
-        const state = Math.random().toString(36).substring(2);
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
 
-        addStatus('Storing data in localStorage...', 'info');
-        
-        // Store for callback verification
-        localStorage.setItem('pkce_verifier', verifier);
-        localStorage.setItem('pkce_state', state);
+        addStatus('Retrieved URL parameters', 'info');
 
-        // Verify storage worked
-        const storedVerifier = localStorage.getItem('pkce_verifier');
-        const storedState = localStorage.getItem('pkce_state');
-        
-        if (!storedVerifier || !storedState) {
-          addStatus('ERROR: Failed to store data in localStorage!', 'error');
+        // Check for OAuth errors first
+        if (error) {
+          addStatus(`OAuth Error: ${error}`, 'error');
+          if (errorDescription) {
+            addStatus(`Error Description: ${errorDescription}`, 'error');
+          }
           return;
         }
 
-        addStatus('Successfully stored verifier and state', 'success');
-
-        // Build OAuth parameters
-        const params = new URLSearchParams({
-          client_id: '0oau3bha34MtNzb6U697',
-          response_type: 'code',
-          scope: 'openid profile email',
-          redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html', // Fixed to use callback.html
-          state: state,
-          nonce: Math.random().toString(36).slice(2),
-          code_challenge_method: 'S256',
-          code_challenge: challenge,
-        });
-
-        const url = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+        // Get stored values from localStorage
+        const verifier = localStorage.getItem('pkce_verifier');
+        const savedState = localStorage.getItem('pkce_state');
 
         // Debug info
         const debugInfo = {
-          verifier_length: verifier.length,
-          challenge_length: challenge.length,
-          state: state,
-          redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
-          client_id: '0oau3bha34MtNzb6U697',
-          localStorage_test: {
-            verifier_stored: !!localStorage.getItem('pkce_verifier'),
-            state_stored: !!localStorage.getItem('pkce_state'),
-            verifier_matches: localStorage.getItem('pkce_verifier') === verifier,
-            state_matches: localStorage.getItem('pkce_state') === state
+          url_params: {
+            code: code ? `${code.substring(0, 10)}...` : null,
+            state: state,
+            error: error,
+            error_description: errorDescription
           },
-          oauth_url_length: url.length
+          localStorage_data: {
+            verifier: verifier ? `${verifier.substring(0, 10)}...` : null,
+            saved_state: savedState,
+            verifier_length: verifier ? verifier.length : 0,
+            state_matches: state === savedState
+          },
+          validation: {
+            has_code: !!code,
+            has_state: !!state,
+            has_verifier: !!verifier,
+            states_match: state === savedState
+          }
         };
 
         updateDebugInfo(debugInfo);
-        addStatus('Built OAuth URL and verified parameters', 'success');
 
-        // Add a delay to let user see the diagnostic info
-        addStatus('Redirecting to Okta in 3 seconds...', 'warning');
+        // Validation
+        if (!code) {
+          addStatus('ERROR: No authorization code received', 'error');
+          return;
+        }
+
+        if (!state) {
+          addStatus('ERROR: No state parameter received', 'error');
+          return;
+        }
+
+        if (!verifier) {
+          addStatus('ERROR: No PKCE verifier found in localStorage', 'error');
+          return;
+        }
+
+        if (state !== savedState) {
+          addStatus(`ERROR: State mismatch! Received: ${state}, Expected: ${savedState}`, 'error');
+          return;
+        }
+
+        addStatus('All parameters validated successfully', 'success');
+
+        // Prepare request to Netlify function
+        const requestPayload = { code, verifier };
+        addStatus('Sending request to Netlify function...', 'info');
+
+        const res = await fetch('/.netlify/functions/oidc-callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestPayload)
+        });
+
+        addStatus(`Received response: ${res.status} ${res.statusText}`, res.ok ? 'success' : 'error');
+
+        if (!res.ok) {
+          const responseText = await res.text();
+          addStatus(`Response body: ${responseText}`, 'error');
+          
+          // Try to parse as JSON for better error display
+          let errorData;
+          try {
+            errorData = JSON.parse(responseText);
+            updateDebugInfo({
+              ...debugInfo,
+              error_response: errorData
+            });
+          } catch (e) {
+            updateDebugInfo({
+              ...debugInfo,
+              error_response: { raw_text: responseText }
+            });
+          }
+
+          throw new Error(`Token exchange failed: ${responseText}`);
+        }
+
+        const json = await res.json();
+        addStatus('Successfully received user data', 'success');
+
+        // Update debug info with response
+        updateDebugInfo({
+          ...debugInfo,
+          success_response: {
+            name: json.name,
+            email: json.email,
+            kerberos: json.kerberos,
+            // Don't show raw token data for security
+            has_raw_data: !!json.raw
+          }
+        });
+
+        addStatus('Redirecting to chatbot...', 'info');
+
+        // Redirect to chatbot with the user info returned by the function
+        const chatbotUrl = `/chatbot.html?name=${encodeURIComponent(json.name || '')}&email=${encodeURIComponent(json.email || '')}&kerberos=${encodeURIComponent(json.kerberos || '')}`;
         
         setTimeout(() => {
-          addStatus('Redirecting now...', 'info');
-          console.log('Final OAuth URL:', url);
-          window.location.href = url;
-        }, 3000);
+          window.location.href = chatbotUrl;
+        }, 2000); // 2 second delay to see the success message
 
-      } catch (error) {
-        addStatus(`FATAL ERROR: ${error.message}`, 'error');
-        console.error('Login error:', error);
-        updateDebugInfo({ error: error.message, stack: error.stack });
+      } catch (err) {
+        addStatus(`FATAL ERROR: ${err.message}`, 'error');
+        console.error('Callback error:', err);
+        
+        updateDebugInfo({
+          fatal_error: {
+            message: err.message,
+            stack: err.stack
+          }
+        });
       }
-    }
-
-    // Test localStorage first
-    addStatus('Testing localStorage availability...', 'info');
-    try {
-      localStorage.setItem('test', 'test');
-      localStorage.removeItem('test');
-      addStatus('localStorage is working', 'success');
-    } catch (e) {
-      addStatus(`localStorage ERROR: ${e.message}`, 'error');
-    }
-
-    // Start the login process
-    startLogin();
+    })();
   </script>
 </body>
 </html>
