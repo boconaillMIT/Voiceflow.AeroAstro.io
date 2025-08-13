@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>Processing login</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Callback - AeroAstro Chatbot</title>
+</head>
 <body>
-  <p>Finishing login…</p>
+  <h2>Logging in...</h2>
   <script>
-    (async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const state = urlParams.get('state');
+    async function handleCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
       const verifier = localStorage.getItem('pkce_verifier');
-      const savedState = localStorage.getItem('pkce_state');
 
-      if (!code || !state || !verifier || state !== savedState) {
-        document.body.textContent = 'Login failed: missing or invalid parameters.';
-        console.error({ code, state, verifier, savedState });
+      if (!code || !verifier) {
+        document.body.innerHTML = '<p>Error: missing code or PKCE verifier.</p>';
         return;
       }
 
@@ -21,23 +21,25 @@
         const res = await fetch('/.netlify/functions/oidc-callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, verifier }),
+          body: JSON.stringify({ code, verifier })
         });
 
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(`Token exchange failed: ${t}`);
-        }
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+        const user = await res.json();
 
-        const json = await res.json();
-        // redirect to chatbot with the user info returned by the function
-        window.location.href =
-          `/chatbot.html?name=${encodeURIComponent(json.name)}&email=${encodeURIComponent(json.email)}&kerberos=${encodeURIComponent(json.kerberos)}`;
+        // Save user info for chatbot
+        localStorage.setItem('user_name', user.name);
+        localStorage.setItem('user_email', user.email);
+        localStorage.setItem('user_kerberos', user.kerberos);
+
+        // Redirect to Voiceflow chatbot
+        window.location.href = 'chatbot.html';
       } catch (err) {
-        document.body.textContent = 'Login failed during token exchange.';
-        console.error(err);
+        document.body.innerHTML = `<p>Login failed: ${err.message}</p>`;
       }
-    })();
+    }
+
+    handleCallback();
   </script>
 </body>
 </html>
