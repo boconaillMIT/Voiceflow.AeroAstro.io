@@ -1,29 +1,60 @@
 // netlify/functions/oidc-callback.js
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const fetch = (...args) =>
+  import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+  let code, verifier;
+  
+  // Handle both POST and GET requests
+  if (event.httpMethod === 'POST') {
+    try {
+      const body = JSON.parse(event.body);
+      code = body.code;
+      verifier = body.verifier;
+    } catch (e) {
+      return {
+        statusCode: 400,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Invalid JSON body' })
+      };
+    }
+  } else if (event.httpMethod === 'GET') {
+    const params = event.queryStringParameters || {};
+    code = params.code;
+    verifier = params.verifier || event.headers['x-pkce-verifier'];
+  } else {
+    return {
+      statusCode: 405,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Method Not Allowed' })
+    };
   }
 
-  let payload;
+  // Validate required parameters
+  if (!code) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Missing authorization code' })
+    };
+  }
+  
+  if (!verifier) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Missing PKCE verifier' })
+    };
+  }
+
   try {
-    payload = JSON.parse(event.body);
-  } catch (e) {
-    return { statusCode: 400, body: 'Invalid JSON' };
-  }
+    // Get environment variables
+    const clientId = process.env.OKTA_CLIENT_ID;
+    const clientSecret = process.env.OKTA_CLIENT_SECRET;
+    const issuer = process.env.OKTA_ISSUER;
+    const redirectUri = process.env.OKTA_REDIRECT_URI;
 
-  const { code, verifier } = payload;
-  if (!code || !verifier) {
-    return { statusCode: 400, body: 'Missing code or verifier' };
-  }
-
-  const clientId = process.env.OKTA_CLIENT_ID;
-  const clientSecret = process.env.OKTA_CLIENT_SECRET; // stored securely in Netlify env
-  const issuer = process.env.OKTA_ISSUER;
-  const redirectUri = process.env.OKTA_REDIRECT_URI; // should be https://.../callback.html
-
-  try {
+    // Prepare token exchange request
     const bodyParams = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
@@ -33,7 +64,7 @@ exports.handler = async (event) => {
 
     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
-    // Use HTTP Basic auth if secret is present (safer than sending secret in body)
+    // Handle client authentication (confidential vs public client)
     if (clientSecret) {
       const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
       headers.Authorization = `Basic ${basic}`;
@@ -41,6 +72,7 @@ exports.handler = async (event) => {
       bodyParams.append('client_id', clientId);
     }
 
+    // Exchange authorization code for tokens
     const tokenRes = await fetch(`${issuer}/v1/token`, {
       method: 'POST',
       headers,
@@ -48,29 +80,68 @@ exports.handler = async (event) => {
     });
 
     if (!tokenRes.ok) {
-      const text = await tokenRes.text();
-      return { statusCode: 502, body: `Token exchange failed: ${text}` };
+      const errorText = await tokenRes.text();
+      console.error('Token exchange failed:', errorText);
+      return {
+        statusCode: 502,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: `Token exchange failed: ${errorText}` })
+      };
     }
 
     const tokens = await tokenRes.json();
-
-    // decode id_token payload (simple base64 decode)
     const idToken = tokens.id_token;
-    if (!idToken) return { statusCode: 502, body: 'No id_token returned' };
 
+    if (!idToken) {
+      return {
+        statusCode: 502,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'No id_token returned from Okta' })
+      };
+    }
+
+    // Decode the ID token to get user info
     const payloadPart = idToken.split('.')[1];
-    const idTokenPayload = JSON.parse(Buffer.from(payloadPart, 'base64').toString('utf8'));
+    const idTokenPayload = JSON.parse(
+      Buffer.from(payloadPart, 'base64').toString('utf8')
+    );
 
+    // Extract and format user metadata
+    const userMetadata = {
+      name: idTokenPayload.name || idTokenPayload.given_name + ' ' + idTokenPayload.family_name || '',
+      email: idTokenPayload.email || '',
+      kerberos: idTokenPayload.preferred_username || idTokenPayload.sub || '',
+      firstName: idTokenPayload.given_name || '',
+      lastName: idTokenPayload.family_name || '',
+      groups: idTokenPayload.groups || [],
+      department: idTokenPayload.department || '',
+      title: idTokenPayload.title || '',
+      // Add any other fields you want to pass to Voiceflow
+      loginTime: new Date().toISOString(),
+      raw: idTokenPayload // Keep full payload for debugging
+    };
+
+    // Return user metadata as JSON (for your callback page to consume)
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        name: idTokenPayload.name || '',
-        email: idTokenPayload.email || '',
-        kerberos: idTokenPayload.preferred_username || idTokenPayload.sub || '',
-      }),
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // Allow CORS for your frontend
+        'Access-Control-Allow-Methods': 'GET, POST',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
+      body: JSON.stringify(userMetadata)
     };
+
   } catch (err) {
-    console.error('Callback error', err);
-    return { statusCode: 500, body: `Callback error: ${err.message}` };
+    console.error('Callback error:', err);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        message: err.message 
+      })
+    };
   }
 };
