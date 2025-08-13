@@ -1,26 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AeroAstro Chatbot Login</title>
+  <meta charset="UTF-8">
+  <title>Login - AeroAstro Chatbot</title>
 </head>
 <body>
   <h2>Redirecting to MIT Okta SSO...</h2>
   <script>
-    // base64(url) helper
+    // Helper: encode ArrayBuffer to base64url string
     function base64UrlEncode(arrayBuffer) {
       const bytes = new Uint8Array(arrayBuffer);
       let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
       return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
-    function generateVerifier() {
-      const array = new Uint8Array(56);
-      crypto.getRandomValues(array);
-      return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
+    // Generate PKCE code challenge
     async function generateChallenge(verifier) {
       const encoder = new TextEncoder();
       const data = encoder.encode(verifier);
@@ -28,34 +25,36 @@
       return base64UrlEncode(digest);
     }
 
-    async function startLogin() {
-      const verifier = generateVerifier();
-      const challenge = await generateChallenge(verifier);
-      const state = Math.random().toString(36).substring(2);
-
-      // store for callback verification
-      localStorage.setItem('pkce_verifier', verifier);
-      localStorage.setItem('pkce_state', state);
-
-  const params = new URLSearchParams({
-    client_id: '0oau3bha34MtNzb6U697',           // NEW Client ID
-    response_type: 'code',
-    scope: 'openid profile email',
-    redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback',  // Confirmed URI
-    state: verifier,
-    nonce: Math.random().toString(36).slice(2),
-    code_challenge_method: 'S256',
-    code_challenge: challenge,
-  });
-  window.location.href = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`; // NEW issuer base URL
-
-
-      const url = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
-      console.log('Redirecting to:', url);
-      window.location.href = url;
+    // Generate random PKCE verifier
+    async function generateVerifier() {
+      const array = new Uint8Array(56);
+      crypto.getRandomValues(array);
+      return btoa(String.fromCharCode(...array))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
-    startLogin();
+    async function login() {
+      const verifier = await generateVerifier();
+      const challenge = await generateChallenge(verifier);
+
+      // Save verifier for callback exchange
+      localStorage.setItem('pkce_verifier', verifier);
+
+      const params = new URLSearchParams({
+        client_id: '0oau3bha34MtNzb6U697',  // Tyler’s MIT app client ID
+        response_type: 'code',
+        scope: 'openid profile email',
+        redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
+        state: verifier,
+        nonce: Math.random().toString(36).slice(2),
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+      });
+
+      window.location.href = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+    }
+
+    login();
   </script>
 </body>
 </html>
