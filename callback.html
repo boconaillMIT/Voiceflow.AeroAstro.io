@@ -2,44 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Callback - AeroAstro Chatbot</title>
+  <title>OAuth Callback</title>
 </head>
 <body>
   <h2>Logging in...</h2>
   <script>
-    async function handleCallback() {
+    async function exchangeCodeForToken() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
-      const verifier = localStorage.getItem('pkce_verifier');
-
-      if (!code || !verifier) {
-        document.body.innerHTML = '<p>Error: missing code or PKCE verifier.</p>';
+      if (!code) {
+        document.body.innerText = 'No code returned from Okta';
         return;
       }
 
-      try {
-        const res = await fetch('/.netlify/functions/oidc-callback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, verifier })
-        });
-
-        if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
-        const user = await res.json();
-
-        // Save user info for chatbot
-        localStorage.setItem('user_name', user.name);
-        localStorage.setItem('user_email', user.email);
-        localStorage.setItem('user_kerberos', user.kerberos);
-
-        // Redirect to Voiceflow chatbot
-        window.location.href = 'chatbot.html';
-      } catch (err) {
-        document.body.innerHTML = `<p>Login failed: ${err.message}</p>`;
+      const verifier = localStorage.getItem('pkce_verifier');
+      if (!verifier) {
+        document.body.innerText = 'Missing PKCE verifier';
+        return;
       }
+
+      // Call Netlify function to exchange code for tokens
+      const response = await fetch('/.netlify/functions/oidc-callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, verifier }),
+      });
+
+      const data = await response.json();
+
+      // Redirect to Voiceflow chatbot with user info in query params
+      const chatbotUrl = new URL('https://aeroastrovfbot.netlify.app/chatbot.html');
+      chatbotUrl.searchParams.set('name', data.name);
+      chatbotUrl.searchParams.set('email', data.email);
+      chatbotUrl.searchParams.set('kerberos', data.kerberos);
+      window.location.href = chatbotUrl.toString();
     }
 
-    handleCallback();
+    exchangeCodeForToken();
   </script>
 </body>
 </html>
