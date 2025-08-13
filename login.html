@@ -3,10 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <title>AeroAstro Chatbot Login</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+    .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+    .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+    pre { background: #f8f9fa; padding: 10px; border-radius: 3px; font-size: 12px; overflow-x: auto; }
+  </style>
 </head>
 <body>
-  <h2>Redirecting to MIT Okta SSO...</h2>
+  <h2>AeroAstro Chatbot Login</h2>
+  <div id="status"></div>
+  <div id="debug-info"></div>
+
   <script>
+    function addStatus(message, type = 'info') {
+      const statusDiv = document.getElementById('status');
+      const timestamp = new Date().toLocaleTimeString();
+      statusDiv.innerHTML += `<div class="status ${type}">[${timestamp}] ${message}</div>`;
+      console.log(`[${timestamp}] ${message}`);
+    }
+
+    function updateDebugInfo(info) {
+      document.getElementById('debug-info').innerHTML = `<pre>${JSON.stringify(info, null, 2)}</pre>`;
+    }
+
     // base64(url) helper
     function base64UrlEncode(arrayBuffer) {
       const bytes = new Uint8Array(arrayBuffer);
@@ -16,45 +39,115 @@
     }
 
     function generateVerifier() {
+      addStatus('Generating PKCE verifier...', 'info');
       const array = new Uint8Array(56);
       crypto.getRandomValues(array);
-      return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const verifier = btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      addStatus(`Generated verifier (${verifier.length} chars)`, 'success');
+      return verifier;
     }
 
     async function generateChallenge(verifier) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(verifier);
-      const digest = await crypto.subtle.digest('SHA-256', data);
-      return base64UrlEncode(digest);
+      addStatus('Generating PKCE challenge...', 'info');
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(verifier);
+        const digest = await crypto.subtle.digest('SHA-256', data);
+        const challenge = base64UrlEncode(digest);
+        addStatus(`Generated challenge (${challenge.length} chars)`, 'success');
+        return challenge;
+      } catch (error) {
+        addStatus(`Error generating challenge: ${error.message}`, 'error');
+        throw error;
+      }
     }
 
     async function startLogin() {
-      const verifier = generateVerifier();
-      const challenge = await generateChallenge(verifier);
-      const state = Math.random().toString(36).substring(2);
+      try {
+        addStatus('Starting login process...', 'info');
+        
+        // Generate PKCE parameters
+        const verifier = generateVerifier();
+        const challenge = await generateChallenge(verifier);
+        const state = Math.random().toString(36).substring(2);
 
-      // store for callback verification
-      localStorage.setItem('pkce_verifier', verifier);
-      localStorage.setItem('pkce_state', state);
+        addStatus('Storing data in localStorage...', 'info');
+        
+        // Store for callback verification
+        localStorage.setItem('pkce_verifier', verifier);
+        localStorage.setItem('pkce_state', state);
 
-  const params = new URLSearchParams({
-    client_id: '0oau3bha34MtNzb6U697',           // NEW Client ID
-    response_type: 'code',
-    scope: 'openid profile email',
-    redirect_uri: 'redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',  // Confirmed URI
-    state: verifier,
-    nonce: Math.random().toString(36).slice(2),
-    code_challenge_method: 'S256',
-    code_challenge: challenge,
-  });
-  window.location.href = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`; // NEW issuer base URL
+        // Verify storage worked
+        const storedVerifier = localStorage.getItem('pkce_verifier');
+        const storedState = localStorage.getItem('pkce_state');
+        
+        if (!storedVerifier || !storedState) {
+          addStatus('ERROR: Failed to store data in localStorage!', 'error');
+          return;
+        }
 
+        addStatus('Successfully stored verifier and state', 'success');
 
-      const url = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
-      console.log('Redirecting to:', url);
-      window.location.href = url;
+        // Build OAuth parameters
+        const params = new URLSearchParams({
+          client_id: '0oau3bha34MtNzb6U697',
+          response_type: 'code',
+          scope: 'openid profile email',
+          redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html', // Fixed to use callback.html
+          state: state,
+          nonce: Math.random().toString(36).slice(2),
+          code_challenge_method: 'S256',
+          code_challenge: challenge,
+        });
+
+        const url = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+
+        // Debug info
+        const debugInfo = {
+          verifier_length: verifier.length,
+          challenge_length: challenge.length,
+          state: state,
+          redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
+          client_id: '0oau3bha34MtNzb6U697',
+          localStorage_test: {
+            verifier_stored: !!localStorage.getItem('pkce_verifier'),
+            state_stored: !!localStorage.getItem('pkce_state'),
+            verifier_matches: localStorage.getItem('pkce_verifier') === verifier,
+            state_matches: localStorage.getItem('pkce_state') === state
+          },
+          oauth_url_length: url.length
+        };
+
+        updateDebugInfo(debugInfo);
+        addStatus('Built OAuth URL and verified parameters', 'success');
+
+        // Add a delay to let user see the diagnostic info
+        addStatus('Redirecting to Okta in 3 seconds...', 'warning');
+        
+        setTimeout(() => {
+          addStatus('Redirecting now...', 'info');
+          console.log('Final OAuth URL:', url);
+          window.location.href = url;
+        }, 3000);
+
+      } catch (error) {
+        addStatus(`FATAL ERROR: ${error.message}`, 'error');
+        console.error('Login error:', error);
+        updateDebugInfo({ error: error.message, stack: error.stack });
+      }
     }
 
+    // Test localStorage first
+    addStatus('Testing localStorage availability...', 'info');
+    try {
+      localStorage.setItem('test', 'test');
+      localStorage.removeItem('test');
+      addStatus('localStorage is working', 'success');
+    } catch (e) {
+      addStatus(`localStorage ERROR: ${e.message}`, 'error');
+    }
+
+    // Start the login process
     startLogin();
   </script>
 </body>
