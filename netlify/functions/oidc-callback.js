@@ -1,15 +1,10 @@
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'non post Method Not Allowed' };
 
-  let payload;
-  try { payload = JSON.parse(event.body); } 
-  catch { return { statusCode: 400, body: 'Invalid JSON' }; }
+  const { code, verifier } = JSON.parse(event.body);
 
-  const { code, verifier } = payload;
   if (!code || !verifier) return { statusCode: 400, body: 'Missing code or verifier' };
 
   const clientId = process.env.OKTA_CLIENT_ID;
@@ -26,22 +21,18 @@ exports.handler = async (event) => {
     });
 
     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-    if (clientSecret) {
-      const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-      headers.Authorization = `Basic ${basic}`;
-    } else { bodyParams.append('client_id', clientId); }
 
-    const tokenRes = await fetch(`${issuer}/v1/token`, { method: 'POST', headers, body: bodyParams.toString() });
-    if (!tokenRes.ok) {
-      const text = await tokenRes.text();
-      return { statusCode: 502, body: `Token exchange failed: ${text}` };
+    if (clientSecret) {
+      headers.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+    } else {
+      bodyParams.append('client_id', clientId);
     }
 
-    const tokens = await tokenRes.json();
-    const idToken = tokens.id_token;
-    if (!idToken) return { statusCode: 502, body: 'No id_token returned' };
+    const tokenRes = await fetch(`${issuer}/v1/token`, { method: 'POST', headers, body: bodyParams.toString() });
+    if (!tokenRes.ok) return { statusCode: 502, body: 'Token exchange failed' };
 
-    const payloadPart = idToken.split('.')[1];
+    const tokens = await tokenRes.json();
+    const payloadPart = tokens.id_token.split('.')[1];
     const idTokenPayload = JSON.parse(Buffer.from(payloadPart, 'base64').toString('utf8'));
 
     return {
