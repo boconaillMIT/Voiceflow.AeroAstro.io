@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Login - AeroAstro Chatbot</title>
+  <meta charset="UTF-8" />
+  <title>AeroAstro Chatbot Login</title>
 </head>
 <body>
   <h2>Redirecting to MIT Okta SSO...</h2>
   <script>
-    // Helper: encode ArrayBuffer to base64url string
-    function base64UrlEncode(arrayBuffer) {
+    async function base64UrlEncode(arrayBuffer) {
       const bytes = new Uint8Array(arrayBuffer);
       let binary = '';
       for (let i = 0; i < bytes.byteLength; i++) {
@@ -17,38 +16,34 @@
       return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
-    // Generate PKCE code challenge
     async function generateChallenge(verifier) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(verifier);
+      const data = new TextEncoder().encode(verifier);
       const digest = await crypto.subtle.digest('SHA-256', data);
       return base64UrlEncode(digest);
     }
 
-    // Generate random PKCE verifier
     async function generateVerifier() {
       const array = new Uint8Array(56);
       crypto.getRandomValues(array);
-      return btoa(String.fromCharCode(...array))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
     async function login() {
       const verifier = await generateVerifier();
       const challenge = await generateChallenge(verifier);
 
-      // Save verifier for callback exchange
+      // Save verifier for callback
       localStorage.setItem('pkce_verifier', verifier);
 
       const params = new URLSearchParams({
-        client_id: '0oau3bha34MtNzb6U697',  // Tyler’s MIT app client ID
+        client_id: '0oau3bha34MtNzb6U697',   // MIT IT client ID
         response_type: 'code',
         scope: 'openid profile email',
-        redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
-        state: verifier,
+        redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html', // must match Okta
+        state: Math.random().toString(36).slice(2),
         nonce: Math.random().toString(36).slice(2),
-        code_challenge: challenge,
         code_challenge_method: 'S256',
+        code_challenge: challenge,
       });
 
       window.location.href = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
