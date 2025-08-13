@@ -2,43 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OAuth Callback</title>
+  <title>Processing Okta Callback...</title>
 </head>
 <body>
-  <h2>Logging in...</h2>
+  <h2>Processing Okta Login...</h2>
+  <div id="status">Please wait...</div>
+
   <script>
-    async function exchangeCodeForToken() {
+    async function processCallback() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
-      if (!code) {
-        document.body.innerText = 'No code returned from Okta';
+      const state = params.get('state'); // PKCE verifier
+
+      if (!code || !state) {
+        document.getElementById('status').innerText = 'Missing code or state in URL.';
         return;
       }
 
+      // Retrieve the verifier stored during login
       const verifier = localStorage.getItem('pkce_verifier');
       if (!verifier) {
-        document.body.innerText = 'Missing PKCE verifier';
+        document.getElementById('status').innerText = 'Missing PKCE verifier.';
         return;
       }
 
-      // Call Netlify function to exchange code for tokens
-      const response = await fetch('/.netlify/functions/oidc-callback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, verifier }),
-      });
+      try {
+        const res = await fetch('/.netlify/functions/oidc-callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, verifier })
+        });
 
-      const data = await response.json();
+        if (!res.ok) {
+          const text = await res.text();
+          document.getElementById('status').innerText = `Error: ${text}`;
+          return;
+        }
 
-      // Redirect to Voiceflow chatbot with user info in query params
-      const chatbotUrl = new URL('https://aeroastrovfbot.netlify.app/chatbot.html');
-      chatbotUrl.searchParams.set('name', data.name);
-      chatbotUrl.searchParams.set('email', data.email);
-      chatbotUrl.searchParams.set('kerberos', data.kerberos);
-      window.location.href = chatbotUrl.toString();
+        const data = await res.json();
+        // Display returned user info (or redirect to chatbot)
+        document.getElementById('status').innerText = `Welcome ${data.name} (${data.kerberos})!`;
+        
+        // Optionally, redirect to the Voiceflow chatbot
+        // window.location.href = `https://aeroastrovfbot.netlify.app/chatbot.html?name=${encodeURIComponent(data.name)}&kerberos=${encodeURIComponent(data.kerberos)}&email=${encodeURIComponent(data.email)}`;
+
+      } catch (err) {
+        document.getElementById('status').innerText = `Callback error: ${err.message}`;
+      }
     }
 
-    exchangeCodeForToken();
+    processCallback();
   </script>
 </body>
 </html>
