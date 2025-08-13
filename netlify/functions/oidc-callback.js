@@ -1,76 +1,67 @@
-// netlify/functions/oidc-callback.js
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>OIDC Callback</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Processing Login...</h1>
+  <pre id="debug">Waiting for response...</pre>
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Only Post Method  Allowed' };
-  }
+  <script>
+    (async () => {
+      try {
+        // 1️⃣ Get "code" from URL
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        if (!code) throw new Error("No 'code' parameter in URL");
 
-  let payload;
-  try {
-    payload = JSON.parse(event.body);
-  } catch (e) {
-    return { statusCode: 400, body: 'Invalid JSON' };
-  }
+        // 2️⃣ Get the PKCE verifier from localStorage
+        const verifier = localStorage.getItem('pkce_verifier');
+        if (!verifier) throw new Error("No PKCE verifier found in localStorage");
 
-  const { code, verifier } = payload;
-  if (!code || !verifier) {
-    return { statusCode: 400, body: 'Missing code or verifier' };
-  }
+        // 3️⃣ POST to Netlify function
+        const res = await fetch('/.netlify/functions/oidc-callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, verifier })
+        });
 
-  const clientId = process.env.OKTA_CLIENT_ID;
-  const clientSecret = process.env.OKTA_CLIENT_SECRET; // stored securely in Netlify env
-  const issuer = process.env.OKTA_ISSUER;
-  const redirectUri = process.env.OKTA_REDIRECT_URI; // should be https://.../callback.html
+        if (!res.ok) {
+          throw new Error(`Callback failed: ${await res.text()}`);
+        }
 
-  try {
-    const bodyParams = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: redirectUri,
-      code_verifier: verifier,
-    });
+        const metadata = await res.json();
 
-    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+        // 4️⃣ Save metadata in localStorage
+        localStorage.setItem('user_metadata', JSON.stringify(metadata));
 
-    // Use HTTP Basic auth if secret is present (safer than sending secret in body)
-    if (clientSecret) {
-      const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-      headers.Authorization = `Basic ${basic}`;
-    } else {
-      bodyParams.append('client_id', clientId);
-    }
+        // 5️⃣ Display for debugging
+        document.getElementById('debug').textContent = JSON.stringify(metadata, null, 2);
 
-    const tokenRes = await fetch(`${issuer}/v1/token`, {
-      method: 'POST',
-      headers,
-      body: bodyParams.toString(),
-    });
+        // 6️⃣ Initialize Voiceflow with metadata
+        window.VoiceflowAssistant = window.VoiceflowAssistant || {};
+        window.VoiceflowAssistant.init({
+          versionID: "66df25f295ab4c2554ea24ad", // your VF Assistant ID
+          user: {
+            name: metadata.name || '',
+            email: metadata.email || '',
+            kerberos: metadata.kerberos || ''
+          }
+        });
 
-    if (!tokenRes.ok) {
-      const text = await tokenRes.text();
-      return { statusCode: 502, body: `Token exchange failed: ${text}` };
-    }
+      } catch (err) {
+        document.getElementById('debug').textContent = `Error: ${err.message}`;
+        console.error(err);
+      }
+    })();
+  </script>
 
-    const tokens = await tokenRes.json();
-
-    // decode id_token payload (simple base64 decode)
-    const idToken = tokens.id_token;
-    if (!idToken) return { statusCode: 502, body: 'No id_token returned' };
-
-    const payloadPart = idToken.split('.')[1];
-    const idTokenPayload = JSON.parse(Buffer.from(payloadPart, 'base64').toString('utf8'));
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        name: idTokenPayload.name || '',
-        email: idTokenPayload.email || '',
-        kerberos: idTokenPayload.preferred_username || idTokenPayload.sub || '',
-      }),
-    };
-  } catch (err) {
-    console.error('Callback error', err);
-    return { statusCode: 500, body: `Callback error: ${err.message}` };
-  }
-};
+  <!-- Voiceflow Web Chat Script -->
+  <script src="https://cdn.voiceflow.com/widget/bundle.mjs" type="module"></script>
+</body>
+</html>
