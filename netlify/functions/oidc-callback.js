@@ -1,49 +1,46 @@
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Callback - AeroAstro Chatbot</title>
+</head>
+<body>
+  <h2>Logging in...</h2>
+  <script>
+    async function handleCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const verifier = localStorage.getItem('pkce_verifier');
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'non post Method Not Allowed' };
+      if (!code || !verifier) {
+        document.body.innerHTML = '<p>Error: missing code or PKCE verifier.</p>';
+        return;
+      }
 
-  const { code, verifier } = JSON.parse(event.body);
+      try {
+        const res = await fetch('/.netlify/functions/oidc-callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, verifier })
+        });
 
-  if (!code || !verifier) return { statusCode: 400, body: 'Missing code or verifier' };
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+        const user = await res.json();
 
-  const clientId = process.env.OKTA_CLIENT_ID;
-  const clientSecret = process.env.OKTA_CLIENT_SECRET;
-  const issuer = process.env.OKTA_ISSUER;
-  const redirectUri = process.env.OKTA_REDIRECT_URI;
+        // Save user info for chatbot
+        localStorage.setItem('user_name', user.name);
+        localStorage.setItem('user_email', user.email);
+        localStorage.setItem('user_kerberos', user.kerberos);
 
-  try {
-    const bodyParams = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: redirectUri,
-      code_verifier: verifier,
-    });
-
-    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-
-    if (clientSecret) {
-      headers.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
-    } else {
-      bodyParams.append('client_id', clientId);
+        // Redirect to Voiceflow chatbot
+        window.location.href = 'chatbot.html';
+      } catch (err) {
+        document.body.innerHTML = `<p>Login failed: ${err.message}</p>`;
+      }
     }
 
-    const tokenRes = await fetch(`${issuer}/v1/token`, { method: 'POST', headers, body: bodyParams.toString() });
-    if (!tokenRes.ok) return { statusCode: 502, body: 'Token exchange failed' };
+    handleCallback();
+  </script>
+</body>
+</html>
 
-    const tokens = await tokenRes.json();
-    const payloadPart = tokens.id_token.split('.')[1];
-    const idTokenPayload = JSON.parse(Buffer.from(payloadPart, 'base64').toString('utf8'));
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        name: idTokenPayload.name || '',
-        email: idTokenPayload.email || '',
-        kerberos: idTokenPayload.preferred_username || idTokenPayload.sub || '',
-      }),
-    };
-  } catch (err) {
-    return { statusCode: 500, body: `Callback error: ${err.message}` };
-  }
-};
