@@ -55,7 +55,9 @@ exports.handler = async (event) => {
 
     const tokens = await tokenRes.json();
     const idToken = tokens.id_token;
-    if (!idToken) return { statusCode: 502, body: 'No id_token returned' };
+    if (!idToken) {
+      return { statusCode: 502, body: 'No id_token returned' };
+    }
 
     const payloadPart = idToken.split('.')[1];
     const idTokenPayload = JSON.parse(
@@ -79,4 +81,6 @@ exports.handler = async (event) => {
     };
   } catch (err) {
     console.error('Callback error', err);
-    return { statusCode: 500, body: `Callback er
+    return { statusCode: 500, body: `Callback error: ${err.message}` };
+  }
+};
