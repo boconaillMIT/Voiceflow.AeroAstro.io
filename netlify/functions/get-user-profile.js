@@ -1,4 +1,4 @@
-// netlify/functions/get-user-profile.js
+// netlify/functions/get-user-profile.js 
 exports.handler = async (event) => {
   try {
     // Get kerberos from query parameters
