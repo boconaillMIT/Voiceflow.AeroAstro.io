@@ -214,8 +214,14 @@
             // Store user data globally for Voiceflow access
             window.currentUser = userData;
             
-            console.log('User data loaded:', userData);
-            console.log('Voiceflow userID:', userID);
+            // DEBUG: Log everything for troubleshooting
+            console.log('=== OAUTH DEBUG INFO ===');
+            console.log('userData from OAuth:', userData);
+            console.log('userData.kerberos:', userData.kerberos);
+            console.log('Generated userID for Voiceflow:', userID);
+            console.log('URL params:', Object.fromEntries(new URLSearchParams(window.location.search)));
+            console.log('localStorage user_metadata:', localStorage.getItem('user_metadata'));
+            console.log('========================');
             
             // Load Voiceflow with user data
             loadVoiceflow(userID, userData);
@@ -300,5 +306,3 @@
     </script>
 </body>
 </html>
-
-
