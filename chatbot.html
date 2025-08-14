@@ -247,7 +247,7 @@
                         if (window.voiceflow && window.voiceflow.chat) {
                             console.log('Setting Voiceflow variables:', userData);
                             
-                            // Method 1: Set variables using the state API
+                            // Just ONE method
                             window.voiceflow.chat.interact({
                                 type: 'set',
                                 payload: {
@@ -255,41 +255,7 @@
                                     user_kerberos: userData.kerberos || '',
                                     user_title: userData.title || '',
                                     user_department: userData.department || '',
-                                    user_email: userData.email || '',
-                                    user_firstname: userData.firstName || '',
-                                    user_lastname: userData.lastName || '',
-                                    user_authenticated: userData.authenticated || false
-                                }
-                            });
-
-                            // Method 2: Alternative approach - send a custom event
-                            window.voiceflow.chat.interact({
-                                type: 'intent',
-                                payload: {
-                                    intent: {
-                                        name: 'user_authenticated'
-                                    },
-                                    entities: [
-                                        { name: 'user_name', value: userData.name || '' },
-                                        { name: 'user_kerberos', value: userData.kerberos || '' },
-                                        { name: 'user_title', value: userData.title || '' },
-                                        { name: 'user_department', value: userData.department || '' },
-                                        { name: 'user_email', value: userData.email || '' }
-                                    ]
-                                }
-                            });
-
-                            // Method 3: Send launch event with variables
-                            window.voiceflow.chat.interact({
-                                type: 'launch',
-                                payload: {
-                                    variables: {
-                                        user_name: userData.name || '',
-                                        user_kerberos: userData.kerberos || '',
-                                        user_title: userData.title || '',
-                                        user_department: userData.department || '',
-                                        user_email: userData.email || ''
-                                    }
+                                    user_email: userData.email || ''
                                 }
                             });
                         }
@@ -306,3 +272,4 @@
     </script>
 </body>
 </html>
+
