@@ -110,7 +110,7 @@ exports.handler = async (event) => {
     const userMetadata = {
       name: idTokenPayload.name || idTokenPayload.given_name + ' ' + idTokenPayload.family_name || '',
       email: idTokenPayload.email || '',
-      kerberos: idTokenPayload.preferred_username || idTokenPayload.sub || '',
+      kerberos: (idTokenPayload.preferred_username || idTokenPayload.sub || '').replace('@mit.edu', ''), 
       firstName: idTokenPayload.given_name || '',
       lastName: idTokenPayload.family_name || '',
       groups: idTokenPayload.groups || [],
