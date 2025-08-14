@@ -3,39 +3,283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voiceflow Chatbot</title>
+    <title>AeroAstro Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .user-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none; /* Hidden by default, shown when user data loads */
+        }
+        .user-info.visible {
+            display: block;
+        }
+        .info-row {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 5px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+        .debug-info {
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 12px;
+            display: none;
+        }
+        .toggle-debug {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <p><b>This is a sample page for accessing the release version of the AeroAstro chatbot (updated 7/31/25). To begin a conversation, please click the icon in the bottom left corner.</b></p>
+    <div class="header">
+        <h1>AeroAstro Chatbot</h1>
+        <p>AI Assistant for MIT's Department of Aeronautics and Astronautics</p>
+    </div>
 
-    <div id="voiceflow-chat"></div>
+    <div class="user-info" id="user-info">
+        <div class="info-row">
+            <span class="info-label">Welcome:</span>
+            <span class="info-value" id="display-name">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Kerberos:</span>
+            <span class="info-value" id="display-kerberos">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value" id="display-title">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Department:</span>
+            <span class="info-value" id="display-department">Loading...</span>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <p><b>Welcome! Your authentication is complete. To begin a conversation with the AeroAstro AI assistant, please click the chat icon in the bottom right corner.</b></p>
+        <div id="voiceflow-chat"></div>
+    </div>
+
+    <button class="toggle-debug" onclick="toggleDebug()">🔧 Toggle Debug Info</button>
+    <div class="debug-info" id="debug-info">
+        <h4>User Metadata:</h4>
+        <pre id="debug-content"></pre>
+    </div>
 
     <script type="text/javascript">
-      // 1. Generate or retrieve a userID from localStorage
-      let userID = localStorage.getItem('userID');
-      if (!userID) {
-        userID = 'user-' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('userID', userID);
-      }
+        // Function to get URL parameters
+        function getURLParameter(name) {
+            return new URLSearchParams(window.location.search).get(name);
+        }
 
-      // 2. Load the Voiceflow chat widget with the userID
-      (function(d, t) {
-          var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
-          v.onload = function() {
-            window.voiceflow.chat.load({
-              verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
-              url: 'https://general-runtime.voiceflow.com',
-              versionID: 'production',
-              userID: userID, // ✅ Pass userID to Voiceflow
-              voice: {
-                url: "https://runtime-api.voiceflow.com"
-              }
-            });
-          };
-          v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
-          v.type = "text/javascript"; 
-          s.parentNode.insertBefore(v, s);
-      })(document, 'script');
+        // Function to get stored metadata
+        function getStoredMetadata() {
+            try {
+                const stored = localStorage.getItem('user_metadata');
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                console.error('Error parsing stored metadata:', e);
+                return null;
+            }
+        }
+
+        // Collect all user data from URL params and localStorage
+        function collectUserData() {
+            // Get data from URL parameters
+            const urlData = {
+                name: getURLParameter('name'),
+                firstName: getURLParameter('firstName'),
+                lastName: getURLParameter('lastName'),
+                kerberos: getURLParameter('kerberos'),
+                email: getURLParameter('email'),
+                title: getURLParameter('title'),
+                department: getURLParameter('department'),
+                groups: getURLParameter('groups'),
+                authenticated: getURLParameter('authenticated')
+            };
+
+            // Get data from localStorage
+            const storedData = getStoredMetadata();
+
+            // Merge data (URL params take precedence)
+            const userData = {
+                name: urlData.name || (storedData && storedData.name) || 
+                      (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
+                      (storedData && storedData.firstName && storedData.lastName ? `${storedData.firstName} ${storedData.lastName}` : '') ||
+                      'User',
+                firstName: urlData.firstName || (storedData && storedData.firstName) || '',
+                lastName: urlData.lastName || (storedData && storedData.lastName) || '',
+                kerberos: urlData.kerberos || (storedData && storedData.kerberos) || '',
+                email: urlData.email || (storedData && storedData.email) || '',
+                title: urlData.title || (storedData && storedData.title) || '',
+                department: urlData.department || (storedData && storedData.department) || '',
+                groups: urlData.groups || (storedData && storedData.groups) || '',
+                authenticated: urlData.authenticated === 'true' || false,
+                loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
+            };
+
+            return userData;
+        }
+
+        // Update the display with user information
+        function updateUserDisplay(userData) {
+            if (userData.authenticated || userData.kerberos) {
+                document.getElementById('display-name').textContent = userData.name || 'Not provided';
+                document.getElementById('display-kerberos').textContent = userData.kerberos || 'Not provided';
+                document.getElementById('display-title').textContent = userData.title || 'Not provided';
+                document.getElementById('display-department').textContent = userData.department || 'Not provided';
+                
+                // Show the user info section
+                document.getElementById('user-info').classList.add('visible');
+            }
+
+            // Update debug info
+            document.getElementById('debug-content').textContent = JSON.stringify({
+                userData: userData,
+                urlParams: Object.fromEntries(new URLSearchParams(window.location.search)),
+                storedData: getStoredMetadata()
+            }, null, 2);
+        }
+
+        // Generate userID for Voiceflow
+        function generateUserID(userData) {
+            // Use kerberos as primary identifier, fallback to stored/generated ID
+            if (userData.kerberos) {
+                return `mit-${userData.kerberos}`;
+            }
+            
+            // Fallback to existing stored userID or generate new one
+            let userID = localStorage.getItem('userID');
+            if (!userID) {
+                userID = 'user-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userID', userID);
+            }
+            return userID;
+        }
+
+        // Toggle debug information
+        function toggleDebug() {
+            const debugInfo = document.getElementById('debug-info');
+            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Initialize the page
+        function initializePage() {
+            // Collect user data
+            const userData = collectUserData();
+            
+            // Update display
+            updateUserDisplay(userData);
+            
+            // Generate userID for Voiceflow
+            const userID = generateUserID(userData);
+            
+            // Store user data globally for Voiceflow access
+            window.currentUser = userData;
+            
+            console.log('User data loaded:', userData);
+            console.log('Voiceflow userID:', userID);
+            
+            // Load Voiceflow with user data
+            loadVoiceflow(userID, userData);
+        }
+
+        // Load Voiceflow chat widget
+        function loadVoiceflow(userID, userData) {
+            (function(d, t) {
+                var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+                v.onload = function() {
+                    window.voiceflow.chat.load({
+                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
+                        url: 'https://general-runtime.voiceflow.com',
+                        versionID: 'production',
+                        userID: userID, // Use real userID based on kerberos
+                        voice: {
+                            url: "https://runtime-api.voiceflow.com"
+                        },
+                        // Pass user data to Voiceflow
+                        launch: {
+                            event: {
+                                type: 'launch',
+                                payload: {
+                                    name: userData.name,
+                                    firstName: userData.firstName,
+                                    lastName: userData.lastName,
+                                    kerberos: userData.kerberos,
+                                    email: userData.email,
+                                    title: userData.title,
+                                    department: userData.department,
+                                    authenticated: userData.authenticated
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Additional Voiceflow setup after load
+                    setTimeout(() => {
+                        if (window.voiceflow && window.voiceflow.chat) {
+                            // Set user variables that Voiceflow can access
+                            window.voiceflow.chat.interact({
+                                type: 'complete',
+                                payload: {
+                                    variables: {
+                                        user_name: userData.name,
+                                        user_kerberos: userData.kerberos,
+                                        user_title: userData.title,
+                                        user_department: userData.department,
+                                        user_email: userData.email,
+                                        user_authenticated: userData.authenticated
+                                    }
+                                }
+                            });
+                        }
+                    }, 1000);
+                };
+                v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
+                v.type = "text/javascript"; 
+                s.parentNode.insertBefore(v, s);
+            })(document, 'script');
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializePage);
     </script>
 </body>
 </html>
