@@ -55,7 +55,20 @@ exports.handler = async (event) => {
         email: 'asmith@mit.edu'
       }
     };
-
+const mockUserData = {
+  'oconaill': {
+    name: 'Brian O\'Conaill',
+    firstName: 'Brian',
+    lastName: 'O\'Conaill', 
+    title: 'Director of Administration and Finance',
+    department: 'Department of Aeronautics and Astronautics',
+    email: 'oconaill@mit.edu'
+  },
+  'jdoe': {
+    name: 'John Doe',
+    // ... etc
+  }
+};
     // Get user data or return defaults
     const userData = mockUserData[kerberos] || {
       name: `${kerberos} (Unknown)`,
