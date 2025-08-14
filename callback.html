@@ -12,6 +12,7 @@
     .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
     pre { background: #f8f9fa; padding: 10px; border-radius: 3px; font-size: 12px; overflow-x: auto; max-height: 300px; }
     .debug-section { margin: 20px 0; }
+    .metadata-preview { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 15px 0; }
   </style>
 </head>
 <body>
@@ -145,26 +146,76 @@
         const json = await res.json();
         addStatus('Successfully received user data', 'success');
 
+        // Store ALL metadata for Voiceflow access
+        localStorage.setItem('user_metadata', JSON.stringify(json));
+        addStatus('Stored complete user metadata for Voiceflow', 'success');
+
+        // Display metadata preview
+        const metadataPreview = document.createElement('div');
+        metadataPreview.className = 'metadata-preview';
+        metadataPreview.innerHTML = `
+          <h4>🎉 Login Successful! User Metadata:</h4>
+          <p><strong>Name:</strong> ${json.name || 'Not provided'}</p>
+          <p><strong>First Name:</strong> ${json.firstName || 'Not provided'}</p>
+          <p><strong>Last Name:</strong> ${json.lastName || 'Not provided'}</p>
+          <p><strong>Kerberos:</strong> ${json.kerberos || 'Not provided'}</p>
+          <p><strong>Email:</strong> ${json.email || 'Not provided'}</p>
+          <p><strong>Title:</strong> ${json.title || 'Not provided'}</p>
+          <p><strong>Department:</strong> ${json.department || 'Not provided'}</p>
+          <p><strong>Groups:</strong> ${json.groups && json.groups.length ? json.groups.join(', ') : 'None'}</p>
+          <p><strong>Login Time:</strong> ${json.loginTime}</p>
+        `;
+        document.getElementById('status').appendChild(metadataPreview);
+
         // Update debug info with response
         updateDebugInfo({
           ...debugInfo,
           success_response: {
             name: json.name,
+            firstName: json.firstName,
+            lastName: json.lastName,
             email: json.email,
             kerberos: json.kerberos,
+            title: json.title,
+            department: json.department,
+            groups: json.groups,
+            loginTime: json.loginTime,
             // Don't show raw token data for security
             has_raw_data: !!json.raw
           }
         });
 
-        addStatus('Redirecting to chatbot...', 'info');
+        addStatus('Redirecting to chatbot with all metadata...', 'info');
 
-        // Redirect to chatbot with the user info returned by the function
-        const chatbotUrl = `/chatbot.html?name=${encodeURIComponent(json.name || '')}&email=${encodeURIComponent(json.email || '')}&kerberos=${encodeURIComponent(json.kerberos || '')}`;
+        // Build comprehensive URL parameters for Voiceflow
+        const chatbotParams = new URLSearchParams({
+          // Core identity
+          name: json.name || '',
+          firstName: json.firstName || '',
+          lastName: json.lastName || '',
+          kerberos: json.kerberos || '',
+          email: json.email || '',
+          
+          // Professional info
+          title: json.title || '',
+          department: json.department || '',
+          
+          // Additional data
+          groups: json.groups ? json.groups.join(',') : '',
+          loginTime: json.loginTime || '',
+          
+          // Flag to indicate authenticated user
+          authenticated: 'true'
+        });
+
+        const chatbotUrl = `/chatbot.html?${chatbotParams.toString()}`;
         
+        console.log('Complete metadata being passed to Voiceflow:', json);
+        console.log('Chatbot URL:', chatbotUrl);
+
         setTimeout(() => {
           window.location.href = chatbotUrl;
-        }, 2000); // 2 second delay to see the success message
+        }, 3000); // 3 second delay to see the metadata preview
 
       } catch (err) {
         addStatus(`FATAL ERROR: ${err.message}`, 'error');
