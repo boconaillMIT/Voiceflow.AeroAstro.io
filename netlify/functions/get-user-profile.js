@@ -1,10 +1,18 @@
-// netlify/functions/get-user-profile.js 
+// netlify/functions/get-user-profile.js
 exports.handler = async (event) => {
   try {
+    // DEBUG: Log the incoming request
+    console.log('=== FUNCTION DEBUG ===');
+    console.log('HTTP Method:', event.httpMethod);
+    console.log('Query Parameters:', event.queryStringParameters);
+    console.log('Headers:', event.headers);
+    
     // Get kerberos from query parameters
     const kerberos = event.queryStringParameters?.kerberos;
+    console.log('Extracted kerberos:', kerberos);
     
     if (!kerberos) {
+      console.log('ERROR: Missing kerberos parameter');
       return {
         statusCode: 400,
         headers: { 
@@ -58,7 +66,10 @@ exports.handler = async (event) => {
       email: `${kerberos}@mit.edu`
     };
 
-    return {
+    console.log('Found user data:', userData);
+    console.log('Returning response with status 200');
+
+    const response = {
       statusCode: 200,
       headers: { 
         'Content-Type': 'application/json',
@@ -68,6 +79,9 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify(userData)
     };
+
+    console.log('Final response:', response);
+    return response;
 
   } catch (error) {
     console.error('Error in get-user-profile:', error);
