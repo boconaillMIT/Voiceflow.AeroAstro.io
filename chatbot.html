@@ -233,44 +233,61 @@
                         userID: userID, // Use real userID based on kerberos
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
-                        },
-                        // Pass user data to Voiceflow
-                        launch: {
-                            event: {
-                                type: 'launch',
-                                payload: {
-                                    name: userData.name,
-                                    firstName: userData.firstName,
-                                    lastName: userData.lastName,
-                                    kerberos: userData.kerberos,
-                                    email: userData.email,
-                                    title: userData.title,
-                                    department: userData.department,
-                                    authenticated: userData.authenticated
-                                }
-                            }
                         }
                     });
                     
-                    // Additional Voiceflow setup after load
+                    // Set variables after Voiceflow loads
                     setTimeout(() => {
                         if (window.voiceflow && window.voiceflow.chat) {
-                            // Set user variables that Voiceflow can access
+                            console.log('Setting Voiceflow variables:', userData);
+                            
+                            // Method 1: Set variables using the state API
                             window.voiceflow.chat.interact({
-                                type: 'complete',
+                                type: 'set',
+                                payload: {
+                                    user_name: userData.name || '',
+                                    user_kerberos: userData.kerberos || '',
+                                    user_title: userData.title || '',
+                                    user_department: userData.department || '',
+                                    user_email: userData.email || '',
+                                    user_firstname: userData.firstName || '',
+                                    user_lastname: userData.lastName || '',
+                                    user_authenticated: userData.authenticated || false
+                                }
+                            });
+
+                            // Method 2: Alternative approach - send a custom event
+                            window.voiceflow.chat.interact({
+                                type: 'intent',
+                                payload: {
+                                    intent: {
+                                        name: 'user_authenticated'
+                                    },
+                                    entities: [
+                                        { name: 'user_name', value: userData.name || '' },
+                                        { name: 'user_kerberos', value: userData.kerberos || '' },
+                                        { name: 'user_title', value: userData.title || '' },
+                                        { name: 'user_department', value: userData.department || '' },
+                                        { name: 'user_email', value: userData.email || '' }
+                                    ]
+                                }
+                            });
+
+                            // Method 3: Send launch event with variables
+                            window.voiceflow.chat.interact({
+                                type: 'launch',
                                 payload: {
                                     variables: {
-                                        user_name: userData.name,
-                                        user_kerberos: userData.kerberos,
-                                        user_title: userData.title,
-                                        user_department: userData.department,
-                                        user_email: userData.email,
-                                        user_authenticated: userData.authenticated
+                                        user_name: userData.name || '',
+                                        user_kerberos: userData.kerberos || '',
+                                        user_title: userData.title || '',
+                                        user_department: userData.department || '',
+                                        user_email: userData.email || ''
                                     }
                                 }
                             });
                         }
-                    }, 1000);
+                    }, 2000);
                 };
                 v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
                 v.type = "text/javascript"; 
