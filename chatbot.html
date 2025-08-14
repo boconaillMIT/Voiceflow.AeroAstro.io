@@ -235,7 +235,7 @@
                     window.voiceflow.chat.load({
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'development',
+                        versionID: 'production',
                         userID: userID, // Use real userID based on kerberos
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
@@ -245,9 +245,9 @@
                     // Set variables after Voiceflow loads
                     setTimeout(() => {
                         if (window.voiceflow && window.voiceflow.chat) {
-                            console.log('Setting Voiceflow variables:', userData);
+                            console.log('Setting Voiceflow variables with REAL OAuth data:', userData);
                             
-                            // Just ONE method
+                            // Set variables directly with real OAuth data
                             window.voiceflow.chat.interact({
                                 type: 'set',
                                 payload: {
@@ -255,7 +255,10 @@
                                     user_kerberos: userData.kerberos || '',
                                     user_title: userData.title || '',
                                     user_department: userData.department || '',
-                                    user_email: userData.email || ''
+                                    user_email: userData.email || '',
+                                    user_firstname: userData.firstName || '',
+                                    user_lastname: userData.lastName || '',
+                                    user_authenticated: userData.authenticated || false
                                 }
                             });
                         }
@@ -272,5 +275,3 @@
     </script>
 </body>
 </html>
-
-
