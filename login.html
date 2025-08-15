@@ -1,109 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AeroAstro Chatbot Login</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 600px;
-      margin: 100px auto;
-      padding: 20px;
-      background-color: #f8f9fa;
-      text-align: center;
-    }
-    .login-container {
-      background: white;
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-    h2 {
-      color: #333;
-      margin-bottom: 20px;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    .subtitle {
-      color: #666;
-      margin-bottom: 30px;
-      font-size: 16px;
-    }
-    .loading {
-      color: #667eea;
-      font-size: 18px;
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroAstro Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .user-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .user-info.visible {
+            display: block;
+        }
+        .info-row {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 5px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+    </style>
 </head>
 <body>
-  <div class="login-container">
-    <h2>AeroAstro Chatbot</h2>
-    <p class="subtitle">Secure login via MIT Touchstone</p>
-    <div class="loading">Redirecting to MIT authentication...</div>
-  </div>
+    <div class="header">
+        <h1>AeroAstro Chatbot</h1>
+        <p>AI Assistant for MIT's Department of Aeronautics and Astronautics</p>
+    </div>
 
-  <script>
-    // Base64URL encoding helper
-    function base64UrlEncode(arrayBuffer) {
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
+    <div class="user-info" id="user-info">
+        <div class="info-row">
+            <span class="info-label">Welcome:</span>
+            <span class="info-value" id="display-name">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Kerberos:</span>
+            <span class="info-value" id="display-kerberos">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value" id="display-title">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Department:</span>
+            <span class="info-value" id="display-department">Loading...</span>
+        </div>
+    </div>
 
-    // Generate PKCE verifier
-    function generateVerifier() {
-      const array = new Uint8Array(56);
-      crypto.getRandomValues(array);
-      return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
+    <div class="chat-container">
+        <p><b>Welcome! Your authentication is complete. The AeroAstro AI assistant will start automatically.</b></p>
+        <div id="voiceflow-chat"></div>
+    </div>
 
-    // Generate PKCE challenge
-    async function generateChallenge(verifier) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(verifier);
-      const digest = await crypto.subtle.digest('SHA-256', data);
-      return base64UrlEncode(digest);
-    }
+    <script type="text/javascript">
+        // Function to get URL parameters
+        function getURLParameter(name) {
+            return new URLSearchParams(window.location.search).get(name);
+        }
 
-    // Start OAuth login flow
-    async function startLogin() {
-      try {
-        // Generate PKCE parameters
-        const verifier = generateVerifier();
-        const challenge = await generateChallenge(verifier);
-        const state = Math.random().toString(36).substring(2);
+        // Function to get stored metadata
+        function getStoredMetadata() {
+            try {
+                const stored = localStorage.getItem('user_metadata');
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                return null;
+            }
+        }
 
-        // Store for callback verification
-        localStorage.setItem('pkce_verifier', verifier);
-        localStorage.setItem('pkce_state', state);
+        // Collect all user data from URL params and localStorage
+        function collectUserData() {
+            const urlData = {
+                name: getURLParameter('name'),
+                firstName: getURLParameter('firstName'),
+                lastName: getURLParameter('lastName'),
+                kerberos: getURLParameter('kerberos'),
+                email: getURLParameter('email'),
+                title: getURLParameter('title'),
+                department: getURLParameter('department'),
+                groups: getURLParameter('groups'),
+                authenticated: getURLParameter('authenticated')
+            };
 
-        // Build OAuth authorization URL
-        const params = new URLSearchParams({
-          client_id: '0oau3bha34MtNzb6U697',
-          response_type: 'code',
-          scope: 'openid profile email',
-          redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
-          state: state,
-          nonce: Math.random().toString(36).slice(2),
-          code_challenge_method: 'S256',
-          code_challenge: challenge,
-        });
+            const storedData = getStoredMetadata();
 
-        // Redirect to Okta for authentication
-        const authUrl = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
-        window.location.href = authUrl;
+            // Merge data (URL params take precedence)
+            const userData = {
+                name: urlData.name || (storedData && storedData.name) || 
+                      (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
+                      (storedData && storedData.firstName && storedData.lastName ? `${storedData.firstName} ${storedData.lastName}` : '') ||
+                      'User',
+                firstName: urlData.firstName || (storedData && storedData.firstName) || '',
+                lastName: urlData.lastName || (storedData && storedData.lastName) || '',
+                kerberos: urlData.kerberos || (storedData && storedData.kerberos) || '',
+                email: urlData.email || (storedData && storedData.email) || '',
+                title: urlData.title || (storedData && storedData.title) || '',
+                department: urlData.department || (storedData && storedData.department) || '',
+                groups: urlData.groups || (storedData && storedData.groups) || '',
+                authenticated: urlData.authenticated === 'true' || false,
+                loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
+            };
 
-      } catch (error) {
-        document.querySelector('.loading').textContent = 'Login failed. Please refresh the page to try again.';
-      }
-    }
+            return userData;
+        }
 
-    // Start the login process
-    startLogin();
-  </script>
+        // Update the display with user information
+        function updateUserDisplay(userData) {
+            if (userData.authenticated || userData.kerberos) {
+                document.getElementById('display-name').textContent = userData.name || 'Not provided';
+                document.getElementById('display-kerberos').textContent = userData.kerberos || 'Not provided';
+                document.getElementById('display-title').textContent = userData.title || 'Not provided';
+                document.getElementById('display-department').textContent = userData.department || 'Not provided';
+                
+                document.getElementById('user-info').classList.add('visible');
+            }
+        }
+
+        // Generate userID for Voiceflow
+        function generateUserID(userData) {
+            if (userData.kerberos) {
+                return `mit-${userData.kerberos}`;
+            }
+            
+            let userID = localStorage.getItem('userID');
+            if (!userID) {
+                userID = 'user-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userID', userID);
+            }
+            return userID;
+        }
+
+        // Load Voiceflow and set OAuth variables
+        function loadVoiceflow(userID, userData) {
+            (function(d, t) {
+                var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+                v.onload = function() {
+                    // Load Voiceflow
+                    window.voiceflow.chat.load({
+                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
+                        url: 'https://general-runtime.voiceflow.com',
+                        versionID: 'production',
+                        userID: userID,
+                        voice: {
+                            url: "https://runtime-api.voiceflow.com"
+                        }
+                    });
+                    
+                    // Set Voiceflow variables with real OAuth data
+                    setTimeout(() => {
+                        if (window.voiceflow && window.voiceflow.chat) {
+                            window.voiceflow.chat.interact({
+                                type: 'set',
+                                payload: {
+                                    user_name: userData.name || '',
+                                    user_kerberos: userData.kerberos || '',
+                                    user_title: userData.title || '',
+                                    user_department: userData.department || '',
+                                    user_email: userData.email || '',
+                                    user_firstname: userData.firstName || '',
+                                    user_lastname: userData.lastName || '',
+                                    user_authenticated: userData.authenticated || false
+                                }
+                            });
+                            
+                            // Auto-open the chat after variables are set
+                            setTimeout(() => {
+                                window.voiceflow.chat.open();
+                            }, 1000);
+                        }
+                    }, 3000);
+                };
+                v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
+                v.type = "text/javascript"; 
+                s.parentNode.insertBefore(v, s);
+            })(document, 'script');
+        }
+
+        // Initialize the page
+        function initializePage() {
+            const userData = collectUserData();
+            updateUserDisplay(userData);
+            const userID = generateUserID(userData);
+            
+            window.currentUser = userData;
+            loadVoiceflow(userID, userData);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
 </body>
 </html>
