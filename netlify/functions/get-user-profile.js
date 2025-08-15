@@ -33,7 +33,7 @@ exports.handler = async (event) => {
         name: 'Brian O\'Conaill',
         firstName: 'Brian',
         lastName: 'O\'Conaill',
-        title: 'Director of Administration and Finance',
+        title: 'Doofus of Administration and Finance',
         department: 'Department of Aeronautics and Astronautics',
         email: 'oconaill@mit.edu'
       },
@@ -43,6 +43,14 @@ exports.handler = async (event) => {
         firstName: 'John',
         lastName: 'Doe',
         title: 'Professor',
+        department: 'AeroAstro',
+        email: 'jdoe@mit.edu'
+      },
+        'alz': {
+        name: 'John Doe',
+        firstName: 'John',
+        lastName: 'Doe',
+        title: 'Infra Professor',
         department: 'AeroAstro',
         email: 'jdoe@mit.edu'
       },
