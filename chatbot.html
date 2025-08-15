@@ -221,8 +221,10 @@
             addDebugStep('Generating userID for Voiceflow...', 'info');
             
             if (userData.kerberos) {
-                const userID = `mit-${userData.kerberos}`;
-                addDebugStep(`Generated userID: ${userID}`, 'success');
+                // Force fresh session every time with timestamp
+                const timestamp = Date.now();
+                const userID = `mit-${userData.kerberos}-${timestamp}`;
+                addDebugStep(`Generated fresh userID: ${userID}`, 'success');
                 return userID;
             }
             
@@ -248,7 +250,7 @@
                     window.voiceflow.chat.load({
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'production', // Make sure this matches what you're testing
+                        versionID: 'development', // Make sure this matches what you're testing
                         userID: userID,
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
@@ -380,4 +382,3 @@
     </script>
 </body>
 </html>
-
