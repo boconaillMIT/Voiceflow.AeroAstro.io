@@ -49,22 +49,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             min-height: 400px;
         }
-        .debug-info {
-            background: #f1f1f1;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 20px;
-            font-size: 12px;
-            display: none;
-        }
-        .toggle-debug {
-            background: none;
-            border: none;
-            color: #666;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
@@ -97,12 +81,6 @@
         <div id="voiceflow-chat"></div>
     </div>
 
-    <button class="toggle-debug" onclick="toggleDebug()">🔧 Toggle Debug Info</button>
-    <div class="debug-info" id="debug-info">
-        <h4>User Metadata:</h4>
-        <pre id="debug-content"></pre>
-    </div>
-
     <script type="text/javascript">
         // Function to get URL parameters
         function getURLParameter(name) {
@@ -115,7 +93,6 @@
                 const stored = localStorage.getItem('user_metadata');
                 return stored ? JSON.parse(stored) : null;
             } catch (e) {
-                console.error('Error parsing stored metadata:', e);
                 return null;
             }
         }
@@ -166,13 +143,6 @@
                 
                 document.getElementById('user-info').classList.add('visible');
             }
-
-            // Update debug info
-            document.getElementById('debug-content').textContent = JSON.stringify({
-                userData: userData,
-                urlParams: Object.fromEntries(new URLSearchParams(window.location.search)),
-                storedData: getStoredMetadata()
-            }, null, 2);
         }
 
         // Generate userID for Voiceflow
@@ -189,12 +159,6 @@
             return userID;
         }
 
-        // Toggle debug information
-        function toggleDebug() {
-            const debugInfo = document.getElementById('debug-info');
-            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-        }
-
         // Load Voiceflow and set OAuth variables
         function loadVoiceflow(userID, userData) {
             (function(d, t) {
@@ -204,7 +168,7 @@
                     window.voiceflow.chat.load({
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'development', // Change to 'production' when ready
+                        versionID: 'production', '' //CHANGE HERE to 'development' as needed
                         userID: userID,
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
@@ -214,9 +178,6 @@
                     // Set Voiceflow variables with real OAuth data
                     setTimeout(() => {
                         if (window.voiceflow && window.voiceflow.chat) {
-                            console.log('Setting Voiceflow variables with real OAuth data:', userData);
-                            
-                            // This sets the variables that Voiceflow can access
                             window.voiceflow.chat.interact({
                                 type: 'set',
                                 payload: {
@@ -230,10 +191,8 @@
                                     user_authenticated: userData.authenticated || false
                                 }
                             });
-                            
-                            console.log('✅ Voiceflow variables set successfully!');
                         }
-                    }, 3000); // 3 second delay to ensure Voiceflow is fully loaded
+                    }, 3000);
                 };
                 v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
                 v.type = "text/javascript"; 
@@ -247,15 +206,7 @@
             updateUserDisplay(userData);
             const userID = generateUserID(userData);
             
-            // Store user data globally
             window.currentUser = userData;
-            
-            console.log('=== OAUTH DEBUG INFO ===');
-            console.log('userData from OAuth:', userData);
-            console.log('userData.kerberos:', userData.kerberos);
-            console.log('Generated userID for Voiceflow:', userID);
-            console.log('========================');
-            
             loadVoiceflow(userID, userData);
         }
 
