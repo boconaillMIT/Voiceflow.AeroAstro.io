@@ -1,17 +1,4 @@
-// Add verification debug message to Voiceflow
-                                setTimeout(() => {
-                                    addDebugStep('Sending debug verification to Voiceflow...', 'info');
-                                    try {
-                                        const debugMessage = `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department} | UserID: ${userID} | Kerberos: ${userData.kerberos}`;
-                                        window.voiceflow.chat.interact({
-                                            type: 'text',
-                                            payload: debugMessage
-                                        });
-                                        addDebugStep('✅ Debug message sent to Voiceflow', 'success');
-                                        
-                                        // Also send PKCE verification
-                                        const pkceVerifier = localStorage.getItem('pkce_verifier');
-                                        const pkceDebugMessage = `PKCE DEBUG: Verifier exists: ${!!pkceVerifier}, Length: ${pkceVerifier ? pkceVerifier.length : 0}, Preview: ${pkceVerifier ? pkceV<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -328,15 +315,27 @@
                                 setTimeout(() => {
                                     addDebugStep('Sending debug verification to Voiceflow...', 'info');
                                     try {
+                                        const debugMessage = `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department} | UserID: ${userID} | Kerberos: ${userData.kerberos}`;
                                         window.voiceflow.chat.interact({
                                             type: 'text',
-                                            payload: `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department}`
+                                            payload: debugMessage
                                         });
                                         addDebugStep('✅ Debug message sent to Voiceflow', 'success');
+                                        
+                                        // Also send PKCE verification
+                                        const pkceVerifier = localStorage.getItem('pkce_verifier');
+                                        const pkceDebugMessage = `PKCE DEBUG: Verifier exists: ${!!pkceVerifier}, Length: ${pkceVerifier ? pkceVerifier.length : 0}, Preview: ${pkceVerifier ? pkceVerifier.substring(0, 10) + '...' : 'NONE'}`;
+                                        setTimeout(() => {
+                                            window.voiceflow.chat.interact({
+                                                type: 'text',
+                                                payload: pkceDebugMessage
+                                            });
+                                        }, 1000);
+                                        
                                     } catch (debugError) {
                                         addDebugStep(`❌ Error sending debug message: ${debugError.message}`, 'error');
                                     }
-                                }, 500);
+                                }, 2000); // Increased delay to 2 seconds
                                 
                                 // Open chat after variables are set and verified
                                 setTimeout(() => {
