@@ -77,7 +77,7 @@
     </div>
 
     <div class="chat-container">
-        <p><b>Welcome! Your authentication is complete. To begin a conversation with the AeroAstro AI assistant, please click the chat icon in the bottom right corner.</b></p>
+        <p><b>Welcome! Starting your personalized AeroAstro AI assistant...</b></p>
         <div id="voiceflow-chat"></div>
     </div>
 
@@ -168,7 +168,7 @@
                     window.voiceflow.chat.load({
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'production', '' //CHANGE HERE to 'development' as needed
+                        versionID: 'production',
                         userID: userID,
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
@@ -178,6 +178,7 @@
                     // Set Voiceflow variables with real OAuth data
                     setTimeout(() => {
                         if (window.voiceflow && window.voiceflow.chat) {
+                            // Set variables with OAuth data
                             window.voiceflow.chat.interact({
                                 type: 'set',
                                 payload: {
@@ -191,8 +192,13 @@
                                     user_authenticated: userData.authenticated || false
                                 }
                             });
+                            
+                            // Automatically open chat after variables are set
+                            setTimeout(() => {
+                                window.voiceflow.chat.open();
+                            }, 500);
                         }
-                    }, 3000);
+                    }, 2000);
                 };
                 v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
                 v.type = "text/javascript"; 
@@ -203,9 +209,19 @@
         // Initialize the page
         function initializePage() {
             const userData = collectUserData();
+            
+            // Check if user has valid OAuth data
+            if (!userData.authenticated && !userData.kerberos) {
+                // No OAuth data - redirect to login after brief delay
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+                return;
+            }
+            
+            // Has OAuth data - proceed with chat
             updateUserDisplay(userData);
             const userID = generateUserID(userData);
-            
             window.currentUser = userData;
             loadVoiceflow(userID, userData);
         }
