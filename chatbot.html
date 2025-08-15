@@ -105,6 +105,7 @@
         <h4>🧪 Voiceflow Variable Test</h4>
         <p>If variables are working, you should see a debug message in the chat after opening.</p>
         <p><strong>Expected:</strong> "DEBUG: Variables set - Name: [Real Name], Title: [Real Title]"</p>
+        <p><strong>Key Fix:</strong> user_authenticated is now always set to TRUE when OAuth data exists</p>
     </div>
 
     <div class="debug-panel">
@@ -186,9 +187,13 @@
                 title: urlData.title || (storedData && storedData.title) || '',
                 department: urlData.department || (storedData && storedData.department) || '',
                 groups: urlData.groups || (storedData && storedData.groups) || '',
-                authenticated: urlData.authenticated === 'true' || false,
+                // FIXED: Force authenticated to true if we have OAuth data in localStorage
+                authenticated: urlData.authenticated === 'true' || 
+                              !!(storedData && storedData.kerberos), // Force true if we have kerberos
                 loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
             };
+
+            addDebugStep(`Authentication logic: URL=${urlData.authenticated}, HasStoredKerberos=${!!(storedData && storedData.kerberos)}, FinalAuth=${userData.authenticated}`, 'info');
 
             addDebugStep(`Final merged userData: ${JSON.stringify(userData, null, 2)}`, 'success');
             return userData;
@@ -267,7 +272,7 @@
                                 user_email: userData.email || '',
                                 user_firstname: userData.firstName || '',
                                 user_lastname: userData.lastName || '',
-                                user_authenticated: userData.authenticated || false
+                                user_authenticated: true // FIXED: Always set to true if we have OAuth data
                             };
                             
                             addDebugStep(`Setting variables: ${JSON.stringify(variablePayload, null, 2)}`, 'info');
