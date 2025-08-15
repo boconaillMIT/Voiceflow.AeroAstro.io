@@ -6,17 +6,17 @@
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 600px;
-      margin: 100px auto;
+      max-width: 800px;
+      margin: 50px auto;
       padding: 20px;
       background-color: #f8f9fa;
-      text-align: center;
     }
     .processing-container {
       background: white;
-      padding: 40px;
+      padding: 30px;
       border-radius: 15px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
     }
     .processing-message {
       color: #667eea;
@@ -27,14 +27,73 @@
       color: #e74c3c;
       font-size: 16px;
     }
+    .debug-info {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: left;
+      font-size: 12px;
+    }
+    .continue-btn {
+      background: #667eea;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
   </style>
 </head>
 <body>
   <div class="processing-container">
     <div class="processing-message" id="status">Processing your login...</div>
+    <div class="debug-info" id="debug" style="display: none;"></div>
+    <button class="continue-btn" id="continue-btn" style="display: none;" onclick="continueToChat()">Continue to Chat</button>
   </div>
 
   <script>
+    let finalUserData = null;
+
+    function showDebugInfo(data) {
+      const debugDiv = document.getElementById('debug');
+      const continueBtn = document.getElementById('continue-btn');
+      
+      debugDiv.innerHTML = `
+        <h4>🔍 Debug Info for Your IT Team:</h4>
+        <p><strong>What we extracted from your token:</strong></p>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+        <p><strong>Please share this with your administrator if the chat doesn't work properly.</strong></p>
+      `;
+      
+      debugDiv.style.display = 'block';
+      continueBtn.style.display = 'inline-block';
+      
+      document.getElementById('status').textContent = 'Login processed! Review the info below:';
+    }
+
+    function continueToChat() {
+      if (finalUserData) {
+        // Build URL with all user data for chatbot
+        const chatbotParams = new URLSearchParams({
+          name: finalUserData.name || '',
+          firstName: finalUserData.firstName || '',
+          lastName: finalUserData.lastName || '',
+          kerberos: finalUserData.kerberos || '',
+          email: finalUserData.email || '',
+          title: finalUserData.title || '',
+          department: finalUserData.department || '',
+          groups: finalUserData.groups ? finalUserData.groups.join(',') : '',
+          loginTime: finalUserData.loginTime || '',
+          authenticated: 'true'
+        });
+
+        window.location.href = `/chatbot.html?${chatbotParams.toString()}`;
+      }
+    }
+
     (async () => {
       try {
         // Get URL parameters
@@ -46,7 +105,7 @@
 
         // Check for OAuth errors
         if (error) {
-          document.getElementById('status').textContent = 'Login failed. Please try again.';
+          document.getElementById('status').textContent = 'Login failed: ' + (errorDescription || error);
           document.getElementById('status').className = 'error-message';
           return;
         }
@@ -70,34 +129,30 @@
         });
 
         if (!res.ok) {
-          throw new Error('Authentication failed');
+          const errorText = await res.text();
+          throw new Error('Authentication failed: ' + errorText);
         }
 
         const userData = await res.json();
+        finalUserData = userData;
 
         // Store complete user metadata
         localStorage.setItem('user_metadata', JSON.stringify(userData));
 
-        // Build URL with all user data for chatbot
-        const chatbotParams = new URLSearchParams({
-          name: userData.name || '',
-          firstName: userData.firstName || '',
-          lastName: userData.lastName || '',
-          kerberos: userData.kerberos || '',
-          email: userData.email || '',
-          title: userData.title || '',
-          department: userData.department || '',
-          groups: userData.groups ? userData.groups.join(',') : '',
-          loginTime: userData.loginTime || '',
-          authenticated: 'true'
-        });
-
-        // Redirect to chatbot
-        window.location.href = `/chatbot.html?${chatbotParams.toString()}`;
+        // Show debug info for troubleshooting
+        showDebugInfo(userData);
 
       } catch (err) {
-        document.getElementById('status').textContent = 'Login failed. Please try again.';
+        document.getElementById('status').textContent = 'Login failed: ' + err.message;
         document.getElementById('status').className = 'error-message';
+        
+        // Show error debug info
+        const debugDiv = document.getElementById('debug');
+        debugDiv.innerHTML = `
+          <h4>❌ Error Debug Info:</h4>
+          <pre>${err.message}\n\nPlease share this with your administrator.</pre>
+        `;
+        debugDiv.style.display = 'block';
       }
     })();
   </script>
