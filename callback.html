@@ -6,8 +6,8 @@
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 800px;
-      margin: 50px auto;
+      max-width: 900px;
+      margin: 30px auto;
       padding: 20px;
       background-color: #f8f9fa;
     }
@@ -27,56 +27,109 @@
       color: #e74c3c;
       font-size: 16px;
     }
-    .debug-info {
-      background: #f8f9fa;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+    .debug-panel {
+      background: #e8f4f8;
+      border: 2px solid #3498db;
+      border-radius: 8px;
       padding: 15px;
       margin: 20px 0;
+      font-size: 11px;
       text-align: left;
-      font-size: 12px;
     }
+    .debug-step {
+      margin: 8px 0;
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+      border-left: 4px solid #3498db;
+    }
+    .success { border-left-color: #27ae60; }
+    .warning { border-left-color: #f39c12; }
+    .error { border-left-color: #e74c3c; }
+    .info { border-left-color: #3498db; }
     .continue-btn {
       background: #667eea;
       color: white;
-      padding: 10px 20px;
+      padding: 12px 24px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       margin-top: 15px;
+      font-size: 16px;
+    }
+    .continue-btn:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+    pre {
+      font-size: 10px;
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      max-height: 200px;
     }
   </style>
 </head>
 <body>
   <div class="processing-container">
     <div class="processing-message" id="status">Processing your login...</div>
-    <div class="debug-info" id="debug" style="display: none;"></div>
-    <button class="continue-btn" id="continue-btn" style="display: none;" onclick="continueToChat()">Continue to Chat</button>
+    
+    <div class="debug-panel">
+      <h4>🔍 OAuth Callback Debug Flow</h4>
+      <div id="debug-steps"></div>
+    </div>
+    
+    <button class="continue-btn" id="continue-btn" style="display: none;" onclick="continueToChat()" disabled>
+      Continue to Chat (5s)
+    </button>
   </div>
 
   <script>
+    let debugSteps = [];
     let finalUserData = null;
+    let countdownTimer = null;
 
-    function showDebugInfo(data) {
-      const debugDiv = document.getElementById('debug');
-      const continueBtn = document.getElementById('continue-btn');
+    function addDebugStep(message, type = 'info', data = null) {
+      const timestamp = new Date().toLocaleTimeString();
+      debugSteps.push({timestamp, message, type, data});
       
-      debugDiv.innerHTML = `
-        <h4>🔍 Debug Info for Your IT Team:</h4>
-        <p><strong>What we extracted from your token:</strong></p>
-        <pre>${JSON.stringify(data, null, 2)}</pre>
-        <p><strong>Please share this with your administrator if the chat doesn't work properly.</strong></p>
-      `;
+      const debugDiv = document.getElementById('debug-steps');
+      debugDiv.innerHTML = debugSteps.map(step => {
+        let content = `<strong>[${step.timestamp}]</strong> ${step.message}`;
+        if (step.data) {
+          content += `<pre>${JSON.stringify(step.data, null, 2)}</pre>`;
+        }
+        return `<div class="debug-step ${step.type}">${content}</div>`;
+      }).join('');
       
-      debugDiv.style.display = 'block';
-      continueBtn.style.display = 'inline-block';
+      // Auto-scroll to bottom
+      debugDiv.scrollTop = debugDiv.scrollHeight;
       
-      document.getElementById('status').textContent = 'Login processed! Review the info below:';
+      console.log(`[CALLBACK DEBUG ${timestamp}] ${message}`, data || '');
+    }
+
+    function startCountdown() {
+      let seconds = 5;
+      const btn = document.getElementById('continue-btn');
+      
+      countdownTimer = setInterval(() => {
+        btn.textContent = `Continue to Chat (${seconds}s)`;
+        seconds--;
+        
+        if (seconds < 0) {
+          clearInterval(countdownTimer);
+          btn.textContent = 'Continue to Chat';
+          btn.disabled = false;
+          btn.style.background = '#667eea';
+        }
+      }, 1000);
     }
 
     function continueToChat() {
       if (finalUserData) {
-        // Build URL with all user data for chatbot
+        addDebugStep('Building chatbot URL with user data...', 'info');
+        
         const chatbotParams = new URLSearchParams({
           name: finalUserData.name || '',
           firstName: finalUserData.firstName || '',
@@ -90,69 +143,147 @@
           authenticated: 'true'
         });
 
-        window.location.href = `/chatbot.html?${chatbotParams.toString()}`;
+        const chatbotUrl = `/chatbot.html?${chatbotParams.toString()}`;
+        addDebugStep('Redirecting to chatbot...', 'success', {chatbotUrl});
+        
+        setTimeout(() => {
+          window.location.href = chatbotUrl;
+        }, 1000);
       }
     }
 
     (async () => {
       try {
+        addDebugStep('🚀 Callback processing started', 'info');
+        addDebugStep(`Browser: ${navigator.userAgent.substring(0, 80)}...`, 'info');
+        addDebugStep(`Current URL: ${window.location.href}`, 'info');
+
         // Get URL parameters
+        addDebugStep('Parsing URL parameters...', 'info');
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         const state = urlParams.get('state');
         const error = urlParams.get('error');
         const errorDescription = urlParams.get('error_description');
 
+        const urlParamsData = {
+          code: code ? `${code.substring(0, 20)}...` : null,
+          state: state,
+          error: error,
+          errorDescription: errorDescription,
+          allParams: Object.fromEntries(urlParams)
+        };
+        
+        addDebugStep('URL parameters parsed', 'success', urlParamsData);
+
         // Check for OAuth errors
         if (error) {
+          addDebugStep('❌ OAuth error detected', 'error', {error, errorDescription});
           document.getElementById('status').textContent = 'Login failed: ' + (errorDescription || error);
           document.getElementById('status').className = 'error-message';
           return;
         }
 
         // Get stored values from localStorage
+        addDebugStep('Retrieving stored PKCE data...', 'info');
         const verifier = localStorage.getItem('pkce_verifier');
         const savedState = localStorage.getItem('pkce_state');
 
-        // Validate required parameters
+        const storageData = {
+          verifier: verifier ? `${verifier.substring(0, 20)}...` : null,
+          savedState: savedState,
+          verifierLength: verifier ? verifier.length : 0,
+          localStorage_available: !!window.localStorage
+        };
+        
+        addDebugStep('PKCE data retrieved', verifier && savedState ? 'success' : 'warning', storageData);
+
+        // Detailed validation
+        addDebugStep('Validating OAuth parameters...', 'info');
+        
+        const validation = {
+          hasCode: !!code,
+          hasState: !!state,
+          hasVerifier: !!verifier,
+          hasSavedState: !!savedState,
+          statesMatch: state === savedState,
+          codeLength: code ? code.length : 0,
+          verifierLength: verifier ? verifier.length : 0
+        };
+
         if (!code || !state || !verifier || state !== savedState) {
-          document.getElementById('status').textContent = 'Login validation failed. Please try again.';
+          addDebugStep('❌ Validation failed', 'error', validation);
+          document.getElementById('status').textContent = 'Login validation failed';
           document.getElementById('status').className = 'error-message';
           return;
         }
 
+        addDebugStep('✅ All validations passed', 'success', validation);
+
+        // Prepare token exchange
+        addDebugStep('Preparing token exchange request...', 'info');
+        const requestPayload = { code, verifier };
+        
         // Exchange code for tokens
+        addDebugStep('Calling Netlify function for token exchange...', 'info');
+        
+        const requestStart = performance.now();
         const res = await fetch('/.netlify/functions/oidc-callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, verifier })
+          body: JSON.stringify(requestPayload)
+        });
+        const requestEnd = performance.now();
+
+        addDebugStep(`Token exchange request completed (${Math.round(requestEnd - requestStart)}ms)`, 
+                    res.ok ? 'success' : 'error', {
+          status: res.status,
+          statusText: res.statusText,
+          headers: Object.fromEntries(res.headers.entries())
         });
 
         if (!res.ok) {
           const errorText = await res.text();
+          addDebugStep('❌ Token exchange failed', 'error', {errorText});
           throw new Error('Authentication failed: ' + errorText);
         }
 
         const userData = await res.json();
         finalUserData = userData;
 
-        // Store complete user metadata
-        localStorage.setItem('user_metadata', JSON.stringify(userData));
+        addDebugStep('✅ Token exchange successful', 'success');
+        addDebugStep('User data extracted from token', 'success', userData);
 
-        // Show debug info for troubleshooting
-        showDebugInfo(userData);
+        // Store complete user metadata
+        addDebugStep('Storing user metadata in localStorage...', 'info');
+        localStorage.setItem('user_metadata', JSON.stringify(userData));
+        
+        // Verify storage
+        const storedMetadata = localStorage.getItem('user_metadata');
+        if (storedMetadata) {
+          addDebugStep('✅ User metadata stored successfully', 'success');
+        } else {
+          addDebugStep('⚠️ Failed to store user metadata', 'warning');
+        }
+
+        // Show success message and enable continue button
+        document.getElementById('status').textContent = 'Login processed successfully! Review the debug info below:';
+        document.getElementById('status').style.color = '#27ae60';
+        
+        const continueBtn = document.getElementById('continue-btn');
+        continueBtn.style.display = 'inline-block';
+        startCountdown();
+
+        addDebugStep('🎉 OAuth callback processing completed successfully', 'success');
 
       } catch (err) {
+        addDebugStep('❌ FATAL ERROR in callback processing', 'error', {
+          message: err.message,
+          stack: err.stack
+        });
+        
         document.getElementById('status').textContent = 'Login failed: ' + err.message;
         document.getElementById('status').className = 'error-message';
-        
-        // Show error debug info
-        const debugDiv = document.getElementById('debug');
-        debugDiv.innerHTML = `
-          <h4>❌ Error Debug Info:</h4>
-          <pre>${err.message}\n\nPlease share this with your administrator.</pre>
-        `;
-        debugDiv.style.display = 'block';
       }
     })();
   </script>
