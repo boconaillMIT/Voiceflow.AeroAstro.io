@@ -1,4 +1,17 @@
-<!DOCTYPE html>
+// Add verification debug message to Voiceflow
+                                setTimeout(() => {
+                                    addDebugStep('Sending debug verification to Voiceflow...', 'info');
+                                    try {
+                                        const debugMessage = `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department} | UserID: ${userID} | Kerberos: ${userData.kerberos}`;
+                                        window.voiceflow.chat.interact({
+                                            type: 'text',
+                                            payload: debugMessage
+                                        });
+                                        addDebugStep('✅ Debug message sent to Voiceflow', 'success');
+                                        
+                                        // Also send PKCE verification
+                                        const pkceVerifier = localStorage.getItem('pkce_verifier');
+                                        const pkceDebugMessage = `PKCE DEBUG: Verifier exists: ${!!pkceVerifier}, Length: ${pkceVerifier ? pkceVerifier.length : 0}, Preview: ${pkceVerifier ? pkceV<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -174,6 +187,20 @@
             const storedData = getStoredMetadata();
             addDebugStep(`localStorage Data: ${JSON.stringify(storedData, null, 2)}`, 'info');
 
+            // PKCE VERIFIER DEBUGGING
+            const currentVerifier = localStorage.getItem('pkce_verifier');
+            const currentState = localStorage.getItem('pkce_state');
+            addDebugStep(`🔐 PKCE Debug - Current verifier: ${currentVerifier ? currentVerifier.substring(0, 20) + '...' : 'MISSING'}`, 'warning');
+            addDebugStep(`🔐 PKCE Debug - Current state: ${currentState || 'MISSING'}`, 'warning');
+            addDebugStep(`🔐 PKCE Debug - Verifier length: ${currentVerifier ? currentVerifier.length : 0} chars`, 'warning');
+            
+            // Check if this matches the OAuth token's expected pattern
+            if (storedData && storedData.raw) {
+                addDebugStep(`🔐 PKCE Debug - Token issued at: ${new Date(storedData.raw.iat * 1000).toLocaleString()}`, 'warning');
+                addDebugStep(`🔐 PKCE Debug - Token expires at: ${new Date(storedData.raw.exp * 1000).toLocaleString()}`, 'warning');
+                addDebugStep(`🔐 PKCE Debug - Token nonce: ${storedData.raw.nonce || 'MISSING'}`, 'warning');
+            }
+
             // Merge data (URL params take precedence)
             const userData = {
                 name: urlData.name || (storedData && storedData.name) || 
@@ -194,6 +221,17 @@
             };
 
             addDebugStep(`Authentication logic: URL=${urlData.authenticated}, HasStoredKerberos=${!!(storedData && storedData.kerberos)}, FinalAuth=${userData.authenticated}`, 'info');
+
+            // CROSS-CONTAMINATION CHECK
+            if (userData.kerberos && currentVerifier) {
+                addDebugStep(`🔍 Cross-contamination check: User=${userData.kerberos}, VerifierExists=${!!currentVerifier}`, 'warning');
+                // Simple heuristic: if kerberos doesn't match expected pattern with verifier timing
+                const timeDiff = Date.now() - (storedData?.loginTime ? new Date(storedData.loginTime).getTime() : 0);
+                addDebugStep(`🔍 Time since OAuth: ${Math.round(timeDiff / 1000)} seconds`, 'warning');
+                if (timeDiff > 300000) { // More than 5 minutes
+                    addDebugStep(`⚠️  OAuth data is old (>5min) but verifier still exists - possible contamination`, 'error');
+                }
+            }
 
             addDebugStep(`Final merged userData: ${JSON.stringify(userData, null, 2)}`, 'success');
             return userData;
@@ -249,7 +287,7 @@
                     window.voiceflow.chat.load({
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'production', // Make sure this matches what you're testing
+                        versionID: 'development', // Make sure this matches what you're testing
                         userID: userID,
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
@@ -298,7 +336,7 @@
                                     } catch (debugError) {
                                         addDebugStep(`❌ Error sending debug message: ${debugError.message}`, 'error');
                                     }
-                                }, 2000);
+                                }, 500);
                                 
                                 // Open chat after variables are set and verified
                                 setTimeout(() => {
@@ -381,5 +419,3 @@
     </script>
 </body>
 </html>
-
-
