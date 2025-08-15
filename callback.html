@@ -4,42 +4,39 @@
   <meta charset="utf-8">
   <title>Processing login</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
-    .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-    .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
-    .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
-    .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-    pre { background: #f8f9fa; padding: 10px; border-radius: 3px; font-size: 12px; overflow-x: auto; max-height: 300px; }
-    .debug-section { margin: 20px 0; }
-    .metadata-preview { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 600px;
+      margin: 100px auto;
+      padding: 20px;
+      background-color: #f8f9fa;
+      text-align: center;
+    }
+    .processing-container {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .processing-message {
+      color: #667eea;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .error-message {
+      color: #e74c3c;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
-  <h2>Processing Login...</h2>
-  <div id="status"></div>
-  
-  <div class="debug-section">
-    <h3>Debug Information</h3>
-    <div id="debug-info"></div>
+  <div class="processing-container">
+    <div class="processing-message" id="status">Processing your login...</div>
   </div>
 
   <script>
-    function addStatus(message, type = 'info') {
-      const statusDiv = document.getElementById('status');
-      const timestamp = new Date().toLocaleTimeString();
-      statusDiv.innerHTML += `<div class="status ${type}">[${timestamp}] ${message}</div>`;
-      console.log(`[${timestamp}] ${message}`);
-    }
-
-    function updateDebugInfo(info) {
-      document.getElementById('debug-info').innerHTML = `<pre>${JSON.stringify(info, null, 2)}</pre>`;
-    }
-
     (async () => {
       try {
-        addStatus('Starting callback processing...', 'info');
-
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
@@ -47,14 +44,10 @@
         const error = urlParams.get('error');
         const errorDescription = urlParams.get('error_description');
 
-        addStatus('Retrieved URL parameters', 'info');
-
-        // Check for OAuth errors first
+        // Check for OAuth errors
         if (error) {
-          addStatus(`OAuth Error: ${error}`, 'error');
-          if (errorDescription) {
-            addStatus(`Error Description: ${errorDescription}`, 'error');
-          }
+          document.getElementById('status').textContent = 'Login failed. Please try again.';
+          document.getElementById('status').className = 'error-message';
           return;
         }
 
@@ -62,171 +55,49 @@
         const verifier = localStorage.getItem('pkce_verifier');
         const savedState = localStorage.getItem('pkce_state');
 
-        // Debug info
-        const debugInfo = {
-          url_params: {
-            code: code ? `${code.substring(0, 10)}...` : null,
-            state: state,
-            error: error,
-            error_description: errorDescription
-          },
-          localStorage_data: {
-            verifier: verifier ? `${verifier.substring(0, 10)}...` : null,
-            saved_state: savedState,
-            verifier_length: verifier ? verifier.length : 0,
-            state_matches: state === savedState
-          },
-          validation: {
-            has_code: !!code,
-            has_state: !!state,
-            has_verifier: !!verifier,
-            states_match: state === savedState
-          }
-        };
-
-        updateDebugInfo(debugInfo);
-
-        // Validation
-        if (!code) {
-          addStatus('ERROR: No authorization code received', 'error');
+        // Validate required parameters
+        if (!code || !state || !verifier || state !== savedState) {
+          document.getElementById('status').textContent = 'Login validation failed. Please try again.';
+          document.getElementById('status').className = 'error-message';
           return;
         }
 
-        if (!state) {
-          addStatus('ERROR: No state parameter received', 'error');
-          return;
-        }
-
-        if (!verifier) {
-          addStatus('ERROR: No PKCE verifier found in localStorage', 'error');
-          return;
-        }
-
-        if (state !== savedState) {
-          addStatus(`ERROR: State mismatch! Received: ${state}, Expected: ${savedState}`, 'error');
-          return;
-        }
-
-        addStatus('All parameters validated successfully', 'success');
-
-        // Prepare request to Netlify function
-        const requestPayload = { code, verifier };
-        addStatus('Sending request to Netlify function...', 'info');
-
+        // Exchange code for tokens
         const res = await fetch('/.netlify/functions/oidc-callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestPayload)
+          body: JSON.stringify({ code, verifier })
         });
-
-        addStatus(`Received response: ${res.status} ${res.statusText}`, res.ok ? 'success' : 'error');
 
         if (!res.ok) {
-          const responseText = await res.text();
-          addStatus(`Response body: ${responseText}`, 'error');
-          
-          // Try to parse as JSON for better error display
-          let errorData;
-          try {
-            errorData = JSON.parse(responseText);
-            updateDebugInfo({
-              ...debugInfo,
-              error_response: errorData
-            });
-          } catch (e) {
-            updateDebugInfo({
-              ...debugInfo,
-              error_response: { raw_text: responseText }
-            });
-          }
-
-          throw new Error(`Token exchange failed: ${responseText}`);
+          throw new Error('Authentication failed');
         }
 
-        const json = await res.json();
-        addStatus('Successfully received user data', 'success');
+        const userData = await res.json();
 
-        // Store ALL metadata for Voiceflow access
-        localStorage.setItem('user_metadata', JSON.stringify(json));
-        addStatus('Stored complete user metadata for Voiceflow', 'success');
+        // Store complete user metadata
+        localStorage.setItem('user_metadata', JSON.stringify(userData));
 
-        // Display metadata preview
-        const metadataPreview = document.createElement('div');
-        metadataPreview.className = 'metadata-preview';
-        metadataPreview.innerHTML = `
-          <h4>🎉 Login Successful! User Metadata:</h4>
-          <p><strong>Name:</strong> ${json.name || 'Not provided'}</p>
-          <p><strong>First Name:</strong> ${json.firstName || 'Not provided'}</p>
-          <p><strong>Last Name:</strong> ${json.lastName || 'Not provided'}</p>
-          <p><strong>Kerberos:</strong> ${json.kerberos || 'Not provided'}</p>
-          <p><strong>Email:</strong> ${json.email || 'Not provided'}</p>
-          <p><strong>Title:</strong> ${json.title || 'Not provided'}</p>
-          <p><strong>Department:</strong> ${json.department || 'Not provided'}</p>
-          <p><strong>Groups:</strong> ${json.groups && json.groups.length ? json.groups.join(', ') : 'None'}</p>
-          <p><strong>Login Time:</strong> ${json.loginTime}</p>
-        `;
-        document.getElementById('status').appendChild(metadataPreview);
-
-        // Update debug info with response
-        updateDebugInfo({
-          ...debugInfo,
-          success_response: {
-            name: json.name,
-            firstName: json.firstName,
-            lastName: json.lastName,
-            email: json.email,
-            kerberos: json.kerberos,
-            title: json.title,
-            department: json.department,
-            groups: json.groups,
-            loginTime: json.loginTime,
-            // Don't show raw token data for security
-            has_raw_data: !!json.raw
-          }
-        });
-
-        addStatus('Redirecting to chatbot with all metadata...', 'info');
-
-        // Build comprehensive URL parameters for Voiceflow
+        // Build URL with all user data for chatbot
         const chatbotParams = new URLSearchParams({
-          // Core identity
-          name: json.name || '',
-          firstName: json.firstName || '',
-          lastName: json.lastName || '',
-          kerberos: json.kerberos || '',
-          email: json.email || '',
-          
-          // Professional info
-          title: json.title || '',
-          department: json.department || '',
-          
-          // Additional data
-          groups: json.groups ? json.groups.join(',') : '',
-          loginTime: json.loginTime || '',
-          
-          // Flag to indicate authenticated user
+          name: userData.name || '',
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          kerberos: userData.kerberos || '',
+          email: userData.email || '',
+          title: userData.title || '',
+          department: userData.department || '',
+          groups: userData.groups ? userData.groups.join(',') : '',
+          loginTime: userData.loginTime || '',
           authenticated: 'true'
         });
 
-        const chatbotUrl = `/chatbot.html?${chatbotParams.toString()}`;
-        
-        console.log('Complete metadata being passed to Voiceflow:', json);
-        console.log('Chatbot URL:', chatbotUrl);
-
-        setTimeout(() => {
-          window.location.href = chatbotUrl;
-        }, 3000); // 3 second delay to see the metadata preview
+        // Redirect to chatbot
+        window.location.href = `/chatbot.html?${chatbotParams.toString()}`;
 
       } catch (err) {
-        addStatus(`FATAL ERROR: ${err.message}`, 'error');
-        console.error('Callback error:', err);
-        
-        updateDebugInfo({
-          fatal_error: {
-            message: err.message,
-            stack: err.stack
-          }
-        });
+        document.getElementById('status').textContent = 'Login failed. Please try again.';
+        document.getElementById('status').className = 'error-message';
       }
     })();
   </script>
