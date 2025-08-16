@@ -74,6 +74,18 @@
             margin: 20px 0;
             font-size: 14px;
         }
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .logout-btn:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
 <body>
@@ -99,13 +111,14 @@
             <span class="info-label">Department:</span>
             <span class="info-value" id="display-department">Loading...</span>
         </div>
+        <button class="logout-btn" onclick="logout()">Logout & Clear Session</button>
     </div>
 
     <div class="voiceflow-test">
         <h4>🧪 Voiceflow Variable Test</h4>
         <p>If variables are working, you should see a debug message in the chat after opening.</p>
         <p><strong>Expected:</strong> "DEBUG: Variables set - Name: [Real Name], Title: [Real Title]"</p>
-        <p><strong>Key Fix:</strong> user_authenticated is now always set to TRUE when OAuth data exists</p>
+        <p><strong>Key Fix:</strong> Session isolation and proper token validation</p>
     </div>
 
     <div class="debug-panel">
@@ -135,27 +148,96 @@
             console.log(`[DEBUG ${timestamp}] ${message}`);
         }
 
+        // Function to clear all stored authentication data
+        function clearAuthData() {
+            addDebugStep('Clearing all authentication data...', 'warning');
+            
+            // Clear OAuth-related localStorage items
+            const keysToRemove = [
+                'user_metadata',
+                'pkce_verifier', 
+                'pkce_state',
+                'oauth_state',
+                'access_token',
+                'id_token',
+                'refresh_token',
+                'userID' // Also clear the generated userID to force regeneration
+            ];
+            
+            keysToRemove.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    addDebugStep(`Cleared localStorage key: ${key}`, 'info');
+                }
+            });
+            
+            // Clear sessionStorage as well
+            sessionStorage.clear();
+            addDebugStep('Cleared sessionStorage', 'info');
+        }
+
+        // Logout function
+        function logout() {
+            addDebugStep('User initiated logout', 'info');
+            clearAuthData();
+            window.location.href = 'login.html';
+        }
+
         // Function to get URL parameters
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
         }
 
-        // Function to get stored metadata
-        function getStoredMetadata() {
+        // Function to validate stored metadata freshness
+        function validateStoredMetadata() {
             try {
                 const stored = localStorage.getItem('user_metadata');
-                return stored ? JSON.parse(stored) : null;
+                if (!stored) return null;
+                
+                const metadata = JSON.parse(stored);
+                addDebugStep(`Found stored metadata for user: ${metadata.kerberos || 'unknown'}`, 'info');
+                
+                // Check if token is expired
+                if (metadata.raw && metadata.raw.exp) {
+                    const expTime = metadata.raw.exp * 1000;
+                    const now = Date.now();
+                    const timeLeft = expTime - now;
+                    
+                    addDebugStep(`Token expires in: ${Math.round(timeLeft / 1000)} seconds`, 'info');
+                    
+                    if (timeLeft <= 0) {
+                        addDebugStep('❌ Token has expired, clearing data', 'error');
+                        clearAuthData();
+                        return null;
+                    }
+                    
+                    // Warn if token expires soon (less than 5 minutes)
+                    if (timeLeft < 300000) {
+                        addDebugStep('⚠️ Token expires in less than 5 minutes', 'warning');
+                    }
+                }
+                
+                // Validate required fields
+                if (!metadata.kerberos) {
+                    addDebugStep('❌ Stored metadata missing kerberos ID', 'error');
+                    clearAuthData();
+                    return null;
+                }
+                
+                return metadata;
+                
             } catch (e) {
-                addDebugStep(`Error parsing localStorage: ${e.message}`, 'error');
+                addDebugStep(`❌ Error validating stored metadata: ${e.message}`, 'error');
+                clearAuthData();
                 return null;
             }
         }
 
-        // Collect all user data from URL params and localStorage
+        // Enhanced user data collection with validation
         function collectUserData() {
             addDebugStep('Starting user data collection...', 'info');
             
-            // Get data from URL parameters
+            // First, check for fresh URL parameters (indicating new login)
             const urlData = {
                 name: getURLParameter('name'),
                 firstName: getURLParameter('firstName'),
@@ -170,25 +252,30 @@
 
             addDebugStep(`URL Parameters: ${JSON.stringify(urlData, null, 2)}`, 'info');
 
-            // Get data from localStorage
-            const storedData = getStoredMetadata();
-            addDebugStep(`localStorage Data: ${JSON.stringify(storedData, null, 2)}`, 'info');
-
-            // PKCE VERIFIER DEBUGGING
-            const currentVerifier = localStorage.getItem('pkce_verifier');
-            const currentState = localStorage.getItem('pkce_state');
-            addDebugStep(`🔐 PKCE Debug - Current verifier: ${currentVerifier ? currentVerifier.substring(0, 20) + '...' : 'MISSING'}`, 'warning');
-            addDebugStep(`🔐 PKCE Debug - Current state: ${currentState || 'MISSING'}`, 'warning');
-            addDebugStep(`🔐 PKCE Debug - Verifier length: ${currentVerifier ? currentVerifier.length : 0} chars`, 'warning');
-            
-            // Check if this matches the OAuth token's expected pattern
-            if (storedData && storedData.raw) {
-                addDebugStep(`🔐 PKCE Debug - Token issued at: ${new Date(storedData.raw.iat * 1000).toLocaleString()}`, 'warning');
-                addDebugStep(`🔐 PKCE Debug - Token expires at: ${new Date(storedData.raw.exp * 1000).toLocaleString()}`, 'warning');
-                addDebugStep(`🔐 PKCE Debug - Token nonce: ${storedData.raw.nonce || 'MISSING'}`, 'warning');
+            // If we have fresh URL data, prioritize it and clear old stored data
+            if (urlData.kerberos && urlData.authenticated === 'true') {
+                addDebugStep('Fresh OAuth data detected from URL, clearing old stored data', 'info');
+                
+                // Check if this is a different user than what's stored
+                const currentStored = localStorage.getItem('user_metadata');
+                if (currentStored) {
+                    try {
+                        const parsed = JSON.parse(currentStored);
+                        if (parsed.kerberos && parsed.kerberos !== urlData.kerberos) {
+                            addDebugStep(`⚠️ User change detected: ${parsed.kerberos} → ${urlData.kerberos}`, 'warning');
+                            clearAuthData();
+                        }
+                    } catch (e) {
+                        addDebugStep('Error parsing existing metadata, clearing', 'warning');
+                        clearAuthData();
+                    }
+                }
             }
 
-            // Merge data (URL params take precedence)
+            // Get validated stored data
+            const storedData = validateStoredMetadata();
+
+            // Merge data (URL params take precedence for fresh logins)
             const userData = {
                 name: urlData.name || (storedData && storedData.name) || 
                       (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
@@ -201,24 +288,10 @@
                 title: urlData.title || (storedData && storedData.title) || '',
                 department: urlData.department || (storedData && storedData.department) || '',
                 groups: urlData.groups || (storedData && storedData.groups) || '',
-                // FIXED: Force authenticated to true if we have OAuth data in localStorage
-                authenticated: urlData.authenticated === 'true' || 
-                              !!(storedData && storedData.kerberos), // Force true if we have kerberos
+                authenticated: (urlData.authenticated === 'true') || 
+                              !!(storedData && storedData.kerberos),
                 loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
             };
-
-            addDebugStep(`Authentication logic: URL=${urlData.authenticated}, HasStoredKerberos=${!!(storedData && storedData.kerberos)}, FinalAuth=${userData.authenticated}`, 'info');
-
-            // CROSS-CONTAMINATION CHECK
-            if (userData.kerberos && currentVerifier) {
-                addDebugStep(`🔍 Cross-contamination check: User=${userData.kerberos}, VerifierExists=${!!currentVerifier}`, 'warning');
-                // Simple heuristic: if kerberos doesn't match expected pattern with verifier timing
-                const timeDiff = Date.now() - (storedData?.loginTime ? new Date(storedData.loginTime).getTime() : 0);
-                addDebugStep(`🔍 Time since OAuth: ${Math.round(timeDiff / 1000)} seconds`, 'warning');
-                if (timeDiff > 300000) { // More than 5 minutes
-                    addDebugStep(`⚠️  OAuth data is old (>5min) but verifier still exists - possible contamination`, 'error');
-                }
-            }
 
             addDebugStep(`Final merged userData: ${JSON.stringify(userData, null, 2)}`, 'success');
             return userData;
@@ -228,7 +301,7 @@
         function updateUserDisplay(userData) {
             addDebugStep('Updating user display...', 'info');
             
-            if (userData.authenticated || userData.kerberos) {
+            if (userData.authenticated && userData.kerberos) {
                 document.getElementById('display-name').textContent = userData.name || 'Not provided';
                 document.getElementById('display-kerberos').textContent = userData.kerberos || 'Not provided';
                 document.getElementById('display-title').textContent = userData.title || 'Not provided';
@@ -241,23 +314,25 @@
             }
         }
 
-        // Generate userID for Voiceflow
+        // Generate userID for Voiceflow with user isolation
         function generateUserID(userData) {
             addDebugStep('Generating userID for Voiceflow...', 'info');
             
             if (userData.kerberos) {
-                // REVERT: Use original stable userID format
-                const userID = `mit-${userData.kerberos}`;
-                addDebugStep(`Generated stable userID: ${userID}`, 'success');
+                // Use kerberos-based ID with timestamp to ensure uniqueness across sessions
+                const sessionId = Date.now().toString(36).substr(-4);
+                const userID = `mit-${userData.kerberos}-${sessionId}`;
+                addDebugStep(`Generated session-specific userID: ${userID}`, 'success');
                 return userID;
             }
             
-            let userID = localStorage.getItem('userID');
+            // Fallback for users without kerberos
+            let userID = sessionStorage.getItem('temp_userID'); // Use sessionStorage instead of localStorage
             if (!userID) {
                 userID = 'user-' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('userID', userID);
+                sessionStorage.setItem('temp_userID', userID);
             }
-            addDebugStep(`Fallback userID: ${userID}`, 'warning');
+            addDebugStep(`Fallback temporary userID: ${userID}`, 'warning');
             return userID;
         }
 
@@ -270,26 +345,24 @@
                 v.onload = function() {
                     addDebugStep('Voiceflow script loaded', 'success');
                     
-                    // Load Voiceflow
+                    // Load Voiceflow with user-specific session
                     window.voiceflow.chat.load({
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'production', // Make sure this matches what you're testing
+                        versionID: 'production',
                         userID: userID,
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
                         }
                     });
                     
-                    addDebugStep('Voiceflow chat.load() called with development version', 'success');
+                    addDebugStep(`Voiceflow loaded for userID: ${userID}`, 'success');
                     
-                    // Set Voiceflow variables with real OAuth data
+                    // Set Voiceflow variables with validated OAuth data
                     setTimeout(() => {
-                        addDebugStep('Attempting to set Voiceflow variables...', 'info');
+                        addDebugStep('Setting Voiceflow variables...', 'info');
                         
                         if (window.voiceflow && window.voiceflow.chat) {
-                            addDebugStep('window.voiceflow.chat is available', 'success');
-                            
                             const variablePayload = {
                                 user_name: userData.name || '',
                                 user_kerberos: userData.kerberos || '',
@@ -298,7 +371,8 @@
                                 user_email: userData.email || '',
                                 user_firstname: userData.firstName || '',
                                 user_lastname: userData.lastName || '',
-                                user_authenticated: true // FIXED: Always set to true if we have OAuth data
+                                user_authenticated: userData.authenticated || false,
+                                session_id: userID // Add session tracking
                             };
                             
                             addDebugStep(`Setting variables: ${JSON.stringify(variablePayload, null, 2)}`, 'info');
@@ -311,53 +385,21 @@
                                 });
                                 addDebugStep('✅ Variables set successfully!', 'success');
                                 
-                                // Add verification debug message to Voiceflow
+                                // Send verification debug message
                                 setTimeout(() => {
-                                    addDebugStep('Sending debug verification to Voiceflow...', 'info');
-                                    try {
-                                        const debugMessage = `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department} | UserID: ${userID} | Kerberos: ${userData.kerberos}`;
-                                        window.voiceflow.chat.interact({
-                                            type: 'text',
-                                            payload: debugMessage
-                                        });
-                                        addDebugStep('✅ Debug message sent to Voiceflow', 'success');
-                                        
-                                        // Also send PKCE verification
-                                        const pkceVerifier = localStorage.getItem('pkce_verifier');
-                                        const pkceDebugMessage = `PKCE DEBUG: Verifier exists: ${!!pkceVerifier}, Length: ${pkceVerifier ? pkceVerifier.length : 0}, Preview: ${pkceVerifier ? pkceVerifier.substring(0, 10) + '...' : 'NONE'}`;
-                                        setTimeout(() => {
-                                            window.voiceflow.chat.interact({
-                                                type: 'text',
-                                                payload: pkceDebugMessage
-                                            });
-                                        }, 1000);
-                                        
-                                    } catch (debugError) {
-                                        addDebugStep(`❌ Error sending debug message: ${debugError.message}`, 'error');
-                                    }
-                                }, 2000); // Increased delay to 2 seconds
+                                    const debugMessage = `DEBUG: Session started for ${variablePayload.user_name} (${variablePayload.user_kerberos}) - ${variablePayload.user_title} | Session: ${userID}`;
+                                    window.voiceflow.chat.interact({
+                                        type: 'text',
+                                        payload: debugMessage
+                                    });
+                                    addDebugStep('✅ Debug message sent to Voiceflow', 'success');
+                                }, 1000);
                                 
-                                // Open chat after variables are set and verified
+                                // Open chat
                                 setTimeout(() => {
-                                    addDebugStep('Opening Voiceflow chat...', 'info');
-                                    try {
-                                        window.voiceflow.chat.open();
-                                        addDebugStep('✅ Chat opened successfully!', 'success');
-                                        
-                                        // Final verification - set variables again after opening
-                                        setTimeout(() => {
-                                            addDebugStep('Final variable verification after chat opened...', 'info');
-                                            window.voiceflow.chat.interact({
-                                                type: 'set',
-                                                payload: variablePayload
-                                            });
-                                            addDebugStep('✅ Final variables set after chat opened', 'success');
-                                        }, 1000);
-                                        
-                                    } catch (openError) {
-                                        addDebugStep(`❌ Error opening chat: ${openError.message}`, 'error');
-                                    }
-                                }, 1500);
+                                    window.voiceflow.chat.open();
+                                    addDebugStep('✅ Chat opened successfully!', 'success');
+                                }, 2000);
                                 
                             } catch (setError) {
                                 addDebugStep(`❌ Error setting variables: ${setError.message}`, 'error');
@@ -376,7 +418,6 @@
                 v.type = "text/javascript"; 
                 s.parentNode.insertBefore(v, s);
                 
-                addDebugStep('Voiceflow script tag added to page', 'info');
             })(document, 'script');
         }
 
@@ -386,22 +427,28 @@
             
             const userData = collectUserData();
             
-            // Check if user has valid OAuth data
-            if (!userData.authenticated && !userData.kerberos) {
-                addDebugStep('No OAuth data found, redirecting to login...', 'warning');
+            // Validate authentication
+            if (!userData.authenticated || !userData.kerberos) {
+                addDebugStep('❌ No valid authentication found, redirecting to login...', 'error');
+                document.body.innerHTML = `
+                    <div class="header">
+                        <h1>Authentication Required</h1>
+                        <p>Redirecting to login page...</p>
+                    </div>
+                `;
                 setTimeout(() => {
                     window.location.href = 'login.html';
-                }, 3000);
+                }, 2000);
                 return;
             }
             
-            addDebugStep('Valid OAuth data found, proceeding with chat initialization', 'success');
+            addDebugStep(`✅ Valid authentication confirmed for: ${userData.kerberos}`, 'success');
             
             updateUserDisplay(userData);
             const userID = generateUserID(userData);
             
+            // Store current user globally (but don't rely on localStorage)
             window.currentUser = userData;
-            addDebugStep('Global currentUser variable set', 'info');
             
             loadVoiceflow(userID, userData);
         }
@@ -409,13 +456,20 @@
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             addDebugStep('DOM Content Loaded', 'info');
+            
+            // Add session info to debug
+            addDebugStep(`Session Start: ${new Date().toISOString()}`, 'info');
+            addDebugStep(`Browser: ${navigator.userAgent.substring(0, 50)}...`, 'info');
+            addDebugStep(`Current URL: ${window.location.href}`, 'info');
+            
             initializePage();
         });
-        
-        // Add browser info
-        addDebugStep(`Browser: ${navigator.userAgent}`, 'info');
-        addDebugStep(`Current URL: ${window.location.href}`, 'info');
+
+        // Clear data on page unload to prevent cross-contamination
+        window.addEventListener('beforeunload', function() {
+            // Only clear session data, not permanent OAuth tokens
+            sessionStorage.clear();
+        });
     </script>
 </body>
 </html>
-
