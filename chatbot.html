@@ -139,44 +139,7 @@
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
         }
-// ADD THIS FUNCTION - detects and handles user changes
-function handleUserChange(incomingKerberos) {
-    if (!incomingKerberos) return; // No incoming user data
-    
-    const existingData = localStorage.getItem('user_metadata');
-    if (!existingData) return; // No existing data to conflict with
-    
-    try {
-        const existing = JSON.parse(existingData);
-        const existingKerberos = existing.kerberos;
-        
-        if (existingKerberos && existingKerberos !== incomingKerberos) {
-            addDebugStep(`🔄 User change detected: ${existingKerberos} → ${incomingKerberos}`, 'warning');
-            addDebugStep('Clearing previous user data...', 'info');
-            
-            // Clear all OAuth-related localStorage
-            const keysToRemove = [
-                'user_metadata',
-                'pkce_verifier',
-                'pkce_state',
-                'oauth_state',
-                'userID'
-            ];
-            
-            keysToRemove.forEach(key => {
-                localStorage.removeItem(key);
-                addDebugStep(`Cleared: ${key}`, 'info');
-            });
-            
-            addDebugStep('✅ Previous user data cleared', 'success');
-        } else if (existingKerberos === incomingKerberos) {
-            addDebugStep(`✅ Same user continuing session: ${incomingKerberos}`, 'success');
-        }
-    } catch (e) {
-        addDebugStep(`Error parsing existing data, clearing all: ${e.message}`, 'warning');
-        localStorage.clear();
-    }
-}
+
         // Function to get stored metadata
         function getStoredMetadata() {
             try {
@@ -189,33 +152,23 @@ function handleUserChange(incomingKerberos) {
         }
 
         // Collect all user data from URL params and localStorage
-// Collect all user data from URL params and localStorage
-function collectUserData() {
-    addDebugStep('Starting user data collection...', 'info');
-    
-    // Get data from URL parameters
-    const urlData = {
-        name: getURLParameter('name'),
-        firstName: getURLParameter('firstName'),
-        lastName: getURLParameter('lastName'),
-        kerberos: getURLParameter('kerberos'),
-        email: getURLParameter('email'),
-        title: getURLParameter('title'),
-        department: getURLParameter('department'),
-        groups: getURLParameter('groups'),
-        authenticated: getURLParameter('authenticated')
-    };
+        function collectUserData() {
+            addDebugStep('Starting user data collection...', 'info');
+            
+            // Get data from URL parameters
+            const urlData = {
+                name: getURLParameter('name'),
+                firstName: getURLParameter('firstName'),
+                lastName: getURLParameter('lastName'),
+                kerberos: getURLParameter('kerberos'),
+                email: getURLParameter('email'),
+                title: getURLParameter('title'),
+                department: getURLParameter('department'),
+                groups: getURLParameter('groups'),
+                authenticated: getURLParameter('authenticated')
+            };
 
-    addDebugStep(`URL Parameters: ${JSON.stringify(urlData, null, 2)}`, 'info');
-
-    // CHECK FOR USER CHANGES BEFORE PROCEEDING
-    if (urlData.kerberos) {
-        handleUserChange(urlData.kerberos);
-    }
-
-    // Get data from localStorage (now cleaned if different user)
-    const storedData = getStoredMetadata();
-    // ... rest of existing function unchanged
+            addDebugStep(`URL Parameters: ${JSON.stringify(urlData, null, 2)}`, 'info');
 
             // Get data from localStorage
             const storedData = getStoredMetadata();
@@ -472,6 +425,3 @@ function collectUserData() {
     </script>
 </body>
 </html>
-
-
-
