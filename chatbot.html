@@ -383,7 +383,14 @@
         // Initialize the page
         function initializePage() {
             addDebugStep('Page initialization started', 'info');
+            // ADD THIS to see if you have cross-contamination
+            const allLocalStorageKeys = Object.keys(localStorage);
+            addDebugStep(`All localStorage keys: ${allLocalStorageKeys.join(', ')}`, 'warning');
             
+            if (localStorage.getItem('user_metadata')) {
+                const existing = JSON.parse(localStorage.getItem('user_metadata'));
+                addDebugStep(`Found existing user data for: ${existing.kerberos || 'unknown'}`, 'warning');
+            }
             const userData = collectUserData();
             
             // Check if user has valid OAuth data
@@ -418,3 +425,4 @@
     </script>
 </body>
 </html>
+
