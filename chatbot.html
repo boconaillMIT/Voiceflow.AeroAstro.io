@@ -174,12 +174,45 @@
             const storedData = getStoredMetadata();
             addDebugStep(`localStorage Data: ${JSON.stringify(storedData, null, 2)}`, 'info');
 
-            // PKCE VERIFIER DEBUGGING
+            // PKCE VERIFIER DEBUGGING AND CLEANUP
             const currentVerifier = localStorage.getItem('pkce_verifier');
             const currentState = localStorage.getItem('pkce_state');
             addDebugStep(`🔐 PKCE Debug - Current verifier: ${currentVerifier ? currentVerifier.substring(0, 20) + '...' : 'MISSING'}`, 'warning');
             addDebugStep(`🔐 PKCE Debug - Current state: ${currentState || 'MISSING'}`, 'warning');
             addDebugStep(`🔐 PKCE Debug - Verifier length: ${currentVerifier ? currentVerifier.length : 0} chars`, 'warning');
+            
+            // PKCE CLEANUP: Remove stale PKCE tokens if we have fresh OAuth data from URL
+            if (urlData.authenticated === 'true' && urlData.kerberos) {
+                if (currentVerifier || currentState) {
+                    addDebugStep('🧹 Fresh OAuth detected, clearing stale PKCE tokens...', 'info');
+                    localStorage.removeItem('pkce_verifier');
+                    localStorage.removeItem('pkce_state');
+                    localStorage.removeItem('oauth_state');
+                    addDebugStep('✅ Stale PKCE tokens cleared', 'success');
+                }
+            } else if (currentVerifier || currentState) {
+                // Check if PKCE tokens are old (more than 10 minutes)
+                const pkceTimestamp = localStorage.getItem('pkce_timestamp');
+                if (pkceTimestamp) {
+                    const age = Date.now() - parseInt(pkceTimestamp);
+                    addDebugStep(`🕐 PKCE token age: ${Math.round(age / 1000)} seconds`, 'info');
+                    if (age > 600000) { // 10 minutes
+                        addDebugStep('🧹 PKCE tokens are old (>10min), clearing...', 'warning');
+                        localStorage.removeItem('pkce_verifier');
+                        localStorage.removeItem('pkce_state');
+                        localStorage.removeItem('oauth_state');
+                        localStorage.removeItem('pkce_timestamp');
+                        addDebugStep('✅ Old PKCE tokens cleared', 'success');
+                    }
+                } else {
+                    // No timestamp means really old tokens, clear them
+                    addDebugStep('🧹 PKCE tokens have no timestamp, clearing...', 'warning');
+                    localStorage.removeItem('pkce_verifier');
+                    localStorage.removeItem('pkce_state');
+                    localStorage.removeItem('oauth_state');
+                    addDebugStep('✅ Timestampless PKCE tokens cleared', 'success');
+                }
+            }
             
             // Check if this matches the OAuth token's expected pattern
             if (storedData && storedData.raw) {
@@ -425,3 +458,4 @@
     </script>
 </body>
 </html>
+
