@@ -139,7 +139,44 @@
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
         }
-
+// ADD THIS FUNCTION - detects and handles user changes
+function handleUserChange(incomingKerberos) {
+    if (!incomingKerberos) return; // No incoming user data
+    
+    const existingData = localStorage.getItem('user_metadata');
+    if (!existingData) return; // No existing data to conflict with
+    
+    try {
+        const existing = JSON.parse(existingData);
+        const existingKerberos = existing.kerberos;
+        
+        if (existingKerberos && existingKerberos !== incomingKerberos) {
+            addDebugStep(`🔄 User change detected: ${existingKerberos} → ${incomingKerberos}`, 'warning');
+            addDebugStep('Clearing previous user data...', 'info');
+            
+            // Clear all OAuth-related localStorage
+            const keysToRemove = [
+                'user_metadata',
+                'pkce_verifier',
+                'pkce_state',
+                'oauth_state',
+                'userID'
+            ];
+            
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                addDebugStep(`Cleared: ${key}`, 'info');
+            });
+            
+            addDebugStep('✅ Previous user data cleared', 'success');
+        } else if (existingKerberos === incomingKerberos) {
+            addDebugStep(`✅ Same user continuing session: ${incomingKerberos}`, 'success');
+        }
+    } catch (e) {
+        addDebugStep(`Error parsing existing data, clearing all: ${e.message}`, 'warning');
+        localStorage.clear();
+    }
+}
         // Function to get stored metadata
         function getStoredMetadata() {
             try {
@@ -425,4 +462,5 @@
     </script>
 </body>
 </html>
+
 
