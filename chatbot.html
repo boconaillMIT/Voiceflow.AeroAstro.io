@@ -189,23 +189,33 @@ function handleUserChange(incomingKerberos) {
         }
 
         // Collect all user data from URL params and localStorage
-        function collectUserData() {
-            addDebugStep('Starting user data collection...', 'info');
-            
-            // Get data from URL parameters
-            const urlData = {
-                name: getURLParameter('name'),
-                firstName: getURLParameter('firstName'),
-                lastName: getURLParameter('lastName'),
-                kerberos: getURLParameter('kerberos'),
-                email: getURLParameter('email'),
-                title: getURLParameter('title'),
-                department: getURLParameter('department'),
-                groups: getURLParameter('groups'),
-                authenticated: getURLParameter('authenticated')
-            };
+// Collect all user data from URL params and localStorage
+function collectUserData() {
+    addDebugStep('Starting user data collection...', 'info');
+    
+    // Get data from URL parameters
+    const urlData = {
+        name: getURLParameter('name'),
+        firstName: getURLParameter('firstName'),
+        lastName: getURLParameter('lastName'),
+        kerberos: getURLParameter('kerberos'),
+        email: getURLParameter('email'),
+        title: getURLParameter('title'),
+        department: getURLParameter('department'),
+        groups: getURLParameter('groups'),
+        authenticated: getURLParameter('authenticated')
+    };
 
-            addDebugStep(`URL Parameters: ${JSON.stringify(urlData, null, 2)}`, 'info');
+    addDebugStep(`URL Parameters: ${JSON.stringify(urlData, null, 2)}`, 'info');
+
+    // CHECK FOR USER CHANGES BEFORE PROCEEDING
+    if (urlData.kerberos) {
+        handleUserChange(urlData.kerberos);
+    }
+
+    // Get data from localStorage (now cleaned if different user)
+    const storedData = getStoredMetadata();
+    // ... rest of existing function unchanged
 
             // Get data from localStorage
             const storedData = getStoredMetadata();
@@ -462,5 +472,6 @@ function handleUserChange(incomingKerberos) {
     </script>
 </body>
 </html>
+
 
 
