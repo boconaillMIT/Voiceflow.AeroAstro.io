@@ -155,7 +155,7 @@
         function collectUserData() {
             addDebugStep('Starting user data collection...', 'info');
             
-            // Get data from URL parameters
+            // Get data from URL parameters first
             const urlData = {
                 name: getURLParameter('name'),
                 firstName: getURLParameter('firstName'),
@@ -221,7 +221,7 @@
                 addDebugStep(`🔐 PKCE Debug - Token nonce: ${storedData.raw.nonce || 'MISSING'}`, 'warning');
             }
 
-            // Merge data (URL params take precedence)
+            // Merge data (URL params take precedence over localStorage)
             const userData = {
                 name: urlData.name || (storedData && storedData.name) || 
                       (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
@@ -234,7 +234,7 @@
                 title: urlData.title || (storedData && storedData.title) || '',
                 department: urlData.department || (storedData && storedData.department) || '',
                 groups: urlData.groups || (storedData && storedData.groups) || '',
-                // FIXED: Force authenticated to true if we have OAuth data in localStorage
+                // FIXED: Force authenticated to true if we have OAuth data in localStorage OR URL
                 authenticated: urlData.authenticated === 'true' || 
                               !!(storedData && storedData.kerberos), // Force true if we have kerberos
                 loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
@@ -274,13 +274,16 @@
             }
         }
 
-        // Generate userID for Voiceflow
+        // Generate userID for Voiceflow with URL fallback
         function generateUserID(userData) {
             addDebugStep('Generating userID for Voiceflow...', 'info');
             
-            if (userData.kerberos) {
-                // REVERT: Use original stable userID format
-                const userID = `mit-${userData.kerberos}`;
+            // Get kerberos from URL parameters directly as backup
+            const urlKerberos = new URLSearchParams(window.location.search).get('kerberos');
+            const kerberos = userData.kerberos || urlKerberos;
+            
+            if (kerberos) {
+                const userID = `mit-${kerberos}`;
                 addDebugStep(`Generated stable userID: ${userID}`, 'success');
                 return userID;
             }
@@ -303,22 +306,21 @@
                 v.onload = function() {
                     addDebugStep('Voiceflow script loaded', 'success');
                     
-                    // Load Voiceflow
-                    //p = 66df25f295ab4c2554ea24ad d=66de313d6a0d94e1bd71c5ce
-                        url: 'https://general-runtime.voiceflow.com',
+                    // Load Voiceflow with the working project ID
                     window.voiceflow.chat.load({
-                        verify: { projectID: '66df25f295ab4c2554ea24ad' },
-                        versionID: 'production', // Make sure this matches what you're testing
+                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' }, // Use the working project ID
+                        url: 'https://general-runtime.voiceflow.com',
+                        versionID: 'production',
                         userID: userID,
                         assistant: {
-                            persistence: 'memory' // Set your preferred persistence option here - can be memory, localStorage, sessionStorage
-                          },
+                            persistence: 'memory'
+                        },
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
                         }
                     });
                     
-                    addDebugStep('Voiceflow chat.load() called with development version', 'success');
+                    addDebugStep('Voiceflow chat.load() called with production version', 'success');
                     
                     // Set Voiceflow variables with real OAuth data
                     setTimeout(() => {
@@ -335,64 +337,49 @@
                                 user_email: userData.email || '',
                                 user_firstname: userData.firstName || '',
                                 user_lastname: userData.lastName || '',
-                                user_authenticated: true // FIXED: Always set to true if we have OAuth data
+                                user_authenticated: true // Always set to true if we have OAuth data
                             };
                             
                             addDebugStep(`Setting variables: ${JSON.stringify(variablePayload, null, 2)}`, 'info');
                             
                             try {
-                                // Set variables
+                                // Set variables using the correct method
                                 window.voiceflow.chat.interact({
                                     type: 'set',
                                     payload: variablePayload
                                 });
                                 addDebugStep('✅ Variables set successfully!', 'success');
                                 
-                                // Add verification debug message to Voiceflow
+                                // Send debug verification message
                                 setTimeout(() => {
                                     addDebugStep('Sending debug verification to Voiceflow...', 'info');
                                     try {
                                         const debugMessage = `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department} | UserID: ${userID} | Kerberos: ${userData.kerberos}`;
-                                            // Set variables with launch
-                                            window.voiceflow.chat.interact({
-                                                type: 'launch'
-                                            }).then(() => {
-                                                // Set variables after launch
-                                                setTimeout(() => {
-                                                    window.voiceflow.chat.interact({
-                                                        type: 'set', 
-                                                        payload: variablePayload
-                                                    });
-                                                }, 1000);
-                                            });
-                                        addDebugStep('✅ Debug message sent to Voiceflow', 'success');
                                         
-                                        // Also send PKCE verification
-                                        const pkceVerifier = localStorage.getItem('pkce_verifier');
-                                        const pkceDebugMessage = `PKCE DEBUG: Verifier exists: ${!!pkceVerifier}, Length: ${pkceVerifier ? pkceVerifier.length : 0}, Preview: ${pkceVerifier ? pkceVerifier.substring(0, 10) + '...' : 'NONE'}`;
-                                        setTimeout(() => {
-                                            window.voiceflow.chat.interact({
-                                                type: 'text',
-                                                payload: pkceDebugMessage
-                                            });
-                                        }, 1000);
+                                        window.voiceflow.chat.interact({
+                                            type: 'text',
+                                            payload: {
+                                                query: debugMessage
+                                            }
+                                        });
+                                        
+                                        addDebugStep('✅ Debug message sent to Voiceflow', 'success');
                                         
                                     } catch (debugError) {
                                         addDebugStep(`❌ Error sending debug message: ${debugError.message}`, 'error');
                                     }
-                                }, 2000); // Increased delay to 2 seconds
+                                }, 2000);
                                 
-                                // Open chat after variables are set and verified
+                                // Open chat after variables are set
                                 setTimeout(() => {
                                     addDebugStep('Opening Voiceflow chat...', 'info');
                                     try {
                                         window.voiceflow.chat.open();
                                         addDebugStep('✅ Chat opened successfully!', 'success');
-                                                                                                                      
                                     } catch (openError) {
                                         addDebugStep(`❌ Error opening chat: ${openError.message}`, 'error');
                                     }
-                                }, 1500);
+                                }, 3000);
                                 
                             } catch (setError) {
                                 addDebugStep(`❌ Error setting variables: ${setError.message}`, 'error');
@@ -418,7 +405,7 @@
         // Initialize the page
         function initializePage() {
             addDebugStep('Page initialization started', 'info');
-            // ADD THIS to see if you have cross-contamination
+            
             const allLocalStorageKeys = Object.keys(localStorage);
             addDebugStep(`All localStorage keys: ${allLocalStorageKeys.join(', ')}`, 'warning');
             
@@ -426,6 +413,7 @@
                 const existing = JSON.parse(localStorage.getItem('user_metadata'));
                 addDebugStep(`Found existing user data for: ${existing.kerberos || 'unknown'}`, 'warning');
             }
+            
             const userData = collectUserData();
             
             // Check if user has valid OAuth data
@@ -460,11 +448,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
