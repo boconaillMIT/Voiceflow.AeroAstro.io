@@ -353,10 +353,18 @@
                                     addDebugStep('Sending debug verification to Voiceflow...', 'info');
                                     try {
                                         const debugMessage = `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department} | UserID: ${userID} | Kerberos: ${userData.kerberos}`;
-                                        window.voiceflow.chat.interact({
-                                            type: 'text',
-                                            payload: debugMessage
-                                        });
+                                            // Set variables with launch
+                                            window.voiceflow.chat.interact({
+                                                type: 'launch'
+                                            }).then(() => {
+                                                // Set variables after launch
+                                                setTimeout(() => {
+                                                    window.voiceflow.chat.interact({
+                                                        type: 'set', 
+                                                        payload: variablePayload
+                                                    });
+                                                }, 1000);
+                                            });
                                         addDebugStep('✅ Debug message sent to Voiceflow', 'success');
                                         
                                         // Also send PKCE verification
@@ -452,6 +460,7 @@
     </script>
 </body>
 </html>
+
 
 
 
