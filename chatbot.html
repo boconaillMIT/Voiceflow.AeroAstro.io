@@ -376,17 +376,7 @@
                                     try {
                                         window.voiceflow.chat.open();
                                         addDebugStep('✅ Chat opened successfully!', 'success');
-                                        
-                                        // Final verification - set variables again after opening
-                                        setTimeout(() => {
-                                            addDebugStep('Final variable verification after chat opened...', 'info');
-                                            window.voiceflow.chat.interact({
-                                                type: 'set',
-                                                payload: variablePayload
-                                            });
-                                            addDebugStep('✅ Final variables set after chat opened', 'success');
-                                        }, 1000);
-                                        
+                                                                                                                      
                                     } catch (openError) {
                                         addDebugStep(`❌ Error opening chat: ${openError.message}`, 'error');
                                     }
@@ -458,4 +448,5 @@
     </script>
 </body>
 </html>
+
 
