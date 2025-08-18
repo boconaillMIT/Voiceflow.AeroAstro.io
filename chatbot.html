@@ -310,6 +310,9 @@
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' }, 
                         versionID: 'production', // Make sure this matches what you're testing
                         userID: userID,
+                        assistant: {
+                            persistence: 'memory' // Set your preferred persistence option here - can be memory, localStorage, sessionStorage
+                          }
                         voice: {
                             url: "https://runtime-api.voiceflow.com"
                         }
@@ -449,6 +452,7 @@
     </script>
 </body>
 </html>
+
 
 
 
