@@ -254,7 +254,22 @@
         addDebugStep('✅ Token exchange successful', 'success');
         addDebugStep('User data extracted from token', 'success', userData);
 
-        // Store complete user metadata
+        // 🔑 Normalization step: make sure no fields are empty or undefined
+const safe = (val) => val || "Unknown";  
+
+// Apply normalization to the key fields Voiceflow expects
+userData.firstName  = safe(userData.firstName);
+userData.lastName   = safe(userData.lastName);
+userData.email      = safe(userData.email);
+userData.kerberos   = safe(userData.kerberos);
+userData.title      = safe(userData.title);
+userData.department = safe(userData.department);
+
+// Re-assign normalized object to finalUserData
+finalUserData = userData;
+
+addDebugStep('✅ Normalized user data (no undefined values)', 'success', userData);
+// Store complete user metadata
         addDebugStep('Storing user metadata in localStorage...', 'info');
         localStorage.setItem('user_metadata', JSON.stringify(userData));
         
