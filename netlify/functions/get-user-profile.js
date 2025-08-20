@@ -28,15 +28,7 @@ exports.handler = async (event) => {
     // For now, we'll return mock data based on kerberos
     // You can enhance this later to pull from a database or LDAP
     const mockUserData = {
-      // Add your real kerberos for testing
-      'oconaill': {
-        name: 'Brian O\'Conaill',
-        firstName: 'Brian',
-        lastName: 'O\'Conaill',
-        title: 'Doofus of Administration and Finance',
-        department: 'Department of Aeronautics and Astronautics',
-        email: 'oconaill@mit.edu'
-      },
+
       // Add other test users
       'jdoe': {
         name: 'John Doe',
