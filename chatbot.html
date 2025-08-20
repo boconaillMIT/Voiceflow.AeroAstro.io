@@ -323,8 +323,7 @@
 // ADD THIS RIGHT AFTER THE VOICEFLOW LOAD SECTION
 addDebugStep('Voiceflow chat.load() called with production version', 'success');
 
-// DIAGNOSTIC CODE - ADD THIS ENTIRE BLOCK
-// CENTERED DIAGNOSTIC CODE
+// Updated diagnostic code with centered positioning
 function setupVoiceflowDiagnostics() {
     // Store the original interact function
     const originalInteract = window.voiceflow.chat.interact;
@@ -373,9 +372,8 @@ function setupVoiceflowDiagnostics() {
         const timestamp = new Date().toLocaleTimeString();
         const entry = document.createElement('div');
         
-        const isCorrectUser = data.payload?.currentUser?.name === "Eunice Nganga" || data.payload?.user_name === "Eunice Nganga";
-        const borderColor = isCorrectUser ? '#10B981' : '#EF4444';
-        const bgColor = isCorrectUser ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+        const borderColor = '#3B82F6'; // Blue for all entries
+        const bgColor = 'rgba(59, 130, 246, 0.1)';
         
         entry.style.cssText = `
             margin: 12px 0;
@@ -389,7 +387,7 @@ function setupVoiceflowDiagnostics() {
         let content = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <strong style="color: #fff;">[${timestamp}] ${type}</strong>
             <span style="background: ${borderColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">
-                ${isCorrectUser ? '✅ EUNICE' : '❌ WRONG USER'}
+                📊 DATA
             </span>
         </div>`;
         
@@ -418,6 +416,12 @@ function setupVoiceflowDiagnostics() {
             }
         }
         
+        if (response) {
+            content += `<div style="margin-top: 8px;"><strong style="color: #F87171;">Response:</strong>
+                <pre style="margin: 4px 0 0 0; font-size: 9px; color: #FCA5A5; white-space: pre-wrap;">${JSON.stringify(response, null, 2)}</pre>
+            </div>`;
+        }
+        
         entry.innerHTML = content;
         diagnosticContent.appendChild(entry);
         
@@ -433,33 +437,46 @@ function setupVoiceflowDiagnostics() {
         addDiagnosticEntry('SENT', {
             method: 'interact',
             payload: payload,
-            userID: userID,
+            userID: this.userID || 'unknown',
             timestamp: new Date().toISOString()
         });
         
-        return originalInteract.call(this, payload);
+        // Call original function and capture response
+        const result = originalInteract.call(this, payload);
+        
+        // If result is a promise, handle response
+        if (result && typeof result.then === 'function') {
+            result.then(response => {
+                addDiagnosticEntry('RECEIVED', {}, response);
+            }).catch(error => {
+                addDiagnosticEntry('ERROR', {}, error);
+            });
+        }
+        
+        return result;
     };
     
-    // Show initial state
+    // Capture initial load parameters
     addDiagnosticEntry('SENT', {
         method: 'initial_load',
         payload: {
             projectID: '66de313d6a0d94e1bd71c5ce',
-            userID: userID,
-            currentUser: userData,
-            urlParams: Object.fromEntries(new URLSearchParams(window.location.search))
+            userID: window.generateUserID ? window.generateUserID(window.currentUser) : 'unknown',
+            currentUser: window.currentUser,
+            urlParams: Object.fromEntries(new URLSearchParams(window.location.search)),
+            localStorage: localStorage.getItem('user_metadata')
         }
     });
     
-    addDebugStep('✅ Voiceflow diagnostics enabled', 'success');
+    console.log('🔍 Voiceflow diagnostics enabled - centered at top of page');
 }
 
+// Call this function after Voiceflow loads
 setTimeout(() => {
     if (window.voiceflow && window.voiceflow.chat) {
         setupVoiceflowDiagnostics();
     }
 }, 3000);
-// END CENTERED DIAGNOSTIC CODE
 
                     
                     // Set Voiceflow variables with real OAuth data
@@ -616,5 +633,6 @@ setTimeout(() => {
     </script>
 </body>
 </html>
+
 
 
