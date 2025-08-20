@@ -324,97 +324,143 @@
 addDebugStep('Voiceflow chat.load() called with production version', 'success');
 
 // DIAGNOSTIC CODE - ADD THIS ENTIRE BLOCK
-setTimeout(() => {
-    if (window.voiceflow && window.voiceflow.chat) {
-        addDebugStep('Setting up Voiceflow diagnostics...', 'info');
+// CENTERED DIAGNOSTIC CODE
+function setupVoiceflowDiagnostics() {
+    // Store the original interact function
+    const originalInteract = window.voiceflow.chat.interact;
+    
+    // Create diagnostic display - CENTERED AT TOP
+    const diagnosticDiv = document.createElement('div');
+    diagnosticDiv.id = 'voiceflow-diagnostics';
+    diagnosticDiv.style.cssText = `
+        position: fixed;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 600px;
+        max-width: 90vw;
+        max-height: 400px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 11px;
+        overflow-y: auto;
+        z-index: 10000;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+    `;
+    
+    diagnosticDiv.innerHTML = `
+        <div style="text-align: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #fff; font-size: 16px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                🔍 VOICEFLOW SESSION DIAGNOSTICS
+            </h3>
+            <div style="font-size: 10px; opacity: 0.8; margin-top: 5px;">
+                Live session monitoring • Project: 66de313d6a0d94e1bd71c5ce
+            </div>
+        </div>
+        <div id="diagnostic-content" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px;"></div>
+    `;
+    
+    document.body.appendChild(diagnosticDiv);
+    
+    const diagnosticContent = document.getElementById('diagnostic-content');
+    
+    function addDiagnosticEntry(type, data, response = null) {
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
         
-        // Store the original interact function
-        const originalInteract = window.voiceflow.chat.interact;
+        const isCorrectUser = data.payload?.currentUser?.name === "Eunice Nganga" || data.payload?.user_name === "Eunice Nganga";
+        const borderColor = isCorrectUser ? '#10B981' : '#EF4444';
+        const bgColor = isCorrectUser ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
         
-        // Create diagnostic display
-        const diagnosticDiv = document.createElement('div');
-        diagnosticDiv.id = 'voiceflow-diagnostics';
-        diagnosticDiv.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            width: 400px;
-            max-height: 500px;
-            background: #f8f9fa;
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: monospace;
-            font-size: 12px;
-            overflow-y: auto;
-            z-index: 10000;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        entry.style.cssText = `
+            margin: 12px 0;
+            padding: 12px;
+            background: ${bgColor};
+            border-radius: 6px;
+            border-left: 4px solid ${borderColor};
+            border: 1px solid rgba(255,255,255,0.1);
         `;
-        diagnosticDiv.innerHTML = '<h4>🔍 Voiceflow Diagnostics</h4><div id="diagnostic-content"></div>';
-        document.body.appendChild(diagnosticDiv);
         
-        const diagnosticContent = document.getElementById('diagnostic-content');
+        let content = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: #fff;">[${timestamp}] ${type}</strong>
+            <span style="background: ${borderColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">
+                ${isCorrectUser ? '✅ EUNICE' : '❌ WRONG USER'}
+            </span>
+        </div>`;
         
-        function addDiagnosticEntry(type, data, response = null) {
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.style.cssText = `
-                margin: 10px 0;
-                padding: 8px;
-                background: white;
-                border-radius: 4px;
-                border-left: 4px solid ${type === 'SENT' ? '#28a745' : '#dc3545'};
-            `;
+        if (type === 'SENT') {
+            content += `<div style="margin-bottom: 6px;"><strong style="color: #E5E7EB;">Method:</strong> ${data.method || 'interact'}</div>`;
             
-            let content = `<strong>[${timestamp}] ${type}</strong><br/>`;
-            
-            if (type === 'SENT') {
-                content += `<strong>Method:</strong> ${data.method || 'interact'}<br/>`;
-                content += `<strong>Payload:</strong><pre>${JSON.stringify(data.payload, null, 2)}</pre>`;
+            if (data.payload?.currentUser) {
+                content += `<div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; margin: 8px 0;">
+                    <div style="color: #F3F4F6; font-weight: bold; margin-bottom: 6px;">👤 USER DATA:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
+                        <div><span style="color: #9CA3AF;">Name:</span> <span style="color: #FFF;">${data.payload.currentUser.name || 'NOT SET'}</span></div>
+                        <div><span style="color: #9CA3AF;">Kerberos:</span> <span style="color: #FFF;">${data.payload.currentUser.kerberos || 'NOT SET'}</span></div>
+                        <div><span style="color: #9CA3AF;">Email:</span> <span style="color: #FFF;">${data.payload.currentUser.email || 'NOT SET'}</span></div>
+                        <div><span style="color: #9CA3AF;">Title:</span> <span style="color: #FFF;">${data.payload.currentUser.title || 'NOT SET'}</span></div>
+                    </div>
+                    <div style="margin-top: 8px;"><span style="color: #9CA3AF;">UserID:</span> <span style="color: #FFF;">${data.payload.userID || 'NOT SET'}</span></div>
+                </div>`;
+            } else if (data.payload?.query) {
+                content += `<div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin: 6px 0; font-size: 10px; color: #E5E7EB;">
+                    ${data.payload.query}
+                </div>`;
+            } else {
+                content += `<div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin: 6px 0;">
+                    <pre style="margin: 0; font-size: 10px; color: #E5E7EB; white-space: pre-wrap;">${JSON.stringify(data.payload, null, 2)}</pre>
+                </div>`;
             }
-            
-            if (response) {
-                content += `<strong>Response:</strong><pre>${JSON.stringify(response, null, 2)}</pre>`;
-            }
-            
-            entry.innerHTML = content;
-            diagnosticContent.appendChild(entry);
-            
-            // Auto scroll to bottom
-            diagnosticDiv.scrollTop = diagnosticDiv.scrollHeight;
-            
-            // Console log for backup
-            console.log(`[VOICEFLOW ${type}]`, data, response || '');
         }
         
-        // Intercept all interact calls
-        window.voiceflow.chat.interact = function(payload) {
-            addDiagnosticEntry('SENT', {
-                method: 'interact',
-                payload: payload,
-                userID: userID,
-                timestamp: new Date().toISOString()
-            });
-            
-            // Call original function
-            return originalInteract.call(this, payload);
-        };
+        entry.innerHTML = content;
+        diagnosticContent.appendChild(entry);
         
-        // Show initial state
+        // Auto scroll to bottom
+        diagnosticDiv.scrollTop = diagnosticDiv.scrollHeight;
+        
+        // Console log for backup
+        console.log(`[VOICEFLOW ${type}]`, data, response || '');
+    }
+    
+    // Intercept all interact calls
+    window.voiceflow.chat.interact = function(payload) {
         addDiagnosticEntry('SENT', {
-            method: 'initial_load',
-            payload: {
-                projectID: '66de313d6a0d94e1bd71c5ce',
-                userID: userID,
-                currentUser: userData,
-                urlParams: Object.fromEntries(new URLSearchParams(window.location.search))
-            }
+            method: 'interact',
+            payload: payload,
+            userID: userID,
+            timestamp: new Date().toISOString()
         });
         
-        addDebugStep('✅ Voiceflow diagnostics enabled', 'success');
+        return originalInteract.call(this, payload);
+    };
+    
+    // Show initial state
+    addDiagnosticEntry('SENT', {
+        method: 'initial_load',
+        payload: {
+            projectID: '66de313d6a0d94e1bd71c5ce',
+            userID: userID,
+            currentUser: userData,
+            urlParams: Object.fromEntries(new URLSearchParams(window.location.search))
+        }
+    });
+    
+    addDebugStep('✅ Voiceflow diagnostics enabled', 'success');
+}
+
+setTimeout(() => {
+    if (window.voiceflow && window.voiceflow.chat) {
+        setupVoiceflowDiagnostics();
     }
 }, 3000);
-// END DIAGNOSTIC CODE
+// END CENTERED DIAGNOSTIC CODE
+
                     
                     // Set Voiceflow variables with real OAuth data
                     setTimeout(() => {
@@ -570,4 +616,5 @@ setTimeout(() => {
     </script>
 </body>
 </html>
+
 
