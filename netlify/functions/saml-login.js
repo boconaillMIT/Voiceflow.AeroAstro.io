@@ -1,8 +1,5 @@
 // netlify/functions/saml-login.js
 exports.handler = async () => {
-  const kerberos = 'oconaill@mit.edu';
-  const name = "Brian O'Conaill";
-  const username = 'oconaill';
 
   return {
     statusCode: 200,
