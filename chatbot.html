@@ -308,10 +308,30 @@
                     
                     // Load Voiceflow with the working project ID
                     window.voiceflow.chat.load({
-                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' }, // Use the working project ID
+                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
                         versionID: 'production',
                         userID: userID,
+                        launch: { 
+                            event: { 
+                                type: 'launch', 
+                                payload: { 
+                                    user_name: userData.name || '',
+                                    user_kerberos: userData.kerberos || '',
+                                    user_title: userData.title || '',
+                                    user_department: userData.department || '',
+                                    user_email: userData.email || '',
+                                    user_firstname: userData.firstName || '',
+                                    user_lastname: userData.lastName || '',
+                                    user_authenticated: userData.authenticated || false,
+                                    user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
+                                    user_logintime: userData.loginTime || '',
+                                    debug_timestamp: new Date().toISOString(),
+                                    debug_userid: userID,
+                                    debug_url: window.location.href
+                                } 
+                            } 
+                        },
                         assistant: {
                             persistence: 'memory'
                         },
@@ -633,6 +653,7 @@ setTimeout(() => {
     </script>
 </body>
 </html>
+
 
 
 
