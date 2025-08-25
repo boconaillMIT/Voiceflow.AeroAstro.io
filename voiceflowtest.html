@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voiceflow Variable Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-controls {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        input, button {
+            margin: 5px;
+            padding: 8px;
+        }
+        #console-output {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+    <h1>Voiceflow Variable Test</h1>
+    
+    <div class="test-controls">
+        <h3>Test Variables</h3>
+        <input type="text" id="test-name" placeholder="Test Name" value="John Doe">
+        <input type="text" id="test-email" placeholder="Test Email" value="john@test.com">
+        <input type="text" id="test-title" placeholder="Test Title" value="Test Manager">
+        <br>
+        <button onclick="loadVoiceflowWithTestData()">Load Voiceflow with Test Data</button>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <div id="console-output"></div>
+
+    <div id="voiceflow-chat"></div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '';
+        }
+
+        function loadVoiceflowWithTestData() {
+            // Get test values from inputs
+            const testName = document.getElementById('test-name').value;
+            const testEmail = document.getElementById('test-email').value;
+            const testTitle = document.getElementById('test-title').value;
+            
+            log('Starting Voiceflow load with test data...');
+            log(`Name: ${testName}, Email: ${testEmail}, Title: ${testTitle}`);
+
+            // Clear any existing Voiceflow
+            if (window.voiceflow && window.voiceflow.chat) {
+                try {
+                    window.voiceflow.chat.destroy();
+                    log('Destroyed existing Voiceflow instance');
+                } catch (e) {
+                    log('No existing instance to destroy');
+                }
+            }
+
+            // Load Voiceflow script
+            const script = document.createElement('script');
+            script.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
+            script.type = "text/javascript";
+            
+            script.onload = function() {
+                log('Voiceflow script loaded');
+                
+                // Generate unique userID for this test
+                const testUserID = 'test-' + Date.now();
+                log(`Using userID: ${testUserID}`);
+
+                try {
+                    // Load with variables in launch payload
+                    window.voiceflow.chat.load({
+                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
+                        url: 'https://general-runtime.voiceflow.com',
+                        versionID: 'production',
+                        userID: testUserID,
+                        launch: { 
+                            event: { 
+                                type: 'launch', 
+                                payload: { 
+                                    user_name: testName,
+                                    user_email: testEmail,
+                                    user_title: testTitle,
+                                    user_kerberos: 'test-user',
+                                    user_authenticated: true,
+                                    test_timestamp: new Date().toISOString()
+                                } 
+                            } 
+                        },
+                        assistant: {
+                            persistence: 'memory'
+                        },
+                        voice: {
+                            url: "https://runtime-api.voiceflow.com"
+                        }
+                    });
+
+                    log('Voiceflow loaded with launch payload');
+
+                    // Open chat after short delay
+                    setTimeout(() => {
+                        try {
+                            window.voiceflow.chat.open();
+                            log('Chat opened - check if variables appear correctly');
+                        } catch (e) {
+                            log('Error opening chat: ' + e.message);
+                        }
+                    }, 2000);
+
+                } catch (e) {
+                    log('Error loading Voiceflow: ' + e.message);
+                }
+            };
+
+            script.onerror = function() {
+                log('Error loading Voiceflow script');
+            };
+
+            document.head.appendChild(script);
+        }
+
+        log('Test page ready. Enter test values and click "Load Voiceflow"');
+    </script>
+</body>
+</html>
