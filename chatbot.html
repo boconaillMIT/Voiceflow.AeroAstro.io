@@ -49,31 +49,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             min-height: 400px;
         }
-        .debug-panel {
-            background: #e8f4f8;
-            border: 2px solid #3498db;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 12px;
-        }
-        .debug-step {
-            margin: 10px 0;
-            padding: 8px;
-            background: white;
-            border-radius: 4px;
-        }
-        .success { border-left: 4px solid #27ae60; }
-        .warning { border-left: 4px solid #f39c12; }
-        .error { border-left: 4px solid #e74c3c; }
-        .voiceflow-test {
-            background: #fff3cd;
-            border: 2px solid #f39c12;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
@@ -101,40 +76,12 @@
         </div>
     </div>
 
-    <div class="voiceflow-test">
-        <h4>🧪 Voiceflow Variable Test</h4>
-        <p>If variables are working, you should see a debug message in the chat after opening.</p>
-        <p><strong>Expected:</strong> "DEBUG: Variables set - Name: [Real Name], Title: [Real Title]"</p>
-        <p><strong>Key Fix:</strong> user_authenticated is now always set to TRUE when OAuth data exists</p>
-    </div>
-
-    <div class="debug-panel">
-        <h3>🔍 Debug Information</h3>
-        <div id="debug-steps"></div>
-    </div>
-
     <div class="chat-container">
         <p><b>Welcome! Starting your personalized AeroAstro AI assistant...</b></p>
         <div id="voiceflow-chat"></div>
     </div>
 
     <script type="text/javascript">
-        let debugSteps = [];
-        
-        function addDebugStep(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            debugSteps.push({timestamp, message, type});
-            
-            const debugDiv = document.getElementById('debug-steps');
-            debugDiv.innerHTML = debugSteps.map(step => 
-                `<div class="debug-step ${step.type}">
-                    <strong>[${step.timestamp}]</strong> ${step.message}
-                </div>`
-            ).join('');
-            
-            console.log(`[DEBUG ${timestamp}] ${message}`);
-        }
-
         // Function to get URL parameters
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
@@ -146,15 +93,13 @@
                 const stored = localStorage.getItem('user_metadata');
                 return stored ? JSON.parse(stored) : null;
             } catch (e) {
-                addDebugStep(`Error parsing localStorage: ${e.message}`, 'error');
+                console.error('Error parsing localStorage:', e.message);
                 return null;
             }
         }
 
         // Collect all user data from URL params and localStorage
         function collectUserData() {
-            addDebugStep('Starting user data collection...', 'info');
-            
             // Get data from URL parameters first
             const urlData = {
                 name: getURLParameter('name'),
@@ -168,57 +113,36 @@
                 authenticated: getURLParameter('authenticated')
             };
 
-            addDebugStep(`URL Parameters: ${JSON.stringify(urlData, null, 2)}`, 'info');
-
             // Get data from localStorage
             const storedData = getStoredMetadata();
-            addDebugStep(`localStorage Data: ${JSON.stringify(storedData, null, 2)}`, 'info');
 
-            // PKCE VERIFIER DEBUGGING AND CLEANUP
+            // PKCE CLEANUP: Remove stale PKCE tokens if we have fresh OAuth data from URL
             const currentVerifier = localStorage.getItem('pkce_verifier');
             const currentState = localStorage.getItem('pkce_state');
-            addDebugStep(`🔐 PKCE Debug - Current verifier: ${currentVerifier ? currentVerifier.substring(0, 20) + '...' : 'MISSING'}`, 'warning');
-            addDebugStep(`🔐 PKCE Debug - Current state: ${currentState || 'MISSING'}`, 'warning');
-            addDebugStep(`🔐 PKCE Debug - Verifier length: ${currentVerifier ? currentVerifier.length : 0} chars`, 'warning');
             
-            // PKCE CLEANUP: Remove stale PKCE tokens if we have fresh OAuth data from URL
             if (urlData.authenticated === 'true' && urlData.kerberos) {
                 if (currentVerifier || currentState) {
-                    addDebugStep('🧹 Fresh OAuth detected, clearing stale PKCE tokens...', 'info');
                     localStorage.removeItem('pkce_verifier');
                     localStorage.removeItem('pkce_state');
                     localStorage.removeItem('oauth_state');
-                    addDebugStep('✅ Stale PKCE tokens cleared', 'success');
                 }
             } else if (currentVerifier || currentState) {
                 // Check if PKCE tokens are old (more than 10 minutes)
                 const pkceTimestamp = localStorage.getItem('pkce_timestamp');
                 if (pkceTimestamp) {
                     const age = Date.now() - parseInt(pkceTimestamp);
-                    addDebugStep(`🕐 PKCE token age: ${Math.round(age / 1000)} seconds`, 'info');
                     if (age > 600000) { // 10 minutes
-                        addDebugStep('🧹 PKCE tokens are old (>10min), clearing...', 'warning');
                         localStorage.removeItem('pkce_verifier');
                         localStorage.removeItem('pkce_state');
                         localStorage.removeItem('oauth_state');
                         localStorage.removeItem('pkce_timestamp');
-                        addDebugStep('✅ Old PKCE tokens cleared', 'success');
                     }
                 } else {
                     // No timestamp means really old tokens, clear them
-                    addDebugStep('🧹 PKCE tokens have no timestamp, clearing...', 'warning');
                     localStorage.removeItem('pkce_verifier');
                     localStorage.removeItem('pkce_state');
                     localStorage.removeItem('oauth_state');
-                    addDebugStep('✅ Timestampless PKCE tokens cleared', 'success');
                 }
-            }
-            
-            // Check if this matches the OAuth token's expected pattern
-            if (storedData && storedData.raw) {
-                addDebugStep(`🔐 PKCE Debug - Token issued at: ${new Date(storedData.raw.iat * 1000).toLocaleString()}`, 'warning');
-                addDebugStep(`🔐 PKCE Debug - Token expires at: ${new Date(storedData.raw.exp * 1000).toLocaleString()}`, 'warning');
-                addDebugStep(`🔐 PKCE Debug - Token nonce: ${storedData.raw.nonce || 'MISSING'}`, 'warning');
             }
 
             // Merge data (URL params take precedence over localStorage)
@@ -234,33 +158,16 @@
                 title: urlData.title || (storedData && storedData.title) || '',
                 department: urlData.department || (storedData && storedData.department) || '',
                 groups: urlData.groups || (storedData && storedData.groups) || '',
-                // FIXED: Force authenticated to true if we have OAuth data in localStorage OR URL
                 authenticated: urlData.authenticated === 'true' || 
                               !!(storedData && storedData.kerberos), // Force true if we have kerberos
                 loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
             };
 
-            addDebugStep(`Authentication logic: URL=${urlData.authenticated}, HasStoredKerberos=${!!(storedData && storedData.kerberos)}, FinalAuth=${userData.authenticated}`, 'info');
-
-            // CROSS-CONTAMINATION CHECK
-            if (userData.kerberos && currentVerifier) {
-                addDebugStep(`🔍 Cross-contamination check: User=${userData.kerberos}, VerifierExists=${!!currentVerifier}`, 'warning');
-                // Simple heuristic: if kerberos doesn't match expected pattern with verifier timing
-                const timeDiff = Date.now() - (storedData?.loginTime ? new Date(storedData.loginTime).getTime() : 0);
-                addDebugStep(`🔍 Time since OAuth: ${Math.round(timeDiff / 1000)} seconds`, 'warning');
-                if (timeDiff > 300000) { // More than 5 minutes
-                    addDebugStep(`⚠️  OAuth data is old (>5min) but verifier still exists - possible contamination`, 'error');
-                }
-            }
-
-            addDebugStep(`Final merged userData: ${JSON.stringify(userData, null, 2)}`, 'success');
             return userData;
         }
 
         // Update the display with user information
         function updateUserDisplay(userData) {
-            addDebugStep('Updating user display...', 'info');
-            
             if (userData.authenticated || userData.kerberos) {
                 document.getElementById('display-name').textContent = userData.name || 'Not provided';
                 document.getElementById('display-kerberos').textContent = userData.kerberos || 'Not provided';
@@ -268,24 +175,17 @@
                 document.getElementById('display-department').textContent = userData.department || 'Not provided';
                 
                 document.getElementById('user-info').classList.add('visible');
-                addDebugStep('User info display updated successfully', 'success');
-            } else {
-                addDebugStep('No authenticated user data found', 'warning');
             }
         }
 
         // Generate userID for Voiceflow with URL fallback
         function generateUserID(userData) {
-            addDebugStep('Generating userID for Voiceflow...', 'info');
-            
             // Get kerberos from URL parameters directly as backup
             const urlKerberos = new URLSearchParams(window.location.search).get('kerberos');
             const kerberos = userData.kerberos || urlKerberos;
             
             if (kerberos) {
-                const userID = `mit-${kerberos}`;
-                addDebugStep(`Generated stable userID: ${userID}`, 'success');
-                return userID;
+                return `mit-${kerberos}`;
             }
             
             let userID = localStorage.getItem('userID');
@@ -293,20 +193,15 @@
                 userID = 'user-' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('userID', userID);
             }
-            addDebugStep(`Fallback userID: ${userID}`, 'warning');
             return userID;
         }
 
         // Load Voiceflow and set OAuth variables
         function loadVoiceflow(userID, userData) {
-            addDebugStep('Starting Voiceflow load process...', 'info');
-            
             (function(d, t) {
                 var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
                 v.onload = function() {
-                    addDebugStep('Voiceflow script loaded', 'success');
-                    
-                    // Load Voiceflow with the working project ID
+                    // Load Voiceflow with launch payload containing user variables
                     window.voiceflow.chat.load({
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
@@ -321,14 +216,7 @@
                                     user_title: userData.title || '',
                                     user_department: userData.department || '',
                                     user_email: userData.email || '',
-                                    user_firstname: userData.firstName || '',
-                                    user_lastname: userData.lastName || '',
-                                    user_authenticated: userData.authenticated || false,
-                                    user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
-                                    user_logintime: userData.loginTime || '',
-                                    debug_timestamp: new Date().toISOString(),
-                                    debug_userid: userID,
-                                    debug_url: window.location.href
+                                    user_authenticated: userData.authenticated || false
                                 } 
                             } 
                         },
@@ -340,320 +228,50 @@
                         }
                     });
                     
-// ADD THIS RIGHT AFTER THE VOICEFLOW LOAD SECTION
-addDebugStep('Voiceflow chat.load() called with production version', 'success');
-
-// Updated diagnostic code with centered positioning
-function setupVoiceflowDiagnostics() {
-    // Store the original interact function
-    const originalInteract = window.voiceflow.chat.interact;
-    
-    // Create diagnostic display - CENTERED AT TOP
-    const diagnosticDiv = document.createElement('div');
-    diagnosticDiv.id = 'voiceflow-diagnostics';
-    diagnosticDiv.style.cssText = `
-        position: fixed;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 600px;
-        max-width: 90vw;
-        max-height: 400px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 12px;
-        padding: 20px;
-        font-family: 'Consolas', 'Monaco', monospace;
-        font-size: 11px;
-        overflow-y: auto;
-        z-index: 10000;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-    `;
-    
-    diagnosticDiv.innerHTML = `
-        <div style="text-align: center; margin-bottom: 15px;">
-            <h3 style="margin: 0; color: #fff; font-size: 16px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
-                🔍 VOICEFLOW SESSION DIAGNOSTICS
-            </h3>
-            <div style="font-size: 10px; opacity: 0.8; margin-top: 5px;">
-                Live session monitoring • Project: 66de313d6a0d94e1bd71c5ce
-            </div>
-        </div>
-        <div id="diagnostic-content" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px;"></div>
-    `;
-    
-    document.body.appendChild(diagnosticDiv);
-    
-    const diagnosticContent = document.getElementById('diagnostic-content');
-    
-    function addDiagnosticEntry(type, data, response = null) {
-        const timestamp = new Date().toLocaleTimeString();
-        const entry = document.createElement('div');
-        
-        const borderColor = '#3B82F6'; // Blue for all entries
-        const bgColor = 'rgba(59, 130, 246, 0.1)';
-        
-        entry.style.cssText = `
-            margin: 12px 0;
-            padding: 12px;
-            background: ${bgColor};
-            border-radius: 6px;
-            border-left: 4px solid ${borderColor};
-            border: 1px solid rgba(255,255,255,0.1);
-        `;
-        
-        let content = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <strong style="color: #fff;">[${timestamp}] ${type}</strong>
-            <span style="background: ${borderColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">
-                📊 DATA
-            </span>
-        </div>`;
-        
-        if (type === 'SENT') {
-            content += `<div style="margin-bottom: 6px;"><strong style="color: #E5E7EB;">Method:</strong> ${data.method || 'interact'}</div>`;
-            
-            if (data.payload?.currentUser) {
-                content += `<div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; margin: 8px 0;">
-                    <div style="color: #F3F4F6; font-weight: bold; margin-bottom: 6px;">👤 USER DATA:</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
-                        <div><span style="color: #9CA3AF;">Name:</span> <span style="color: #FFF;">${data.payload.currentUser.name || 'NOT SET'}</span></div>
-                        <div><span style="color: #9CA3AF;">Kerberos:</span> <span style="color: #FFF;">${data.payload.currentUser.kerberos || 'NOT SET'}</span></div>
-                        <div><span style="color: #9CA3AF;">Email:</span> <span style="color: #FFF;">${data.payload.currentUser.email || 'NOT SET'}</span></div>
-                        <div><span style="color: #9CA3AF;">Title:</span> <span style="color: #FFF;">${data.payload.currentUser.title || 'NOT SET'}</span></div>
-                    </div>
-                    <div style="margin-top: 8px;"><span style="color: #9CA3AF;">UserID:</span> <span style="color: #FFF;">${data.payload.userID || 'NOT SET'}</span></div>
-                </div>`;
-            } else if (data.payload?.query) {
-                content += `<div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin: 6px 0; font-size: 10px; color: #E5E7EB;">
-                    ${data.payload.query}
-                </div>`;
-            } else {
-                content += `<div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin: 6px 0;">
-                    <pre style="margin: 0; font-size: 10px; color: #E5E7EB; white-space: pre-wrap;">${JSON.stringify(data.payload, null, 2)}</pre>
-                </div>`;
-            }
-        }
-        
-        if (response) {
-            content += `<div style="margin-top: 8px;"><strong style="color: #F87171;">Response:</strong>
-                <pre style="margin: 4px 0 0 0; font-size: 9px; color: #FCA5A5; white-space: pre-wrap;">${JSON.stringify(response, null, 2)}</pre>
-            </div>`;
-        }
-        
-        entry.innerHTML = content;
-        diagnosticContent.appendChild(entry);
-        
-        // Auto scroll to bottom
-        diagnosticDiv.scrollTop = diagnosticDiv.scrollHeight;
-        
-        // Console log for backup
-        console.log(`[VOICEFLOW ${type}]`, data, response || '');
-    }
-    
-    // Intercept all interact calls
-    window.voiceflow.chat.interact = function(payload) {
-        addDiagnosticEntry('SENT', {
-            method: 'interact',
-            payload: payload,
-            userID: this.userID || 'unknown',
-            timestamp: new Date().toISOString()
-        });
-        
-        // Call original function and capture response
-        const result = originalInteract.call(this, payload);
-        
-        // If result is a promise, handle response
-        if (result && typeof result.then === 'function') {
-            result.then(response => {
-                addDiagnosticEntry('RECEIVED', {}, response);
-            }).catch(error => {
-                addDiagnosticEntry('ERROR', {}, error);
-            });
-        }
-        
-        return result;
-    };
-    
-    // Capture initial load parameters
-    addDiagnosticEntry('SENT', {
-        method: 'initial_load',
-        payload: {
-            projectID: '66de313d6a0d94e1bd71c5ce',
-            userID: window.generateUserID ? window.generateUserID(window.currentUser) : 'unknown',
-            currentUser: window.currentUser,
-            urlParams: Object.fromEntries(new URLSearchParams(window.location.search)),
-            localStorage: localStorage.getItem('user_metadata')
-        }
-    });
-    
-    console.log('🔍 Voiceflow diagnostics enabled - centered at top of page');
-}
-
-// Call this function after Voiceflow loads
-setTimeout(() => {
-    if (window.voiceflow && window.voiceflow.chat) {
-        setupVoiceflowDiagnostics();
-    }
-}, 3000);
-
-                    
-                    // Set Voiceflow variables with real OAuth data
+                    // Open chat after load completes
                     setTimeout(() => {
-                        addDebugStep('Attempting to set Voiceflow variables...', 'info');
-                        
-                        if (window.voiceflow && window.voiceflow.chat) {
-                            addDebugStep('window.voiceflow.chat is available', 'success');
-                            
-                            const variablePayload = {
-                                user_name: userData.name || '',
-                                user_kerberos: userData.kerberos || '',
-                                user_title: userData.title || '',
-                                user_department: userData.department || '',
-                                user_email: userData.email || '',
-                                user_firstname: userData.firstName || '',
-                                user_lastname: userData.lastName || '',
-                                user_authenticated: true // Always set to true if we have OAuth data
-                            };
-                            
-                            addDebugStep(`Setting variables: ${JSON.stringify(variablePayload, null, 2)}`, 'info');
-                            
-                            try {
-                                // Set variables using the correct method
-                                window.voiceflow.chat.interact({
-                                    type: 'set',
-                                    payload: variablePayload
-                                });
-                                addDebugStep('✅ Variables set successfully!', 'success');
-                                
-                                // Send debug verification message
-                                setTimeout(() => {
-                                    addDebugStep('Sending debug verification to Voiceflow...', 'info');
-                                    try {
-                                        const debugMessage = `DEBUG: Variables set - Name: ${variablePayload.user_name}, Title: ${variablePayload.user_title}, Dept: ${variablePayload.user_department} | UserID: ${userID} | Kerberos: ${userData.kerberos}`;
-                                        
-                                        window.voiceflow.chat.interact({
-                                            type: 'text',
-                                            payload: {
-                                                query: debugMessage
-                                            }
-                                        });
-                                        
-                                        addDebugStep('✅ Debug message sent to Voiceflow', 'success');
-                                        
-                                    } catch (debugError) {
-                                        addDebugStep(`❌ Error sending debug message: ${debugError.message}`, 'error');
-                                    }
-                                }, 2000);
-                                
-                                // Open chat after variables are set
-                                setTimeout(() => {
-                                    addDebugStep('Opening Voiceflow chat...', 'info');
-                                    try {
-                                        window.voiceflow.chat.open();
-                                        addDebugStep('✅ Chat opened successfully!', 'success');
-                                    } catch (openError) {
-                                        addDebugStep(`❌ Error opening chat: ${openError.message}`, 'error');
-                                    }
-                                }, 3000);
-                                
-                            } catch (setError) {
-                                addDebugStep(`❌ Error setting variables: ${setError.message}`, 'error');
-                            }
-                        } else {
-                            addDebugStep('❌ window.voiceflow.chat not available', 'error');
+                        try {
+                            window.voiceflow.chat.open();
+                        } catch (openError) {
+                            console.error('Error opening chat:', openError.message);
                         }
                     }, 2000);
                 };
                 
                 v.onerror = function() {
-                    addDebugStep('❌ Error loading Voiceflow script', 'error');
+                    console.error('Error loading Voiceflow script');
                 };
                 
                 v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
                 v.type = "text/javascript"; 
                 s.parentNode.insertBefore(v, s);
-                
-                addDebugStep('Voiceflow script tag added to page', 'info');
             })(document, 'script');
         }
 
         // Initialize the page
         function initializePage() {
-            addDebugStep('Page initialization started', 'info');
-            
-            const allLocalStorageKeys = Object.keys(localStorage);
-            addDebugStep(`All localStorage keys: ${allLocalStorageKeys.join(', ')}`, 'warning');
-            
-            if (localStorage.getItem('user_metadata')) {
-                const existing = JSON.parse(localStorage.getItem('user_metadata'));
-                addDebugStep(`Found existing user data for: ${existing.kerberos || 'unknown'}`, 'warning');
-            }
-            
             const userData = collectUserData();
             
             // Check if user has valid OAuth data
             if (!userData.authenticated && !userData.kerberos) {
-                addDebugStep('No OAuth data found, redirecting to login...', 'warning');
                 setTimeout(() => {
                     window.location.href = 'login.html';
                 }, 3000);
                 return;
             }
             
-            addDebugStep('Valid OAuth data found, proceeding with chat initialization', 'success');
-            
             updateUserDisplay(userData);
             const userID = generateUserID(userData);
             
             window.currentUser = userData;
-            addDebugStep('Global currentUser variable set', 'info');
             
             loadVoiceflow(userID, userData);
         }
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            addDebugStep('DOM Content Loaded', 'info');
             initializePage();
         });
-        
-        // Add browser info
-        addDebugStep(`Browser: ${navigator.userAgent}`, 'info');
-        addDebugStep(`Current URL: ${window.location.href}`, 'info');
-        // ADD THIS AT THE END OF YOUR SCRIPT SECTION
-// Diagnostic button
-setTimeout(() => {
-    const button = document.createElement('button');
-    button.textContent = '🔍 Show Current State';
-    button.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        padding: 10px 15px;
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        z-index: 10001;
-    `;
-    
-    button.onclick = function() {
-        console.log('=== CURRENT DIAGNOSTIC STATE ===');
-        console.log('URL:', window.location.href);
-        console.log('currentUser:', window.currentUser);
-        console.log('localStorage user_metadata:', localStorage.getItem('user_metadata'));
-        console.log('Generated userID:', generateUserID(window.currentUser));
-    };
-    
-    document.body.appendChild(button);
-}, 4000);
     </script>
 </body>
 </html>
-
-
-
-
