@@ -37,10 +37,12 @@
     <h1>Voiceflow Variable Test</h1>
     
     <div class="test-controls">
-        <h3>Test Variables</h3>
-        <input type="text" id="test-name" placeholder="Test Name" value="John Doe">
-        <input type="text" id="test-email" placeholder="Test Email" value="john@test.com">
-        <input type="text" id="test-title" placeholder="Test Title" value="Test Manager">
+        <h3>Test Variables (Using Known Voiceflow Variables)</h3>
+        <input type="text" id="user_name" placeholder="user_name" value="Test User">
+        <input type="text" id="user_kerberos" placeholder="user_kerberos" value="testuser">
+        <input type="text" id="user_email" placeholder="user_email" value="test@mit.edu">
+        <input type="text" id="user_title" placeholder="user_title" value="Test Title">
+        <input type="text" id="user_department" placeholder="user_department" value="Test Department">
         <br>
         <button onclick="loadVoiceflowWithTestData()">Load Voiceflow with Test Data</button>
         <button onclick="clearConsole()">Clear Console</button>
@@ -64,13 +66,19 @@
         }
 
         function loadVoiceflowWithTestData() {
-            // Get test values from inputs
-            const testName = document.getElementById('test-name').value;
-            const testEmail = document.getElementById('test-email').value;
-            const testTitle = document.getElementById('test-title').value;
+            // Get values using the exact variable names from Voiceflow
+            const userName = document.getElementById('user_name').value;
+            const userKerberos = document.getElementById('user_kerberos').value;
+            const userEmail = document.getElementById('user_email').value;
+            const userTitle = document.getElementById('user_title').value;
+            const userDepartment = document.getElementById('user_department').value;
             
-            log('Starting Voiceflow load with test data...');
-            log(`Name: ${testName}, Email: ${testEmail}, Title: ${testTitle}`);
+            log('Starting Voiceflow load with existing variable names...');
+            log(`user_name: ${userName}`);
+            log(`user_kerberos: ${userKerberos}`);
+            log(`user_email: ${userEmail}`);
+            log(`user_title: ${userTitle}`);
+            log(`user_department: ${userDepartment}`);
 
             // Clear any existing Voiceflow
             if (window.voiceflow && window.voiceflow.chat) {
@@ -94,14 +102,8 @@
                 const testUserID = 'test-' + Date.now();
                 log(`Using userID: ${testUserID}`);
 
-                // Debug: Check if variables are defined
-                log('testName: ' + testName);
-                log('testEmail: ' + testEmail); 
-                log('testTitle: ' + testTitle);
-                log('testUserID: ' + testUserID);
-
                 try {
-                    // Load with variables in launch payload
+                    // Load with variables in launch payload using exact Voiceflow variable names
                     const config = {
                         verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                         url: 'https://general-runtime.voiceflow.com',
@@ -111,10 +113,11 @@
                             event: { 
                                 type: 'launch', 
                                 payload: { 
-                                    user_name: testName,
-                                    user_email: testEmail,
-                                    user_title: testTitle,
-                                    user_kerberos: 'test-user',
+                                    user_name: userName,
+                                    user_kerberos: userKerberos,
+                                    user_email: userEmail,
+                                    user_title: userTitle,
+                                    user_department: userDepartment,
                                     user_authenticated: true
                                 } 
                             } 
@@ -127,9 +130,10 @@
                         }
                     };
                     
-                    log('Config created, loading Voiceflow...');
+                    log('Config created with exact variable names, loading Voiceflow...');
+                    log('Payload: ' + JSON.stringify(config.launch.event.payload, null, 2));
+                    
                     window.voiceflow.chat.load(config);
-
                     log('Voiceflow loaded with launch payload');
 
                     // Open chat after short delay
@@ -137,6 +141,7 @@
                         try {
                             window.voiceflow.chat.open();
                             log('Chat opened - check if variables appear correctly');
+                            log('Expected: Should show "Test User" instead of "John Smith"');
                         } catch (e) {
                             log('Error opening chat: ' + e.message);
                         }
