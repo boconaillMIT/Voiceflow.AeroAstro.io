@@ -96,31 +96,31 @@
 
                 try {
                     // Load with variables in launch payload
-                    window.voiceflow.chat.load({
-                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
-                        url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'production',
-                        userID: testUserID,
-                        launch: { 
-                            event: { 
-                                type: 'launch', 
-                                payload: { 
-                                    user_name: testName,
-                                    user_email: testEmail,
-                                    user_title: testTitle,
-                                    user_kerberos: 'test-user',
-                                    user_authenticated: true,
-                                    test_timestamp: new Date().toISOString()
+                        window.voiceflow.chat.load({
+                            verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
+                            url: 'https://general-runtime.voiceflow.com',
+                            versionID: 'production',
+                            userID: userID,
+                            launch: { 
+                                event: { 
+                                    type: 'launch', 
+                                    payload: { 
+                                        user_name: userData.name || '',
+                                        user_kerberos: userData.kerberos || '',
+                                        user_title: userData.title || '',
+                                        user_department: userData.department || '',
+                                        user_email: userData.email || '',
+                                        user_authenticated: userData.authenticated || false
+                                    } 
                                 } 
-                            } 
-                        },
-                        assistant: {
-                            persistence: 'memory'
-                        },
-                        voice: {
-                            url: "https://runtime-api.voiceflow.com"
-                        }
-                    });
+                            },
+                            assistant: {
+                                persistence: 'memory'
+                            },
+                            voice: {
+                                url: "https://runtime-api.voiceflow.com"
+                            }
+                        });
 
                     log('Voiceflow loaded with launch payload');
 
