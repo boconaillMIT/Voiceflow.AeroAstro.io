@@ -34,25 +34,11 @@
       font-size: 18px;
       margin-top: 20px;
     }
-    .debug-panel {
-      background: #e8f4f8;
-      border: 2px solid #3498db;
-      border-radius: 8px;
-      padding: 15px;
-      margin: 20px 0;
-      font-size: 12px;
-      text-align: left;
+    .error-message {
+      color: #e74c3c;
+      font-size: 16px;
+      margin-top: 20px;
     }
-    .debug-step {
-      margin: 8px 0;
-      padding: 5px;
-      background: white;
-      border-radius: 3px;
-      border-left: 3px solid #3498db;
-    }
-    .success { border-left-color: #27ae60; }
-    .warning { border-left-color: #f39c12; }
-    .error { border-left-color: #e74c3c; }
   </style>
 </head>
 <body>
@@ -60,33 +46,11 @@
     <h2>AeroAstro Chatbot</h2>
     <p class="subtitle">Secure login via MIT Touchstone</p>
     <div class="loading" id="status">Initializing login...</div>
-    
-    <div class="debug-panel">
-      <h4>🔍 Login Flow Debug</h4>
-      <div id="debug-steps"></div>
-    </div>
   </div>
 
   <script>
-    let debugSteps = [];
-    
-    function addDebugStep(message, type = 'info') {
-      const timestamp = new Date().toLocaleTimeString();
-      debugSteps.push({timestamp, message, type});
-      
-      const debugDiv = document.getElementById('debug-steps');
-      debugDiv.innerHTML = debugSteps.map(step => 
-        `<div class="debug-step ${step.type}">
-          <strong>[${step.timestamp}]</strong> ${step.message}
-        </div>`
-      ).join('');
-      
-      console.log(`[LOGIN DEBUG ${timestamp}] ${message}`);
-    }
-
     // Base64URL encoding helper
     function base64UrlEncode(arrayBuffer) {
-      addDebugStep('Encoding challenge for PKCE...', 'info');
       const bytes = new Uint8Array(arrayBuffer);
       let binary = '';
       for (let i = 0; i < bytes.byteLength; i++) {
@@ -97,26 +61,19 @@
 
     // Generate PKCE verifier
     function generateVerifier() {
-      addDebugStep('Generating PKCE verifier...', 'info');
       const array = new Uint8Array(56);
       crypto.getRandomValues(array);
-      const verifier = btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      addDebugStep(`Generated verifier (${verifier.length} chars)`, 'success');
-      return verifier;
+      return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
     // Generate PKCE challenge
     async function generateChallenge(verifier) {
-      addDebugStep('Generating PKCE challenge...', 'info');
       try {
         const encoder = new TextEncoder();
         const data = encoder.encode(verifier);
         const digest = await crypto.subtle.digest('SHA-256', data);
-        const challenge = base64UrlEncode(digest);
-        addDebugStep(`Generated challenge (${challenge.length} chars)`, 'success');
-        return challenge;
+        return base64UrlEncode(digest);
       } catch (error) {
-        addDebugStep(`Error generating challenge: ${error.message}`, 'error');
         throw error;
       }
     }
@@ -124,35 +81,24 @@
     // Start OAuth login flow
     async function startLogin() {
       try {
-        addDebugStep('Starting OAuth login flow...', 'info');
-        
         // Check if user already has OAuth data
         const existingData = localStorage.getItem('user_metadata');
         const urlParams = new URLSearchParams(window.location.search);
         
         if (existingData && !urlParams.get('force_login')) {
-          addDebugStep('Found existing OAuth data in localStorage', 'warning');
-          addDebugStep(`Existing data preview: ${existingData.substring(0, 100)}...`, 'info');
-          
           document.getElementById('status').textContent = 'Already authenticated - redirecting...';
           setTimeout(() => {
-            addDebugStep('Redirecting to chatbot.html', 'success');
             window.location.href = 'chatbot.html';
           }, 2000);
           return;
         }
-
-        addDebugStep('No existing OAuth data found, proceeding with fresh login', 'info');
 
         // Generate PKCE parameters
         const verifier = generateVerifier();
         const challenge = await generateChallenge(verifier);
         const state = Math.random().toString(36).substring(2);
 
-        addDebugStep(`Generated state: ${state}`, 'info');
-
         // Store for callback verification
-        addDebugStep('Storing PKCE data in localStorage...', 'info');
         localStorage.setItem('pkce_verifier', verifier);
         localStorage.setItem('pkce_state', state);
 
@@ -160,11 +106,8 @@
         const storedVerifier = localStorage.getItem('pkce_verifier');
         const storedState = localStorage.getItem('pkce_state');
         
-        if (storedVerifier && storedState) {
-          addDebugStep('✅ PKCE data stored successfully', 'success');
-        } else {
-          addDebugStep('❌ Failed to store PKCE data!', 'error');
-          throw new Error('localStorage storage failed');
+        if (!storedVerifier || !storedState) {
+          throw new Error('Failed to store authentication data');
         }
 
         // Build OAuth authorization URL
@@ -180,45 +123,23 @@
         });
 
         const authUrl = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
-        
-        addDebugStep(`Built OAuth URL (${authUrl.length} chars)`, 'success');
-        addDebugStep(`Redirect URI: https://aeroastrovfbot.netlify.app/callback.html`, 'info');
-        addDebugStep(`Client ID: 0oau3bha34MtNzb6U697`, 'info');
 
         // Update status and redirect
         document.getElementById('status').textContent = 'Redirecting to MIT authentication...';
         
         setTimeout(() => {
-          addDebugStep('🚀 Redirecting to Okta now...', 'success');
-          console.log('Full OAuth URL:', authUrl);
           window.location.href = authUrl;
         }, 2000);
 
       } catch (error) {
-        addDebugStep(`❌ FATAL ERROR: ${error.message}`, 'error');
         document.getElementById('status').textContent = 'Login failed. Please refresh the page to try again.';
-        document.getElementById('status').style.color = '#e74c3c';
+        document.getElementById('status').className = 'error-message';
+        console.error('Login error:', error);
       }
-    }
-
-    // Add browser and environment info
-    addDebugStep(`Browser: ${navigator.userAgent.substring(0, 50)}...`, 'info');
-    addDebugStep(`Current URL: ${window.location.href}`, 'info');
-    addDebugStep(`localStorage available: ${!!window.localStorage}`, 'info');
-    addDebugStep(`crypto.subtle available: ${!!window.crypto?.subtle}`, 'info');
-
-    // Test localStorage
-    try {
-      localStorage.setItem('test', 'test');
-      localStorage.removeItem('test');
-      addDebugStep('✅ localStorage test passed', 'success');
-    } catch (e) {
-      addDebugStep(`❌ localStorage test failed: ${e.message}`, 'error');
     }
 
     // Start the login process
     startLogin();
   </script>
 </body>
-</html>
 </html>
