@@ -171,14 +171,15 @@
           console.warn('Failed to store user metadata');
         }
 
-        // Show success message and enable continue button
+        // Show success message and redirect immediately
         document.getElementById('status').textContent = 'Login successful! Redirecting to chatbot...';
         document.getElementById('status').style.color = '#27ae60';
         document.getElementById('spinner').style.display = 'none';
         
-        const continueBtn = document.getElementById('continue-btn');
-        continueBtn.style.display = 'inline-block';
-        startCountdown();
+        // Redirect immediately without button or countdown
+        setTimeout(() => {
+          continueToChat();
+        }, 500);
 
       } catch (err) {
         document.getElementById('status').textContent = 'Login failed: ' + err.message;
