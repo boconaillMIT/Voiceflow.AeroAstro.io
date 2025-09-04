@@ -1,287 +1,201 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Simple Tester</title>
+    <title>Voiceflow Bookmarklet Tester</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
             padding: 20px; 
             background: #f5f5f5; 
+            max-width: 800px;
+            margin: 0 auto;
         }
         .container { 
-            max-width: 800px; 
-            margin: 0 auto; 
             background: white; 
             padding: 20px; 
             border-radius: 8px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
         }
-        .controls { 
-            margin-bottom: 20px; 
-            padding: 15px; 
-            background: #e8f4f8; 
-            border-radius: 5px; 
+        .bookmarklet {
+            background: #007bff;
+            color: white;
+            padding: 15px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 10px 0;
         }
-        button { 
-            background: #007bff; 
-            color: white; 
-            border: none; 
-            padding: 10px 20px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            margin: 5px; 
+        .bookmarklet:hover {
+            background: #0056b3;
         }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #log { 
-            height: 200px; 
-            overflow-y: auto; 
-            background: #f8f9fa; 
-            border: 1px solid #ddd; 
-            padding: 10px; 
-            font-family: monospace; 
-            font-size: 12px; 
-            white-space: pre-wrap; 
+        .instructions {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
         }
-        .questions { 
-            margin: 15px 0; 
-            padding: 10px; 
-            background: #fff3cd; 
-            border-radius: 4px; 
+        .code-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            white-space: pre-wrap;
         }
-        .status { 
-            font-weight: bold; 
-            margin: 10px 0; 
-        }
-        .success { color: #28a745; }
-        .error { color: #dc3545; }
-        .warning { color: #ffc107; }
+        ol { line-height: 1.6; }
+        li { margin: 8px 0; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🤖 Voiceflow Simple Tester</h1>
+        <h1>🤖 Voiceflow Bookmarklet Tester</h1>
         
-        <div class="controls">
-            <button onclick="loadChatbot()">1. Load Chatbot</button>
-            <button onclick="testSelectors()" id="testBtn" disabled>2. Test Selectors</button>
-            <button onclick="startTesting()" id="startBtn" disabled>3. Start Auto-Testing</button>
-            <button onclick="stopTesting()" id="stopBtn" disabled>Stop</button>
-            <button onclick="clearLog()">Clear Log</button>
+        <div class="instructions">
+            <h3>This approach works by running the automation directly on your chatbot page!</h3>
+            <p>Since we can't access iframe content due to browser security, we'll inject the script directly into your chatbot.</p>
         </div>
 
-        <div class="questions">
-            <h3>Test Questions:</h3>
-            <div id="questionsList">Loading questions...</div>
+        <h2>Method 1: Bookmarklet (Easiest)</h2>
+        
+        <p><strong>Step 1:</strong> Drag this button to your bookmarks bar:</p>
+        
+        <a href="javascript:(function(){const questions=['What are the admission requirements?','How do I apply for financial aid?','What research opportunities are available?','Who should I contact about course registration?','What courses are required for the aerospace engineering degree?','What is the application deadline?','How do I schedule a campus visit?','What scholarships are available?','Tell me about the faculty research areas','What are the prerequisites for graduate programs?'];let currentIndex=0;let interval=null;function log(msg){console.log('[VF Tester] '+msg);}function sendQuestion(){if(currentIndex>=questions.length){log('All questions completed!');clearInterval(interval);return;}const textarea=document.querySelector('textarea.vfrc-chat-input');const sendBtn=document.querySelector('#vfrc-send-message');if(!textarea||!sendBtn){log('Could not find chat elements. Stopping.');clearInterval(interval);return;}const question=questions[currentIndex];textarea.value=question;textarea.dispatchEvent(new Event('input',{bubbles:true}));setTimeout(()=>{sendBtn.click();log(`Sent Q${currentIndex+1}: ${question}`);currentIndex++;},500);}if(interval){clearInterval(interval);interval=null;log('Stopped testing.');}else{log('Starting automated testing...');interval=setInterval(sendQuestion,8000);sendQuestion();}})();" class="bookmarklet">🤖 VF Auto Tester</a>
+
+        <p><strong>Step 2:</strong> Go to your chatbot page: <code>https://aeroastrovfbot.netlify.app/chatbot.html</code></p>
+        
+        <p><strong>Step 3:</strong> Wait for the chat to fully load, then click the bookmarklet!</p>
+
+        <h2>Method 2: Browser Console Script</h2>
+        
+        <div class="instructions">
+            <p>If bookmarklets don't work, you can paste this script directly into your browser console:</p>
         </div>
 
-        <div class="status" id="status">Ready to load chatbot</div>
-        
-        <div id="log"></div>
+        <p><strong>Step 1:</strong> Go to your chatbot page</p>
+        <p><strong>Step 2:</strong> Press F12 to open developer tools</p>
+        <p><strong>Step 3:</strong> Go to the "Console" tab</p>
+        <p><strong>Step 4:</strong> Copy and paste this code:</p>
 
-        <iframe id="chatFrame" style="width: 100%; height: 500px; border: 1px solid #ccc; margin-top: 20px;"></iframe>
+        <div class="code-block">// Voiceflow Auto Tester Script
+const questions = [
+    "What are the admission requirements?",
+    "How do I apply for financial aid?",
+    "What research opportunities are available?",
+    "Who should I contact about course registration?",
+    "What courses are required for the aerospace engineering degree?",
+    "What is the application deadline?",
+    "How do I schedule a campus visit?",
+    "What scholarships are available?",
+    "Tell me about the faculty research areas",
+    "What are the prerequisites for graduate programs?"
+];
+
+let currentIndex = 0;
+let testingInterval = null;
+
+function log(message) {
+    console.log(`[VF Tester] ${message}`);
+}
+
+function sendQuestion() {
+    if (currentIndex >= questions.length) {
+        log('✅ All questions completed!');
+        clearInterval(testingInterval);
+        return;
+    }
+    
+    // Find the chat elements
+    const textarea = document.querySelector('textarea.vfrc-chat-input');
+    const sendButton = document.querySelector('#vfrc-send-message');
+    
+    if (!textarea || !sendButton) {
+        log('❌ Could not find chat elements. Stopping test.');
+        clearInterval(testingInterval);
+        return;
+    }
+    
+    const question = questions[currentIndex];
+    
+    // Clear and enter the question
+    textarea.value = '';
+    textarea.value = question;
+    
+    // Trigger input events
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    // Send the message after a short delay
+    setTimeout(() => {
+        sendButton.click();
+        log(`📤 Sent Q${currentIndex + 1}/${questions.length}: ${question}`);
+        currentIndex++;
+    }, 500);
+}
+
+function startTesting() {
+    if (testingInterval) {
+        clearInterval(testingInterval);
+        testingInterval = null;
+        log('⏹️ Testing stopped.');
+        return;
+    }
+    
+    log('🚀 Starting automated testing...');
+    log(`📝 Will test ${questions.length} questions with 8-second intervals`);
+    
+    // Test selectors first
+    const textarea = document.querySelector('textarea.vfrc-chat-input');
+    const sendButton = document.querySelector('#vfrc-send-message');
+    
+    if (!textarea) {
+        log('❌ Could not find textarea.vfrc-chat-input');
+        return;
+    }
+    if (!sendButton) {
+        log('❌ Could not find send button #vfrc-send-message');
+        return;
+    }
+    
+    log('✅ Found all required elements');
+    
+    // Start testing
+    currentIndex = 0;
+    testingInterval = setInterval(sendQuestion, 8000); // 8 seconds between questions
+    sendQuestion(); // Send first question immediately
+}
+
+// Start the testing
+startTesting();
+
+// To stop testing manually, run: clearInterval(testingInterval);</div>
+
+        <p><strong>Step 5:</strong> Press Enter to run the script</p>
+
+        <h2>What You'll See:</h2>
+        <ul>
+            <li>✅ Green checkmarks when elements are found</li>
+            <li>📤 Progress messages as each question is sent</li>
+            <li>❌ Error messages if something goes wrong</li>
+            <li>⏹️ Completion message when all questions are done</li>
+        </ul>
+
+        <h2>To Stop Testing:</h2>
+        <p>In the console, type: <code>clearInterval(testingInterval)</code></p>
+
+        <div class="instructions">
+            <h3>💡 Tips:</h3>
+            <ul>
+                <li>Make sure your chatbot is fully loaded before starting</li>
+                <li>The script waits 8 seconds between questions</li>
+                <li>You can modify the questions array in the script</li>
+                <li>Watch the console for progress updates</li>
+                <li>All responses will appear in your chatbot as normal</li>
+            </ul>
+        </div>
     </div>
-
-    <script>
-        // Test questions - you can modify these
-        const questions = [
-            "What are the admission requirements?",
-            "How do I apply for financial aid?",
-            "What research opportunities are available?",
-            "Who should I contact about course registration?",
-            "What courses are required for the aerospace engineering degree?",
-            "What is the application deadline?",
-            "How do I schedule a campus visit?",
-            "What scholarships are available?",
-            "Tell me about the faculty research areas",
-            "What are the prerequisites for graduate programs?"
-        ];
-
-        let currentQuestionIndex = 0;
-        let testingInterval = null;
-        let chatLoaded = false;
-
-        // Display questions
-        document.getElementById('questionsList').innerHTML = 
-            questions.map((q, i) => `${i + 1}. ${q}`).join('<br>');
-
-        function log(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const logDiv = document.getElementById('log');
-            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#333';
-            logDiv.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
-
-        function updateStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-        }
-
-        function clearLog() {
-            document.getElementById('log').innerHTML = '';
-        }
-
-        function loadChatbot() {
-            const iframe = document.getElementById('chatFrame');
-            iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
-            
-            log('Loading chatbot...', 'info');
-            updateStatus('Loading chatbot...', 'warning');
-            
-            iframe.onload = function() {
-                log('Chatbot loaded successfully!', 'success');
-                updateStatus('Chatbot loaded! Now test selectors.', 'success');
-                document.getElementById('testBtn').disabled = false;
-                chatLoaded = true;
-                
-                // Wait a bit for Voiceflow to initialize
-                setTimeout(() => {
-                    log('Voiceflow should be initialized now', 'info');
-                }, 5000);
-            };
-        }
-
-        function testSelectors() {
-            if (!chatLoaded) {
-                log('Please load chatbot first!', 'error');
-                return;
-            }
-
-            const iframe = document.getElementById('chatFrame');
-            
-            try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                
-                // Test for textarea
-                const textarea = iframeDoc.querySelector('textarea.vfrc-chat-input');
-                const sendButton = iframeDoc.querySelector('#vfrc-send-message');
-                
-                log('Testing selectors...', 'info');
-                
-                if (textarea) {
-                    log('✅ Found textarea: textarea.vfrc-chat-input', 'success');
-                } else {
-                    log('❌ Could not find textarea.vfrc-chat-input', 'error');
-                    // Try alternative selectors
-                    const altTextarea = iframeDoc.querySelector('textarea');
-                    if (altTextarea) {
-                        log(`📝 Found alternative textarea: ${altTextarea.className}`, 'warning');
-                    }
-                }
-                
-                if (sendButton) {
-                    log('✅ Found send button: #vfrc-send-message', 'success');
-                } else {
-                    log('❌ Could not find send button #vfrc-send-message', 'error');
-                    // Try alternative selectors
-                    const altButton = iframeDoc.querySelector('button[title="Send"]');
-                    if (altButton) {
-                        log(`📝 Found alternative send button: ${altButton.id || altButton.className}`, 'warning');
-                    }
-                }
-                
-                if (textarea && sendButton) {
-                    updateStatus('Selectors found! Ready to start testing.', 'success');
-                    document.getElementById('startBtn').disabled = false;
-                    
-                    // Test sending a message
-                    log('Testing message send...', 'info');
-                    textarea.value = 'Test message from automation';
-                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                    
-                    setTimeout(() => {
-                        sendButton.click();
-                        log('Test message sent!', 'success');
-                    }, 1000);
-                    
-                } else {
-                    updateStatus('Selectors not found. Check the log.', 'error');
-                }
-                
-            } catch (error) {
-                log(`Error testing selectors: ${error.message}`, 'error');
-                updateStatus('Error testing selectors', 'error');
-            }
-        }
-
-        function startTesting() {
-            if (currentQuestionIndex >= questions.length) {
-                currentQuestionIndex = 0;
-            }
-            
-            log(`Starting automated testing from question ${currentQuestionIndex + 1}...`, 'info');
-            updateStatus('Auto-testing in progress...', 'warning');
-            
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            
-            testingInterval = setInterval(sendNextQuestion, 8000); // 8 seconds between questions
-            sendNextQuestion(); // Send first question immediately
-        }
-
-        function sendNextQuestion() {
-            if (currentQuestionIndex >= questions.length) {
-                stopTesting();
-                log('All questions completed!', 'success');
-                updateStatus('Testing completed!', 'success');
-                return;
-            }
-
-            const question = questions[currentQuestionIndex];
-            const iframe = document.getElementById('chatFrame');
-            
-            try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                const textarea = iframeDoc.querySelector('textarea.vfrc-chat-input');
-                const sendButton = iframeDoc.querySelector('#vfrc-send-message');
-                
-                if (textarea && sendButton) {
-                    // Clear existing text and type new question
-                    textarea.value = '';
-                    textarea.value = question;
-                    
-                    // Trigger input event to make sure Voiceflow recognizes the change
-                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                    textarea.dispatchEvent(new Event('change', { bubbles: true }));
-                    
-                    // Wait a moment then click send
-                    setTimeout(() => {
-                        sendButton.click();
-                        log(`Q${currentQuestionIndex + 1}: ${question}`, 'info');
-                        currentQuestionIndex++;
-                        updateStatus(`Sent question ${currentQuestionIndex}/${questions.length}`, 'warning');
-                    }, 1000);
-                    
-                } else {
-                    log('❌ Could not find chat elements', 'error');
-                    stopTesting();
-                }
-                
-            } catch (error) {
-                log(`Error sending question: ${error.message}`, 'error');
-                stopTesting();
-            }
-        }
-
-        function stopTesting() {
-            if (testingInterval) {
-                clearInterval(testingInterval);
-                testingInterval = null;
-            }
-            
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            
-            log('Testing stopped', 'warning');
-            updateStatus('Testing stopped', 'info');
-        }
-
-        // Auto-load chatbot when page loads
-        window.addEventListener('load', function() {
-            log('Simple Tester loaded. Click "Load Chatbot" to begin.', 'info');
-        });
-    </script>
 </body>
 </html>
