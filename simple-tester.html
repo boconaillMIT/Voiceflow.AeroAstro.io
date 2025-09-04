@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chatbot Auto Tester</title>
+</head>
+<body>
+    <h1>Chatbot Auto Tester</h1>
+    <button onclick="loadAndTest()">Load Questions & Start Test</button>
+    <div id="status"></div>
+    
+    <script>
+        async function loadAndTest() {
+            document.getElementById('status').innerHTML = 'Loading questions...';
+            
+            try {
+                const response = await fetch('https://docs.google.com/spreadsheets/d/1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ/export?format=csv');
+                const text = await response.text();
+                const questions = text.split('\n')
+                    .slice(1)
+                    .map(line => line.replace(/"/g, '').trim())
+                    .filter(q => q.length > 0);
+                
+                document.getElementById('status').innerHTML = `Loaded ${questions.length} questions. Opening chatbot...`;
+                
+                const chatWindow = window.open('https://aeroastrovfbot.netlify.app/chatbot.html?name=Test+User&kerberos=testuser&authenticated=true');
+                
+                setTimeout(() => {
+                    let i = 0;
+                    const interval = setInterval(() => {
+                        if (i >= questions.length) {
+                            clearInterval(interval);
+                            document.getElementById('status').innerHTML = 'Test completed!';
+                            return;
+                        }
+                        
+                        try {
+                            const input = chatWindow.document.querySelector('input, textarea, [contenteditable="true"]');
+                            if (input) {
+                                input.value = questions[i];
+                                input.focus();
+                                
+                                // Try multiple ways to trigger the input
+                                input.dispatchEvent(new Event('input', {bubbles: true}));
+                                input.dispatchEvent(new Event('change', {bubbles: true}));
+                                
+                                setTimeout(() => {
+                                    input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
+                                    input.dispatchEvent(new KeyboardEvent('keypress', {key: 'Enter', bubbles: true}));
+                                }, 500);
+                            }
+                            
+                            document.getElementById('status').innerHTML = `Sent question ${i+1}/${questions.length}: ${questions[i].substring(0, 50)}...`;
+                        } catch (e) {
+                            document.getElementById('status').innerHTML = `Error on question ${i+1}: ${e.message}`;
+                        }
+                        
+                        i++;
+                    }, 8000); // 8 seconds between questions
+                }, 10000); // Wait 10 seconds for chatbot to load
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML = 'Error loading questions: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
