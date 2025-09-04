@@ -414,6 +414,7 @@
             document.getElementById('stopBtn').disabled = true;
             
             log('⏹️ Testing stopped', 'warning');
+            addToTranscript('⏹️ Testing stopped by user', 'system');
             updateStatus('Testing stopped', 'info');
         }
 
