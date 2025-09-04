@@ -1,201 +1,451 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Bookmarklet Tester</title>
+    <title>Voiceflow Chatbot Tester</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
+            margin: 0;
             padding: 20px; 
             background: #f5f5f5; 
-            max-width: 800px;
-            margin: 0 auto;
         }
         .container { 
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+            height: 90vh;
+        }
+        .control-panel { 
             background: white; 
             padding: 20px; 
             border-radius: 8px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-y: auto;
         }
-        .bookmarklet {
+        .chatbot-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 5px 0;
+            width: 100%;
+            font-size: 14px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status { 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .questions-list {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .question-item {
+            padding: 5px;
+            margin: 2px 0;
+            border-radius: 3px;
+        }
+        .question-item.current {
             background: #007bff;
             color: white;
-            padding: 15px 25px;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 16px;
             font-weight: bold;
-            display: inline-block;
+        }
+        .question-item.completed {
+            background: #28a745;
+            color: white;
+        }
+        .progress {
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
             margin: 10px 0;
         }
-        .bookmarklet:hover {
-            background: #0056b3;
-        }
-        .instructions {
-            background: #e8f4f8;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-        }
-        .code-block {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: monospace;
+        .progress-bar {
+            background: #007bff;
+            height: 20px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
             font-size: 12px;
-            border: 1px solid #ddd;
-            margin: 10px 0;
-            white-space: pre-wrap;
         }
-        ol { line-height: 1.6; }
-        li { margin: 8px 0; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        .config-section {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+        }
+        .config-section h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        label {
+            display: block;
+            margin: 5px 0;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🤖 Voiceflow Bookmarklet Tester</h1>
-        
-        <div class="instructions">
-            <h3>This approach works by running the automation directly on your chatbot page!</h3>
-            <p>Since we can't access iframe content due to browser security, we'll inject the script directly into your chatbot.</p>
+        <div class="control-panel">
+            <h2>🤖 Chatbot Tester</h2>
+            
+            <div class="config-section">
+                <h4>📊 Google Sheets Configuration</h4>
+                <label>Sheet ID:</label>
+                <input type="text" id="sheetId" value="1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ" placeholder="Google Sheet ID">
+                <button onclick="loadQuestions()">📥 Load Questions</button>
+            </div>
+
+            <div class="config-section">
+                <h4>⚙️ Test Settings</h4>
+                <label>Delay between questions (seconds):</label>
+                <input type="number" id="delay" value="6" min="3" max="30">
+                <label>Start from question #:</label>
+                <input type="number" id="startIndex" value="1" min="1">
+            </div>
+
+            <div class="status info" id="status">Ready to load questions</div>
+
+            <div class="progress">
+                <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+            </div>
+
+            <button onclick="loadChatbot()" id="loadBtn">🔗 Load Chatbot</button>
+            <button onclick="startTesting()" id="startBtn" disabled>▶️ Start Testing</button>
+            <button onclick="stopTesting()" id="stopBtn" disabled>⏹️ Stop Testing</button>
+            <button onclick="exportResults()" id="exportBtn" disabled>📄 Export Results</button>
+
+            <div class="questions-list" id="questionsList">
+                <div style="text-align: center; color: #6c757d;">Questions will appear here after loading</div>
+            </div>
+
+            <div class="log" id="log"></div>
         </div>
 
-        <h2>Method 1: Bookmarklet (Easiest)</h2>
-        
-        <p><strong>Step 1:</strong> Drag this button to your bookmarks bar:</p>
-        
-        <a href="javascript:(function(){const questions=['What are the admission requirements?','How do I apply for financial aid?','What research opportunities are available?','Who should I contact about course registration?','What courses are required for the aerospace engineering degree?','What is the application deadline?','How do I schedule a campus visit?','What scholarships are available?','Tell me about the faculty research areas','What are the prerequisites for graduate programs?'];let currentIndex=0;let interval=null;function log(msg){console.log('[VF Tester] '+msg);}function sendQuestion(){if(currentIndex>=questions.length){log('All questions completed!');clearInterval(interval);return;}const textarea=document.querySelector('textarea.vfrc-chat-input');const sendBtn=document.querySelector('#vfrc-send-message');if(!textarea||!sendBtn){log('Could not find chat elements. Stopping.');clearInterval(interval);return;}const question=questions[currentIndex];textarea.value=question;textarea.dispatchEvent(new Event('input',{bubbles:true}));setTimeout(()=>{sendBtn.click();log(`Sent Q${currentIndex+1}: ${question}`);currentIndex++;},500);}if(interval){clearInterval(interval);interval=null;log('Stopped testing.');}else{log('Starting automated testing...');interval=setInterval(sendQuestion,8000);sendQuestion();}})();" class="bookmarklet">🤖 VF Auto Tester</a>
-
-        <p><strong>Step 2:</strong> Go to your chatbot page: <code>https://aeroastrovfbot.netlify.app/chatbot.html</code></p>
-        
-        <p><strong>Step 3:</strong> Wait for the chat to fully load, then click the bookmarklet!</p>
-
-        <h2>Method 2: Browser Console Script</h2>
-        
-        <div class="instructions">
-            <p>If bookmarklets don't work, you can paste this script directly into your browser console:</p>
-        </div>
-
-        <p><strong>Step 1:</strong> Go to your chatbot page</p>
-        <p><strong>Step 2:</strong> Press F12 to open developer tools</p>
-        <p><strong>Step 3:</strong> Go to the "Console" tab</p>
-        <p><strong>Step 4:</strong> Copy and paste this code:</p>
-
-        <div class="code-block">// Voiceflow Auto Tester Script
-const questions = [
-    "What are the admission requirements?",
-    "How do I apply for financial aid?",
-    "What research opportunities are available?",
-    "Who should I contact about course registration?",
-    "What courses are required for the aerospace engineering degree?",
-    "What is the application deadline?",
-    "How do I schedule a campus visit?",
-    "What scholarships are available?",
-    "Tell me about the faculty research areas",
-    "What are the prerequisites for graduate programs?"
-];
-
-let currentIndex = 0;
-let testingInterval = null;
-
-function log(message) {
-    console.log(`[VF Tester] ${message}`);
-}
-
-function sendQuestion() {
-    if (currentIndex >= questions.length) {
-        log('✅ All questions completed!');
-        clearInterval(testingInterval);
-        return;
-    }
-    
-    // Find the chat elements
-    const textarea = document.querySelector('textarea.vfrc-chat-input');
-    const sendButton = document.querySelector('#vfrc-send-message');
-    
-    if (!textarea || !sendButton) {
-        log('❌ Could not find chat elements. Stopping test.');
-        clearInterval(testingInterval);
-        return;
-    }
-    
-    const question = questions[currentIndex];
-    
-    // Clear and enter the question
-    textarea.value = '';
-    textarea.value = question;
-    
-    // Trigger input events
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    textarea.dispatchEvent(new Event('change', { bubbles: true }));
-    
-    // Send the message after a short delay
-    setTimeout(() => {
-        sendButton.click();
-        log(`📤 Sent Q${currentIndex + 1}/${questions.length}: ${question}`);
-        currentIndex++;
-    }, 500);
-}
-
-function startTesting() {
-    if (testingInterval) {
-        clearInterval(testingInterval);
-        testingInterval = null;
-        log('⏹️ Testing stopped.');
-        return;
-    }
-    
-    log('🚀 Starting automated testing...');
-    log(`📝 Will test ${questions.length} questions with 8-second intervals`);
-    
-    // Test selectors first
-    const textarea = document.querySelector('textarea.vfrc-chat-input');
-    const sendButton = document.querySelector('#vfrc-send-message');
-    
-    if (!textarea) {
-        log('❌ Could not find textarea.vfrc-chat-input');
-        return;
-    }
-    if (!sendButton) {
-        log('❌ Could not find send button #vfrc-send-message');
-        return;
-    }
-    
-    log('✅ Found all required elements');
-    
-    // Start testing
-    currentIndex = 0;
-    testingInterval = setInterval(sendQuestion, 8000); // 8 seconds between questions
-    sendQuestion(); // Send first question immediately
-}
-
-// Start the testing
-startTesting();
-
-// To stop testing manually, run: clearInterval(testingInterval);</div>
-
-        <p><strong>Step 5:</strong> Press Enter to run the script</p>
-
-        <h2>What You'll See:</h2>
-        <ul>
-            <li>✅ Green checkmarks when elements are found</li>
-            <li>📤 Progress messages as each question is sent</li>
-            <li>❌ Error messages if something goes wrong</li>
-            <li>⏹️ Completion message when all questions are done</li>
-        </ul>
-
-        <h2>To Stop Testing:</h2>
-        <p>In the console, type: <code>clearInterval(testingInterval)</code></p>
-
-        <div class="instructions">
-            <h3>💡 Tips:</h3>
-            <ul>
-                <li>Make sure your chatbot is fully loaded before starting</li>
-                <li>The script waits 8 seconds between questions</li>
-                <li>You can modify the questions array in the script</li>
-                <li>Watch the console for progress updates</li>
-                <li>All responses will appear in your chatbot as normal</li>
-            </ul>
+        <div class="chatbot-panel">
+            <iframe id="chatFrame" src="about:blank"></iframe>
         </div>
     </div>
+
+    <script>
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let testingInterval = null;
+        let chatbotLoaded = false;
+        let testResults = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('log');
+            const colors = {
+                info: '#495057',
+                success: '#28a745', 
+                error: '#dc3545',
+                warning: '#ffc107'
+            };
+            
+            logDiv.innerHTML += `<div style="color: ${colors[type]}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function updateProgress() {
+            const progress = questions.length > 0 ? (currentQuestionIndex / questions.length) * 100 : 0;
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = `${Math.round(progress)}% (${currentQuestionIndex}/${questions.length})`;
+        }
+
+        function updateQuestionsList() {
+            const listDiv = document.getElementById('questionsList');
+            if (questions.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; color: #6c757d;">No questions loaded</div>';
+                return;
+            }
+
+            listDiv.innerHTML = questions.map((q, index) => {
+                let className = 'question-item';
+                if (index < currentQuestionIndex) className += ' completed';
+                else if (index === currentQuestionIndex) className += ' current';
+                
+                return `<div class="${className}">${index + 1}. ${q.substring(0, 80)}${q.length > 80 ? '...' : ''}</div>`;
+            }).join('');
+        }
+
+        async function loadQuestions() {
+            const sheetId = document.getElementById('sheetId').value.trim();
+            if (!sheetId) {
+                updateStatus('Please enter a Google Sheet ID', 'error');
+                return;
+            }
+
+            updateStatus('Loading questions from Google Sheets...', 'warning');
+            log('Fetching questions from Google Sheets...', 'info');
+
+            try {
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+                const response = await fetch(csvUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const csvText = await response.text();
+                
+                // Parse CSV - assume questions are in first column
+                const lines = csvText.split('\n');
+                questions = lines
+                    .slice(1) // Skip header row
+                    .map(line => {
+                        // Handle CSV parsing with commas in questions
+                        const firstComma = line.indexOf(',');
+                        return firstComma === -1 ? line : line.substring(0, firstComma);
+                    })
+                    .filter(q => q && q.trim())
+                    .map(q => q.replace(/"/g, '').trim()); // Clean up quotes
+
+                if (questions.length === 0) {
+                    throw new Error('No questions found in the sheet');
+                }
+
+                log(`✅ Loaded ${questions.length} questions`, 'success');
+                updateStatus(`Loaded ${questions.length} questions successfully`, 'success');
+                
+                // Reset progress
+                currentQuestionIndex = 0;
+                testResults = [];
+                updateProgress();
+                updateQuestionsList();
+                
+                // Enable load button
+                document.getElementById('loadBtn').disabled = false;
+
+            } catch (error) {
+                log(`❌ Error loading questions: ${error.message}`, 'error');
+                updateStatus(`Error: ${error.message}`, 'error');
+                
+                // Use fallback questions
+                questions = [
+                    "What are the admission requirements?",
+                    "How do I apply for financial aid?",
+                    "What research opportunities are available?"
+                ];
+                log(`Using ${questions.length} fallback questions`, 'warning');
+                updateStatus(`Using ${questions.length} fallback questions`, 'warning');
+                updateQuestionsList();
+            }
+        }
+
+        function loadChatbot() {
+            const iframe = document.getElementById('chatFrame');
+            iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
+            
+            log('Loading chatbot...', 'info');
+            updateStatus('Loading chatbot...', 'warning');
+            
+            iframe.onload = function() {
+                log('Chatbot loaded successfully!', 'success');
+                updateStatus('Chatbot loaded! Waiting for Voiceflow to initialize...', 'info');
+                
+                // Wait for Voiceflow to initialize
+                setTimeout(() => {
+                    chatbotLoaded = true;
+                    document.getElementById('startBtn').disabled = false;
+                    log('Voiceflow should be ready now', 'success');
+                    updateStatus('Ready to start testing!', 'success');
+                }, 8000);
+            };
+        }
+
+        function sendQuestion(question, questionNumber) {
+            const iframe = document.getElementById('chatFrame');
+            
+            try {
+                const voiceflow = iframe.contentWindow.voiceflow;
+                if (voiceflow && voiceflow.chat && voiceflow.chat.interact) {
+                    voiceflow.chat.interact({
+                        type: 'text',
+                        payload: question
+                    });
+                    
+                    log(`📤 Q${questionNumber}: ${question}`, 'info');
+                    
+                    testResults.push({
+                        questionNumber,
+                        question,
+                        timestamp: new Date().toISOString(),
+                        status: 'sent'
+                    });
+                    
+                    return true;
+                } else {
+                    throw new Error('Voiceflow not accessible in iframe');
+                }
+            } catch (error) {
+                log(`❌ Error sending Q${questionNumber}: ${error.message}`, 'error');
+                testResults.push({
+                    questionNumber,
+                    question,
+                    timestamp: new Date().toISOString(),
+                    status: 'error',
+                    error: error.message
+                });
+                return false;
+            }
+        }
+
+        function startTesting() {
+            if (!chatbotLoaded) {
+                updateStatus('Please load the chatbot first', 'error');
+                return;
+            }
+
+            if (questions.length === 0) {
+                updateStatus('Please load questions first', 'error');
+                return;
+            }
+
+            const startIndex = parseInt(document.getElementById('startIndex').value) - 1;
+            const delay = parseInt(document.getElementById('delay').value) * 1000;
+
+            if (startIndex < 0 || startIndex >= questions.length) {
+                updateStatus('Invalid start index', 'error');
+                return;
+            }
+
+            currentQuestionIndex = startIndex;
+            
+            log(`🚀 Starting test from question ${startIndex + 1}`, 'info');
+            updateStatus('Testing in progress...', 'warning');
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // Send first question immediately
+            sendNextQuestion();
+            
+            // Set up interval for remaining questions
+            testingInterval = setInterval(sendNextQuestion, delay);
+        }
+
+        function sendNextQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                stopTesting();
+                log('✅ All questions completed!', 'success');
+                updateStatus('Testing completed!', 'success');
+                document.getElementById('exportBtn').disabled = false;
+                return;
+            }
+
+            const question = questions[currentQuestionIndex];
+            const questionNumber = currentQuestionIndex + 1;
+            
+            sendQuestion(question, questionNumber);
+            currentQuestionIndex++;
+            
+            updateProgress();
+            updateQuestionsList();
+        }
+
+        function stopTesting() {
+            if (testingInterval) {
+                clearInterval(testingInterval);
+                testingInterval = null;
+            }
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            log('⏹️ Testing stopped', 'warning');
+            updateStatus('Testing stopped', 'info');
+        }
+
+        function exportResults() {
+            if (testResults.length === 0) {
+                updateStatus('No results to export', 'error');
+                return;
+            }
+
+            const csv = [
+                'Question Number,Question,Timestamp,Status,Error',
+                ...testResults.map(result => 
+                    `${result.questionNumber},"${result.question}","${result.timestamp}","${result.status}","${result.error || ''}"`
+                )
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chatbot-test-results-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            log('📄 Results exported to CSV', 'success');
+        }
+
+        // Auto-load questions on page load
+        window.addEventListener('load', () => {
+            log('Tester loaded. Loading questions from Google Sheets...', 'info');
+            loadQuestions();
+        });
+    </script>
 </body>
 </html>
