@@ -251,23 +251,46 @@
             
             // Clear transcript
             clearTranscript();
-            addToTranscript(`🔄 Loading questions from new sheet: ${sheetId}`, 'system');
+            addToTranscript(`🔄 Loading questions from sheet: ${sheetId}`, 'system');
 
             updateStatus('Loading questions from Google Sheets...', 'warning');
             log('Fetching questions from Google Sheets...', 'info');
 
             try {
                 const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
-                const response = await fetch(csvUrl);
+                log(`Attempting to fetch: ${csvUrl}`, 'info');
+                
+                // Add timeout to the fetch
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+                
+                const response = await fetch(csvUrl, {
+                    signal: controller.signal,
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'text/csv, text/plain, */*'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                log(`Response status: ${response.status}`, 'info');
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}. Make sure the Google Sheet is published and publicly viewable.`);
                 }
                 
                 const csvText = await response.text();
+                log(`Received ${csvText.length} characters of CSV data`, 'info');
+                
+                if (!csvText || csvText.trim().length === 0) {
+                    throw new Error('Empty response from Google Sheets');
+                }
                 
                 // Parse CSV - assume questions are in first column
                 const lines = csvText.split('\n');
+                log(`CSV has ${lines.length} lines`, 'info');
+                
                 const newQuestions = lines
                     .slice(1) // Skip header row
                     .map(line => {
@@ -279,7 +302,7 @@
                     .map(q => q.replace(/"/g, '').trim()); // Clean up quotes
 
                 if (newQuestions.length === 0) {
-                    throw new Error('No questions found in the sheet');
+                    throw new Error('No questions found in the sheet. Check that your sheet has questions in column A and is publicly accessible.');
                 }
 
                 // Update the global questions array
@@ -310,28 +333,46 @@
                 currentQuestionIndex = 0;
                 testResults = [];
                 
-                log(`❌ Error loading questions: ${error.message}`, 'error');
-                addToTranscript(`❌ Error loading questions: ${error.message}`, 'system');
-                updateStatus(`Error: ${error.message}`, 'error');
+                let errorMessage = error.message;
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timed out after 15 seconds. Check your internet connection and sheet accessibility.';
+                }
+                
+                log(`❌ Error loading questions: ${errorMessage}`, 'error');
+                addToTranscript(`❌ Error: ${errorMessage}`, 'system');
+                updateStatus(`Error: ${errorMessage}`, 'error');
                 
                 // Clear displays
                 updateProgress();
                 updateQuestionsList();
                 
-                // Use fallback questions only if user wants them
-                const useFallback = confirm(`Failed to load from Google Sheets. Use fallback questions instead?\n\nError: ${error.message}`);
+                // Provide troubleshooting help
+                addToTranscript(`🔧 Troubleshooting tips:`, 'system');
+                addToTranscript(`• Make sure the Google Sheet is published to web`, 'system');
+                addToTranscript(`• Share settings should be "Anyone with link can view"`, 'system');
+                addToTranscript(`• Questions should be in column A`, 'system');
+                addToTranscript(`• Try using a different browser if CORS errors persist`, 'system');
+                
+                // Offer fallback questions
+                const useFallback = confirm(`Failed to load from Google Sheets.\n\nError: ${errorMessage}\n\nWould you like to use fallback questions to test the system?`);
                 
                 if (useFallback) {
                     questions = [
                         "What are the admission requirements?",
                         "How do I apply for financial aid?",
-                        "What research opportunities are available?"
+                        "What research opportunities are available?",
+                        "Who should I contact about course registration?",
+                        "What courses are required for the aerospace engineering degree?"
                     ];
                     log(`Using ${questions.length} fallback questions`, 'warning');
                     addToTranscript(`Using ${questions.length} fallback questions`, 'system');
                     updateStatus(`Using ${questions.length} fallback questions`, 'warning');
                     updateProgress();
                     updateQuestionsList();
+                    
+                    if (chatbotLoaded) {
+                        document.getElementById('startBtn').disabled = false;
+                    }
                 }
             }
         }
