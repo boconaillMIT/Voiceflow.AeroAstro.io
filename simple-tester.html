@@ -10,10 +10,10 @@
             background: #f5f5f5; 
         }
         .container { 
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 400px 1fr;
+            grid-template-columns: 350px 1fr 350px;
             gap: 20px;
             height: 90vh;
         }
@@ -29,6 +29,55 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             overflow: hidden;
+        }
+        .transcript-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .transcript {
+            flex: 1;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .message.user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .message.bot {
+            background: #e9ecef;
+            color: #333;
+            margin-right: auto;
+        }
+        .message.system {
+            background: #fff3cd;
+            color: #856404;
+            text-align: center;
+            font-style: italic;
+            margin: 5px auto;
+            max-width: 100%;
+        }
+        .timestamp {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
         }
         button { 
             background: #007bff; 
@@ -115,7 +164,7 @@
             margin: 0 0 10px 0;
             color: #495057;
         }
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], textarea {
             width: 100%;
             padding: 8px;
             border: 1px solid #ced4da;
@@ -134,6 +183,12 @@
             height: 100%;
             border: none;
         }
+        .fallback-btn {
+            background: #6c757d !important;
+        }
+        .manual-btn {
+            background: #28a745 !important;
+        }
     </style>
 </head>
 <body>
@@ -142,10 +197,23 @@
             <h2>🤖 Chatbot Tester</h2>
             
             <div class="config-section">
-                <h4>📊 Google Sheets Configuration</h4>
-                <label>Sheet ID:</label>
+                <h4>📊 Questions Source</h4>
+                
+                <!-- Method 1: Default Questions -->
+                <button onclick="loadFallbackQuestions()" class="fallback-btn">🔄 Use Default Questions (10 questions)</button>
+                
+                <!-- Method 2: Manual Paste -->
+                <label style="margin-top: 15px;">Manual Entry (paste one question per line):</label>
+                <textarea id="manualQuestions" rows="6" placeholder="What are the admission requirements?
+How do I apply for financial aid?
+What research opportunities are available?
+Who should I contact about course registration?"></textarea>
+                <button onclick="loadManualQuestions()" class="manual-btn">📝 Load Manual Questions</button>
+                
+                <!-- Method 3: Google Sheets -->
+                <label style="margin-top: 15px;">Google Sheet ID (if accessible):</label>
                 <input type="text" id="sheetId" value="1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ" placeholder="Google Sheet ID">
-                <button onclick="loadQuestions()">📥 Load Questions</button>
+                <button onclick="loadQuestions()">📥 Load from Google Sheets</button>
             </div>
 
             <div class="config-section">
@@ -156,7 +224,7 @@
                 <input type="number" id="startIndex" value="1" min="1">
             </div>
 
-            <div class="status info" id="status">Ready to load questions</div>
+            <div class="status info" id="status">Ready - choose how to load questions</div>
 
             <div class="progress">
                 <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
@@ -168,7 +236,7 @@
             <button onclick="exportResults()" id="exportBtn" disabled>📄 Export Results</button>
 
             <div class="questions-list" id="questionsList">
-                <div style="text-align: center; color: #6c757d;">Questions will appear here after loading</div>
+                <div style="text-align: center; color: #6c757d;">Choose a method above to load questions</div>
             </div>
 
             <div class="log" id="log"></div>
@@ -176,6 +244,15 @@
 
         <div class="chatbot-panel">
             <iframe id="chatFrame" src="about:blank"></iframe>
+        </div>
+
+        <div class="transcript-panel">
+            <h3>💬 Live Transcript</h3>
+            <div class="transcript" id="transcript">
+                <div class="message system">Choose a method to load questions and get started...</div>
+            </div>
+            <button onclick="clearTranscript()" style="margin-top: 10px;">🗑️ Clear Transcript</button>
+            <button onclick="copyTranscript()" style="margin-top: 5px;">📋 Copy Transcript</button>
         </div>
     </div>
 
@@ -185,6 +262,48 @@
         let testingInterval = null;
         let chatbotLoaded = false;
         let testResults = [];
+        let responseTimeout = null;
+
+        function addToTranscript(message, type = 'system') {
+            const transcript = document.getElementById('transcript');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            
+            if (type === 'user') {
+                messageDiv.innerHTML = `
+                    <div><strong>You:</strong> ${message}</div>
+                    <div class="timestamp">${timestamp}</div>
+                `;
+            } else if (type === 'bot') {
+                messageDiv.innerHTML = `
+                    <div><strong>Bot:</strong> ${message}</div>
+                    <div class="timestamp">${timestamp}</div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div>${message}</div>
+                    <div class="timestamp">${timestamp}</div>
+                `;
+            }
+            
+            transcript.appendChild(messageDiv);
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        function clearTranscript() {
+            document.getElementById('transcript').innerHTML = 
+                '<div class="message system">Transcript cleared...</div>';
+        }
+
+        function copyTranscript() {
+            const transcript = document.getElementById('transcript');
+            const text = Array.from(transcript.children).map(div => div.textContent).join('\n\n');
+            navigator.clipboard.writeText(text).then(() => {
+                log('📋 Transcript copied to clipboard', 'success');
+            });
+        }
 
         function log(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
@@ -216,7 +335,7 @@
         function updateQuestionsList() {
             const listDiv = document.getElementById('questionsList');
             if (questions.length === 0) {
-                listDiv.innerHTML = '<div style="text-align: center; color: #6c757d;">No questions loaded</div>';
+                listDiv.innerHTML = '<div style="text-align: center; color: #6c757d;">Choose a method above to load questions</div>';
                 return;
             }
 
@@ -229,19 +348,80 @@
             }).join('');
         }
 
-        async function loadQuestions() {
-            const sheetId = document.getElementById('sheetId').value.trim();
-            if (!sheetId) {
-                updateStatus('Please enter a Google Sheet ID', 'error');
+        function loadManualQuestions() {
+            const manualText = document.getElementById('manualQuestions').value.trim();
+            if (!manualText) {
+                updateStatus('Please enter some questions in the text area', 'error');
                 return;
             }
 
-            // Reset everything first
+            resetTestState();
+            
+            addToTranscript(`🔄 Loading manually entered questions`, 'system');
+            updateStatus('Processing manual questions...', 'warning');
+            log('Loading manually entered questions...', 'info');
+
+            try {
+                const newQuestions = manualText
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
+                if (newQuestions.length === 0) {
+                    throw new Error('No valid questions found');
+                }
+
+                questions = newQuestions;
+
+                log(`✅ Loaded ${questions.length} manual questions`, 'success');
+                addToTranscript(`✅ Successfully loaded ${questions.length} questions`, 'system');
+                updateStatus(`Loaded ${questions.length} questions successfully`, 'success');
+                
+                updateProgress();
+                updateQuestionsList();
+                enableTestingIfReady();
+
+            } catch (error) {
+                log(`❌ Error processing manual questions: ${error.message}`, 'error');
+                addToTranscript(`❌ Error: ${error.message}`, 'system');
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function loadFallbackQuestions() {
+            resetTestState();
+            
+            addToTranscript(`🔄 Loading default test questions`, 'system');
+            updateStatus('Loading default questions...', 'warning');
+            log('Loading default fallback questions...', 'info');
+
+            questions = [
+                "What are the admission requirements?",
+                "How do I apply for financial aid?",
+                "What research opportunities are available?",
+                "Who should I contact about course registration?",
+                "What courses are required for the aerospace engineering degree?",
+                "What is the application deadline?",
+                "How do I schedule a campus visit?",
+                "What scholarships are available?",
+                "Tell me about the faculty research areas",
+                "What are the prerequisites for graduate programs?"
+            ];
+
+            log(`✅ Loaded ${questions.length} default questions`, 'success');
+            addToTranscript(`✅ Successfully loaded ${questions.length} default questions`, 'system');
+            updateStatus(`Loaded ${questions.length} default questions`, 'success');
+            
+            updateProgress();
+            updateQuestionsList();
+            enableTestingIfReady();
+        }
+
+        function resetTestState() {
             questions = [];
             currentQuestionIndex = 0;
             testResults = [];
             
-            // Stop any running tests
             if (testingInterval) {
                 clearInterval(testingInterval);
                 testingInterval = null;
@@ -249,10 +429,26 @@
                 document.getElementById('stopBtn').disabled = true;
             }
             
-            // Clear transcript
             clearTranscript();
-            addToTranscript(`🔄 Loading questions from sheet: ${sheetId}`, 'system');
+            document.getElementById('startIndex').value = 1;
+            document.getElementById('exportBtn').disabled = true;
+        }
 
+        function enableTestingIfReady() {
+            if (chatbotLoaded && questions.length > 0) {
+                document.getElementById('startBtn').disabled = false;
+            }
+        }
+
+        async function loadQuestions() {
+            const sheetId = document.getElementById('sheetId').value.trim();
+            if (!sheetId) {
+                updateStatus('Please enter a Google Sheet ID', 'error');
+                return;
+            }
+
+            resetTestState();
+            addToTranscript(`🔄 Loading questions from sheet: ${sheetId}`, 'system');
             updateStatus('Loading questions from Google Sheets...', 'warning');
             log('Fetching questions from Google Sheets...', 'info');
 
@@ -260,120 +456,63 @@
                 const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
                 log(`Attempting to fetch: ${csvUrl}`, 'info');
                 
-                // Add timeout to the fetch
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
                 
                 const response = await fetch(csvUrl, {
                     signal: controller.signal,
                     mode: 'cors',
-                    headers: {
-                        'Accept': 'text/csv, text/plain, */*'
-                    }
+                    headers: { 'Accept': 'text/csv, text/plain, */*' }
                 });
                 
                 clearTimeout(timeoutId);
                 
-                log(`Response status: ${response.status}`, 'info');
-                
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}. Make sure the Google Sheet is published and publicly viewable.`);
+                    throw new Error(`HTTP ${response.status}: Make sure the Google Sheet is published and publicly viewable.`);
                 }
                 
                 const csvText = await response.text();
-                log(`Received ${csvText.length} characters of CSV data`, 'info');
                 
                 if (!csvText || csvText.trim().length === 0) {
                     throw new Error('Empty response from Google Sheets');
                 }
                 
-                // Parse CSV - assume questions are in first column
                 const lines = csvText.split('\n');
-                log(`CSV has ${lines.length} lines`, 'info');
-                
                 const newQuestions = lines
-                    .slice(1) // Skip header row
+                    .slice(1)
                     .map(line => {
-                        // Handle CSV parsing with commas in questions
                         const firstComma = line.indexOf(',');
                         return firstComma === -1 ? line : line.substring(0, firstComma);
                     })
                     .filter(q => q && q.trim())
-                    .map(q => q.replace(/"/g, '').trim()); // Clean up quotes
+                    .map(q => q.replace(/"/g, '').trim());
 
                 if (newQuestions.length === 0) {
-                    throw new Error('No questions found in the sheet. Check that your sheet has questions in column A and is publicly accessible.');
+                    throw new Error('No questions found in the sheet');
                 }
 
-                // Update the global questions array
                 questions = newQuestions;
-
-                log(`✅ Loaded ${questions.length} questions from new sheet`, 'success');
+                log(`✅ Loaded ${questions.length} questions from Google Sheets`, 'success');
                 addToTranscript(`✅ Successfully loaded ${questions.length} questions`, 'system');
                 updateStatus(`Loaded ${questions.length} questions successfully`, 'success');
                 
-                // Reset progress and display
                 updateProgress();
                 updateQuestionsList();
-                
-                // Reset start index to 1
-                document.getElementById('startIndex').value = 1;
-                
-                // Enable/disable buttons appropriately
-                document.getElementById('loadBtn').disabled = false;
-                document.getElementById('exportBtn').disabled = true;
-                
-                if (chatbotLoaded) {
-                    document.getElementById('startBtn').disabled = false;
-                }
+                enableTestingIfReady();
 
             } catch (error) {
-                // Clear questions on error
-                questions = [];
-                currentQuestionIndex = 0;
-                testResults = [];
-                
                 let errorMessage = error.message;
                 if (error.name === 'AbortError') {
-                    errorMessage = 'Request timed out after 15 seconds. Check your internet connection and sheet accessibility.';
+                    errorMessage = 'Request timed out after 15 seconds.';
                 }
                 
-                log(`❌ Error loading questions: ${errorMessage}`, 'error');
-                addToTranscript(`❌ Error: ${errorMessage}`, 'system');
+                log(`❌ Google Sheets error: ${errorMessage}`, 'error');
+                addToTranscript(`❌ Google Sheets failed: ${errorMessage}`, 'system');
                 updateStatus(`Error: ${errorMessage}`, 'error');
                 
-                // Clear displays
+                questions = [];
                 updateProgress();
                 updateQuestionsList();
-                
-                // Provide troubleshooting help
-                addToTranscript(`🔧 Troubleshooting tips:`, 'system');
-                addToTranscript(`• Make sure the Google Sheet is published to web`, 'system');
-                addToTranscript(`• Share settings should be "Anyone with link can view"`, 'system');
-                addToTranscript(`• Questions should be in column A`, 'system');
-                addToTranscript(`• Try using a different browser if CORS errors persist`, 'system');
-                
-                // Offer fallback questions
-                const useFallback = confirm(`Failed to load from Google Sheets.\n\nError: ${errorMessage}\n\nWould you like to use fallback questions to test the system?`);
-                
-                if (useFallback) {
-                    questions = [
-                        "What are the admission requirements?",
-                        "How do I apply for financial aid?",
-                        "What research opportunities are available?",
-                        "Who should I contact about course registration?",
-                        "What courses are required for the aerospace engineering degree?"
-                    ];
-                    log(`Using ${questions.length} fallback questions`, 'warning');
-                    addToTranscript(`Using ${questions.length} fallback questions`, 'system');
-                    updateStatus(`Using ${questions.length} fallback questions`, 'warning');
-                    updateProgress();
-                    updateQuestionsList();
-                    
-                    if (chatbotLoaded) {
-                        document.getElementById('startBtn').disabled = false;
-                    }
-                }
             }
         }
 
@@ -382,17 +521,19 @@
             iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
             
             log('Loading chatbot...', 'info');
+            addToTranscript('🔗 Loading chatbot...', 'system');
             updateStatus('Loading chatbot...', 'warning');
             
             iframe.onload = function() {
                 log('Chatbot loaded successfully!', 'success');
+                addToTranscript('✅ Chatbot loaded! Waiting for Voiceflow...', 'system');
                 updateStatus('Chatbot loaded! Waiting for Voiceflow to initialize...', 'info');
                 
-                // Wait for Voiceflow to initialize
                 setTimeout(() => {
                     chatbotLoaded = true;
-                    document.getElementById('startBtn').disabled = false;
+                    enableTestingIfReady();
                     log('Voiceflow should be ready now', 'success');
+                    addToTranscript('✅ Voiceflow ready!', 'system');
                     updateStatus('Ready to start testing!', 'success');
                 }, 8000);
             };
@@ -400,6 +541,8 @@
 
         function sendQuestion(question, questionNumber) {
             const iframe = document.getElementById('chatFrame');
+            
+            addToTranscript(question, 'user');
             
             try {
                 const voiceflow = iframe.contentWindow.voiceflow;
@@ -418,12 +561,18 @@
                         status: 'sent'
                     });
                     
+                    setTimeout(() => {
+                        tryCaptureBotResponse(questionNumber);
+                    }, 3000);
+                    
                     return true;
                 } else {
-                    throw new Error('Voiceflow not accessible in iframe');
+                    throw new Error('Voiceflow not accessible');
                 }
             } catch (error) {
                 log(`❌ Error sending Q${questionNumber}: ${error.message}`, 'error');
+                addToTranscript(`Error: ${error.message}`, 'system');
+                
                 testResults.push({
                     questionNumber,
                     question,
@@ -432,6 +581,15 @@
                     error: error.message
                 });
                 return false;
+            }
+        }
+
+        function tryCaptureBotResponse(questionNumber) {
+            try {
+                addToTranscript('Bot response received (content not accessible via iframe)', 'bot');
+                log(`📥 Response to Q${questionNumber} (iframe access limited)`, 'warning');
+            } catch (error) {
+                addToTranscript('Bot response received', 'bot');
             }
         }
 
@@ -457,15 +615,13 @@
             currentQuestionIndex = startIndex;
             
             log(`🚀 Starting test from question ${startIndex + 1}`, 'info');
+            addToTranscript(`🚀 Starting automated test from question ${startIndex + 1}`, 'system');
             updateStatus('Testing in progress...', 'warning');
             
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
             
-            // Send first question immediately
             sendNextQuestion();
-            
-            // Set up interval for remaining questions
             testingInterval = setInterval(sendNextQuestion, delay);
         }
 
@@ -473,6 +629,7 @@
             if (currentQuestionIndex >= questions.length) {
                 stopTesting();
                 log('✅ All questions completed!', 'success');
+                addToTranscript('✅ All questions completed!', 'system');
                 updateStatus('Testing completed!', 'success');
                 document.getElementById('exportBtn').disabled = false;
                 return;
@@ -526,10 +683,15 @@
             log('📄 Results exported to CSV', 'success');
         }
 
-        // Auto-load fallback questions on page load instead of trying Google Sheets
+        // Start with manual mode - no auto-loading
         window.addEventListener('load', () => {
-            log('Tester loaded. Loading default questions...', 'info');
-            loadFallbackQuestions();
+            log('Tester loaded. Choose a method to load questions.', 'info');
+            updateStatus('Ready - choose how to load questions', 'info');
+            addToTranscript('🤖 Chatbot Tester Ready', 'system');
+            addToTranscript('Choose a method to load questions:', 'system');
+            addToTranscript('• Use Default Questions (fastest)', 'system');
+            addToTranscript('• Paste Manual Questions (reliable)', 'system');
+            addToTranscript('• Load from Google Sheets (if accessible)', 'system');
         });
     </script>
 </body>
