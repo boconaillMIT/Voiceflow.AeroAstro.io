@@ -307,7 +307,73 @@ What courses are required for the degree?</textarea>
             });
         }
 
-        function loadDefaultQuestions() {
+        async function loadFromGoogleSheets() {
+            const sheetId = document.getElementById('googleSheetId').value.trim();
+            if (!sheetId) {
+                updateStatus('Please enter a Google Sheet ID', 'error');
+                return;
+            }
+
+            const gid = document.getElementById('sheetGid').value.trim() || '0';
+            
+            updateStatus('Loading from Google Sheets...', 'warning');
+            addToConversation(`🔄 Loading questions from Google Sheet: ${sheetId}, GID: ${gid}`, 'system');
+
+            try {
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+                
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch(csvUrl, {
+                    signal: controller.signal,
+                    mode: 'cors',
+                    headers: { 'Accept': 'text/csv, text/plain, */*' }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} - Make sure sheet is published and GID ${gid} exists`);
+                }
+
+                const csvText = await response.text();
+                if (!csvText.trim()) {
+                    throw new Error('Empty response from Google Sheets');
+                }
+
+                const lines = csvText.split('\n');
+                const newQuestions = lines
+                    .slice(1) // Skip header
+                    .map(line => {
+                        const firstComma = line.indexOf(',');
+                        return firstComma === -1 ? line : line.substring(0, firstComma);
+                    })
+                    .filter(q => q && q.trim())
+                    .map(q => q.replace(/"/g, '').trim());
+
+                if (newQuestions.length === 0) {
+                    throw new Error('No questions found in first column');
+                }
+
+                // Update the textarea with loaded questions
+                document.getElementById('questionsInput').value = newQuestions.join('\n');
+                
+                questions = newQuestions;
+                updateQuestionsList();
+                updateProgress();
+                updateStatus(`Loaded ${questions.length} questions from Google Sheets`, 'success');
+                addToConversation(`✅ Successfully loaded ${questions.length} questions from Google Sheets`, 'system');
+
+            } catch (error) {
+                let errorMsg = error.message;
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Request timed out after 10 seconds';
+                }
+                
+                updateStatus(`Google Sheets error: ${errorMsg}`, 'error');
+                addToConversation(`❌ Google Sheets failed: ${errorMsg}`, 'system');
+                addToConversation(`💡 Try: 1) Publish sheet to web, 2) Check GID, 3) Use manual entry`, 'system');
+            }
+        }
             const defaultQuestions = [
                 "What are the admission requirements?",
                 "How do I apply for financial aid?",
