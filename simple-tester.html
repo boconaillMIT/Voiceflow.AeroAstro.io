@@ -526,10 +526,10 @@
             log('📄 Results exported to CSV', 'success');
         }
 
-        // Auto-load questions on page load
+        // Auto-load fallback questions on page load instead of trying Google Sheets
         window.addEventListener('load', () => {
-            log('Tester loaded. Loading questions from Google Sheets...', 'info');
-            loadQuestions();
+            log('Tester loaded. Loading default questions...', 'info');
+            loadFallbackQuestions();
         });
     </script>
 </body>
