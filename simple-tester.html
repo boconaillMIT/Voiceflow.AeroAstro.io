@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester</title>
+    <title>Voiceflow Chatbot Tester v2</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -17,7 +17,7 @@
             gap: 20px;
             height: 90vh;
         }
-        .control-panel { 
+        .panel { 
             background: white; 
             padding: 20px; 
             border-radius: 8px; 
@@ -30,372 +30,221 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        .transcript-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 8px 0;
+            width: 100%;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button.green { background: #28a745; }
+        button.gray { background: #6c757d; }
+        button.red { background: #dc3545; }
+        .status { 
+            padding: 12px; 
+            border-radius: 4px; 
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .section {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            background: #f8f9fa;
+        }
+        .section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        label {
+            display: block;
+            margin: 8px 0 4px 0;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .questions-display {
+            background: #e9ecef;
+            border: 1px solid #adb5bd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 200px;
             overflow-y: auto;
-            display: flex;
-            flex-direction: column;
+            font-size: 12px;
+        }
+        .question-item {
+            padding: 6px;
+            margin: 3px 0;
+            border-radius: 3px;
+            background: white;
         }
         .transcript {
-            flex: 1;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 4px;
             padding: 15px;
+            height: 300px;
             overflow-y: auto;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 13px;
+            margin: 15px 0;
         }
         .message {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 8px;
-            max-width: 80%;
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 6px;
         }
         .message.user {
             background: #007bff;
             color: white;
-            margin-left: auto;
-            text-align: right;
+            margin-left: 20%;
         }
         .message.bot {
             background: #e9ecef;
             color: #333;
-            margin-right: auto;
+            margin-right: 20%;
         }
         .message.system {
             background: #fff3cd;
             color: #856404;
             text-align: center;
             font-style: italic;
-            margin: 5px auto;
-            max-width: 100%;
-        }
-        .timestamp {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-top: 5px;
-        }
-        button { 
-            background: #007bff; 
-            color: white; 
-            border: none; 
-            padding: 10px 20px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            margin: 5px 0;
-            width: 100%;
-            font-size: 14px;
-        }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .status { 
-            padding: 10px; 
-            border-radius: 4px; 
-            margin: 10px 0;
-            font-weight: bold;
-        }
-        .status.success { background: #d4edda; color: #155724; }
-        .status.error { background: #f8d7da; color: #721c24; }
-        .status.warning { background: #fff3cd; color: #856404; }
-        .status.info { background: #d1ecf1; color: #0c5460; }
-        .questions-list {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            margin: 10px 0;
-            max-height: 200px;
-            overflow-y: auto;
-            font-size: 12px;
-        }
-        .question-item {
-            padding: 5px;
-            margin: 2px 0;
-            border-radius: 3px;
-        }
-        .question-item.current {
-            background: #007bff;
-            color: white;
-            font-weight: bold;
-        }
-        .question-item.completed {
-            background: #28a745;
-            color: white;
-        }
-        .progress {
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        .progress-bar {
-            background: #007bff;
-            height: 20px;
-            transition: width 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-        }
-        .log {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            margin: 10px 0;
-            height: 150px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 11px;
-        }
-        .config-section {
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 10px 0;
-            background: #f8f9fa;
-        }
-        .config-section h4 {
-            margin: 0 0 10px 0;
-            color: #495057;
-        }
-        input[type="text"], input[type="number"], textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            margin: 5px 0;
-            box-sizing: border-box;
-        }
-        label {
-            display: block;
-            margin: 5px 0;
-            font-weight: bold;
-            font-size: 12px;
         }
         iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
-        .fallback-btn {
-            background: #6c757d !important;
-        }
-        .manual-btn {
-            background: #28a745 !important;
+        .debug {
+            font-family: monospace;
+            font-size: 11px;
+            color: #6c757d;
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="control-panel">
-            <h2>🤖 Chatbot Tester</h2>
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <h2>🤖 Chatbot Tester v2</h2>
             
-            <div class="config-section">
-                <h4>📊 Questions Source</h4>
+            <div class="section">
+                <h4>📝 Load Questions</h4>
                 
-                <!-- Method 1: Default Questions -->
-                <button onclick="loadFallbackQuestions()" class="fallback-btn">🔄 Use Default Questions (10 questions)</button>
+                <button onclick="useDefaultQuestions()" class="gray">🔄 Use Built-in Questions (10 questions)</button>
                 
-                <!-- Method 2: Manual Paste -->
-                <label style="margin-top: 15px;">Manual Entry (paste one question per line):</label>
-                <textarea id="manualQuestions" rows="6" placeholder="What are the admission requirements?
+                <label>Manual Questions (edit as needed):</label>
+                <textarea id="questionTextArea" rows="6">What are the admission requirements?
 How do I apply for financial aid?
 What research opportunities are available?
-Who should I contact about course registration?"></textarea>
-                <button onclick="loadManualQuestions()" class="manual-btn">📝 Load Manual Questions</button>
+Who should I contact about course registration?
+What courses are required for the degree?</textarea>
+                <button onclick="loadFromTextArea()" class="green">📝 Load These Questions</button>
                 
-                <!-- Method 3: Google Sheets -->
-                <label style="margin-top: 15px;">Google Sheet ID (if accessible):</label>
-                <input type="text" id="sheetId" value="1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ" placeholder="Google Sheet ID">
-                <button onclick="loadQuestions()">📥 Load from Google Sheets</button>
+                <label>Google Sheet ID (optional):</label>
+                <input type="text" id="googleSheetId" placeholder="Enter Google Sheet ID">
+                <button onclick="tryGoogleSheets()" id="googleBtn">📥 Try Google Sheets</button>
+                <div class="debug" id="googleStatus">Ready to try Google Sheets</div>
             </div>
 
-            <div class="config-section">
-                <h4>⚙️ Test Settings</h4>
+            <div class="section">
+                <h4>⚙️ Settings</h4>
                 <label>Delay between questions (seconds):</label>
-                <input type="number" id="delay" value="6" min="3" max="30">
-                <label>Start from question #:</label>
-                <input type="number" id="startIndex" value="1" min="1">
+                <input type="number" id="delaySeconds" value="6" min="3" max="30">
             </div>
 
-            <div class="status info" id="status">Ready - choose how to load questions</div>
+            <div class="status" id="mainStatus">Ready - load questions above</div>
 
-            <div class="progress">
-                <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+            <button onclick="loadChatbot()" id="loadChatBtn">🔗 Load Chatbot</button>
+            <button onclick="startTest()" id="startBtn" disabled>▶️ Start Automated Test</button>
+            <button onclick="stopTest()" id="stopBtn" disabled class="red">⏹️ Stop Test</button>
+
+            <div class="questions-display" id="questionsDisplay">
+                <div style="text-align: center; color: #6c757d;">Load questions above to see them here</div>
             </div>
-
-            <button onclick="loadChatbot()" id="loadBtn">🔗 Load Chatbot</button>
-            <button onclick="startTesting()" id="startBtn" disabled>▶️ Start Testing</button>
-            <button onclick="stopTesting()" id="stopBtn" disabled>⏹️ Stop Testing</button>
-            <button onclick="exportResults()" id="exportBtn" disabled>📄 Export Results</button>
-
-            <div class="questions-list" id="questionsList">
-                <div style="text-align: center; color: #6c757d;">Choose a method above to load questions</div>
-            </div>
-
-            <div class="log" id="log"></div>
         </div>
 
+        <!-- Middle Panel: Chatbot -->
         <div class="chatbot-panel">
-            <iframe id="chatFrame" src="about:blank"></iframe>
+            <iframe id="chatIframe" src="about:blank"></iframe>
         </div>
 
-        <div class="transcript-panel">
+        <!-- Right Panel: Transcript -->
+        <div class="panel">
             <h3>💬 Live Transcript</h3>
             <div class="transcript" id="transcript">
-                <div class="message system">Choose a method to load questions and get started...</div>
+                <div class="message system">Transcript will appear here during testing</div>
             </div>
-            <button onclick="clearTranscript()" style="margin-top: 10px;">🗑️ Clear Transcript</button>
-            <button onclick="copyTranscript()" style="margin-top: 5px;">📋 Copy Transcript</button>
+            <button onclick="clearTranscript()">🗑️ Clear Transcript</button>
+            <button onclick="copyToClipboard()">📋 Copy Transcript</button>
         </div>
     </div>
 
     <script>
-        let questions = [];
+        // Global variables
+        let questionsList = [];
         let currentQuestionIndex = 0;
-        let testingInterval = null;
-        let chatbotLoaded = false;
-        let testResults = [];
-        let responseTimeout = null;
+        let testInterval = null;
+        let chatbotReady = false;
 
-        function addToTranscript(message, type = 'system') {
+        // Helper functions
+        function addMessage(text, type = 'system') {
             const transcript = document.getElementById('transcript');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            
-            const timestamp = new Date().toLocaleTimeString();
-            
-            if (type === 'user') {
-                messageDiv.innerHTML = `
-                    <div><strong>You:</strong> ${message}</div>
-                    <div class="timestamp">${timestamp}</div>
-                `;
-            } else if (type === 'bot') {
-                messageDiv.innerHTML = `
-                    <div><strong>Bot:</strong> ${message}</div>
-                    <div class="timestamp">${timestamp}</div>
-                `;
-            } else {
-                messageDiv.innerHTML = `
-                    <div>${message}</div>
-                    <div class="timestamp">${timestamp}</div>
-                `;
-            }
-            
-            transcript.appendChild(messageDiv);
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.innerHTML = `${text}<br><small>${new Date().toLocaleTimeString()}</small>`;
+            transcript.appendChild(msg);
             transcript.scrollTop = transcript.scrollHeight;
         }
 
-        function clearTranscript() {
-            document.getElementById('transcript').innerHTML = 
-                '<div class="message system">Transcript cleared...</div>';
+        function updateStatus(text, type = 'info') {
+            const status = document.getElementById('mainStatus');
+            status.textContent = text;
+            status.className = `status ${type}`;
         }
 
-        function copyTranscript() {
-            const transcript = document.getElementById('transcript');
-            const text = Array.from(transcript.children).map(div => div.textContent).join('\n\n');
-            navigator.clipboard.writeText(text).then(() => {
-                log('📋 Transcript copied to clipboard', 'success');
-            });
-        }
-
-        function log(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const logDiv = document.getElementById('log');
-            const colors = {
-                info: '#495057',
-                success: '#28a745', 
-                error: '#dc3545',
-                warning: '#ffc107'
-            };
-            
-            logDiv.innerHTML += `<div style="color: ${colors[type]}">[${timestamp}] ${message}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
-
-        function updateStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-        }
-
-        function updateProgress() {
-            const progress = questions.length > 0 ? (currentQuestionIndex / questions.length) * 100 : 0;
-            const progressBar = document.getElementById('progressBar');
-            progressBar.style.width = progress + '%';
-            progressBar.textContent = `${Math.round(progress)}% (${currentQuestionIndex}/${questions.length})`;
-        }
-
-        function updateQuestionsList() {
-            const listDiv = document.getElementById('questionsList');
-            if (questions.length === 0) {
-                listDiv.innerHTML = '<div style="text-align: center; color: #6c757d;">Choose a method above to load questions</div>';
+        function displayQuestions() {
+            const display = document.getElementById('questionsDisplay');
+            if (questionsList.length === 0) {
+                display.innerHTML = '<div style="text-align: center; color: #6c757d;">No questions loaded</div>';
                 return;
             }
-
-            listDiv.innerHTML = questions.map((q, index) => {
-                let className = 'question-item';
-                if (index < currentQuestionIndex) className += ' completed';
-                else if (index === currentQuestionIndex) className += ' current';
-                
-                return `<div class="${className}">${index + 1}. ${q.substring(0, 80)}${q.length > 80 ? '...' : ''}</div>`;
-            }).join('');
+            
+            display.innerHTML = questionsList.map((q, i) => 
+                `<div class="question-item">${i + 1}. ${q}</div>`
+            ).join('');
         }
 
-        function loadManualQuestions() {
-            const manualText = document.getElementById('manualQuestions').value.trim();
-            if (!manualText) {
-                updateStatus('Please enter some questions in the text area', 'error');
-                return;
-            }
-
-            resetTestState();
-            
-            addToTranscript(`🔄 Loading manually entered questions`, 'system');
-            updateStatus('Processing manual questions...', 'warning');
-            log('Loading manually entered questions...', 'info');
-
-            try {
-                const newQuestions = manualText
-                    .split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0);
-
-                if (newQuestions.length === 0) {
-                    throw new Error('No valid questions found');
-                }
-
-                questions = newQuestions;
-
-                log(`✅ Loaded ${questions.length} manual questions`, 'success');
-                addToTranscript(`✅ Successfully loaded ${questions.length} questions`, 'system');
-                updateStatus(`Loaded ${questions.length} questions successfully`, 'success');
-                
-                updateProgress();
-                updateQuestionsList();
-                enableTestingIfReady();
-
-            } catch (error) {
-                log(`❌ Error processing manual questions: ${error.message}`, 'error');
-                addToTranscript(`❌ Error: ${error.message}`, 'system');
-                updateStatus(`Error: ${error.message}`, 'error');
-            }
-        }
-
-        function loadFallbackQuestions() {
-            resetTestState();
-            
-            addToTranscript(`🔄 Loading default test questions`, 'system');
-            updateStatus('Loading default questions...', 'warning');
-            log('Loading default fallback questions...', 'info');
-
-            questions = [
+        // Question loading functions
+        function useDefaultQuestions() {
+            questionsList = [
                 "What are the admission requirements?",
                 "How do I apply for financial aid?",
                 "What research opportunities are available?",
@@ -407,324 +256,241 @@ Who should I contact about course registration?"></textarea>
                 "Tell me about the faculty research areas",
                 "What are the prerequisites for graduate programs?"
             ];
-
-            log(`✅ Loaded ${questions.length} default questions`, 'success');
-            addToTranscript(`✅ Successfully loaded ${questions.length} default questions`, 'system');
-            updateStatus(`Loaded ${questions.length} default questions`, 'success');
             
-            updateProgress();
-            updateQuestionsList();
-            enableTestingIfReady();
+            updateStatus(`Loaded ${questionsList.length} default questions`, 'success');
+            addMessage(`✅ Loaded ${questionsList.length} built-in questions`);
+            displayQuestions();
+            checkReadyToTest();
         }
 
-        function resetTestState() {
-            questions = [];
-            currentQuestionIndex = 0;
-            testResults = [];
+        function loadFromTextArea() {
+            const textarea = document.getElementById('questionTextArea');
+            const text = textarea.value.trim();
             
-            if (testingInterval) {
-                clearInterval(testingInterval);
-                testingInterval = null;
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('stopBtn').disabled = true;
-            }
-            
-            clearTranscript();
-            document.getElementById('startIndex').value = 1;
-            document.getElementById('exportBtn').disabled = true;
-        }
-
-        function enableTestingIfReady() {
-            if (chatbotLoaded && questions.length > 0) {
-                document.getElementById('startBtn').disabled = false;
-            }
-        }
-
-        async function loadQuestions() {
-            const sheetIdInput = document.getElementById('sheetId');
-            const sheetId = sheetIdInput.value.trim();
-            
-            // Update the display to show what we're reading
-            document.getElementById('currentSheetId').textContent = sheetId || 'None entered';
-            
-            if (!sheetId) {
-                updateStatus('Please enter a Google Sheet ID', 'error');
-                log('❌ No Sheet ID entered', 'error');
+            if (!text) {
+                updateStatus('Please enter some questions in the text area', 'error');
+                addMessage('❌ Text area is empty');
                 return;
             }
 
-            // Debug: Show what sheet ID we're actually using
-            log(`🔍 Reading from input field: "${sheetId}"`, 'info');
-            addToTranscript(`🔍 Using Sheet ID: ${sheetId}`, 'system');
+            const questions = text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
 
-            resetTestState();
-            addToTranscript(`🔄 Loading questions from sheet: ${sheetId}`, 'system');
-            updateStatus('Loading questions from Google Sheets...', 'warning');
-            log('Fetching questions from Google Sheets...', 'info');
+            if (questions.length === 0) {
+                updateStatus('No valid questions found', 'error');
+                addMessage('❌ No valid questions found in text area');
+                return;
+            }
 
-            // Add a loading indicator
-            const loadButton = document.querySelector('button[onclick="loadQuestions()"]');
-            const originalText = loadButton.textContent;
-            loadButton.textContent = '⏳ Loading...';
-            loadButton.disabled = true;
+            questionsList = questions;
+            updateStatus(`Loaded ${questionsList.length} questions from text area`, 'success');
+            addMessage(`✅ Loaded ${questionsList.length} questions from text area`);
+            displayQuestions();
+            checkReadyToTest();
+        }
+
+        async function tryGoogleSheets() {
+            const sheetId = document.getElementById('googleSheetId').value.trim();
+            if (!sheetId) {
+                updateStatus('Please enter a Google Sheet ID', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('googleBtn');
+            const status = document.getElementById('googleStatus');
+            
+            btn.textContent = '⏳ Loading...';
+            btn.disabled = true;
+            status.textContent = `Trying to load from: ${sheetId}`;
+            
+            updateStatus('Attempting to load from Google Sheets...', 'warning');
+            addMessage(`🔄 Attempting to load from Google Sheet: ${sheetId}`);
 
             try {
-                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
-                log(`📡 Full URL: ${csvUrl}`, 'info');
-                addToTranscript(`📡 Fetching: ${csvUrl}`, 'system');
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+                addMessage(`📡 Fetching: ${url}`);
                 
-                // Shorter timeout and better error handling
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => {
-                    controller.abort();
-                    log('⏰ Request timed out after 10 seconds', 'error');
-                }, 10000); // Reduced to 10 seconds
+                setTimeout(() => controller.abort(), 8000); // 8 second timeout
                 
-                const response = await fetch(csvUrl, {
+                const response = await fetch(url, {
                     signal: controller.signal,
-                    mode: 'no-cors', // Try no-cors mode
-                    headers: { 'Accept': 'text/csv, text/plain, */*' }
+                    mode: 'cors'
                 });
-                
-                clearTimeout(timeoutId);
-                log(`📡 Response received - Status: ${response.status}, Type: ${response.type}`, 'info');
-                
-                if (response.type === 'opaque') {
-                    // no-cors mode returns opaque response
-                    throw new Error('CORS blocked - try manual entry or ensure sheet is published');
-                }
-                
+
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: Make sure the Google Sheet is published and publicly viewable.`);
+                    throw new Error(`HTTP ${response.status} - Sheet may not be published or accessible`);
                 }
-                
+
                 const csvText = await response.text();
-                log(`✅ Received ${csvText.length} characters from Sheet ID: ${sheetId}`, 'info');
-                
-                if (!csvText || csvText.trim().length === 0) {
+                if (!csvText.trim()) {
                     throw new Error('Empty response from Google Sheets');
                 }
-                
+
                 const lines = csvText.split('\n');
-                const newQuestions = lines
-                    .slice(1)
-                    .map(line => {
-                        const firstComma = line.indexOf(',');
-                        return firstComma === -1 ? line : line.substring(0, firstComma);
-                    })
+                const questions = lines
+                    .slice(1) // Skip header
+                    .map(line => line.split(',')[0]) // First column
                     .filter(q => q && q.trim())
                     .map(q => q.replace(/"/g, '').trim());
 
-                if (newQuestions.length === 0) {
-                    throw new Error('No questions found in the sheet');
+                if (questions.length === 0) {
+                    throw new Error('No questions found in first column');
                 }
 
-                questions = newQuestions;
-                log(`✅ Successfully loaded ${questions.length} questions from Sheet ID: ${sheetId}`, 'success');
-                addToTranscript(`✅ Successfully loaded ${questions.length} questions from ${sheetId}`, 'system');
-                updateStatus(`Loaded ${questions.length} questions successfully`, 'success');
-                
-                updateProgress();
-                updateQuestionsList();
-                enableTestingIfReady();
+                questionsList = questions;
+                updateStatus(`Loaded ${questionsList.length} questions from Google Sheets`, 'success');
+                addMessage(`✅ Successfully loaded ${questionsList.length} questions from Google Sheets`);
+                status.textContent = `Success: ${questionsList.length} questions loaded`;
+                displayQuestions();
+                checkReadyToTest();
 
             } catch (error) {
-                let errorMessage = error.message;
+                let errorMsg = error.message;
                 if (error.name === 'AbortError') {
-                    errorMessage = 'Request timed out after 10 seconds. Try manual entry instead.';
+                    errorMsg = 'Timed out after 8 seconds';
                 }
                 
-                log(`❌ Google Sheets error for ${sheetId}: ${errorMessage}`, 'error');
-                addToTranscript(`❌ Failed to load from ${sheetId}: ${errorMessage}`, 'system');
-                addToTranscript(`💡 Try copying questions manually from your sheet`, 'system');
-                updateStatus(`Error: ${errorMessage}`, 'error');
-                
-                questions = [];
-                updateProgress();
-                updateQuestionsList();
+                updateStatus(`Google Sheets failed: ${errorMsg}`, 'error');
+                addMessage(`❌ Google Sheets error: ${errorMsg}`);
+                addMessage(`💡 Try copying questions manually instead`);
+                status.textContent = `Failed: ${errorMsg}`;
             } finally {
-                // Restore button
-                loadButton.textContent = originalText;
-                loadButton.disabled = false;
+                btn.textContent = '📥 Try Google Sheets';
+                btn.disabled = false;
             }
         }
 
+        // Chatbot functions
         function loadChatbot() {
-            const iframe = document.getElementById('chatFrame');
+            const iframe = document.getElementById('chatIframe');
             iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
             
-            log('Loading chatbot...', 'info');
-            addToTranscript('🔗 Loading chatbot...', 'system');
             updateStatus('Loading chatbot...', 'warning');
+            addMessage('🔗 Loading chatbot...');
             
             iframe.onload = function() {
-                log('Chatbot loaded successfully!', 'success');
-                addToTranscript('✅ Chatbot loaded! Waiting for Voiceflow...', 'system');
-                updateStatus('Chatbot loaded! Waiting for Voiceflow to initialize...', 'info');
+                addMessage('✅ Chatbot page loaded, waiting for Voiceflow...');
+                updateStatus('Chatbot loaded, waiting for Voiceflow...', 'info');
                 
                 setTimeout(() => {
-                    chatbotLoaded = true;
-                    enableTestingIfReady();
-                    log('Voiceflow should be ready now', 'success');
-                    addToTranscript('✅ Voiceflow ready!', 'system');
-                    updateStatus('Ready to start testing!', 'success');
+                    chatbotReady = true;
+                    updateStatus('Chatbot ready!', 'success');
+                    addMessage('✅ Voiceflow should be ready now');
+                    checkReadyToTest();
                 }, 8000);
             };
         }
 
-        function sendQuestion(question, questionNumber) {
-            const iframe = document.getElementById('chatFrame');
+        function checkReadyToTest() {
+            const startBtn = document.getElementById('startBtn');
+            if (questionsList.length > 0 && chatbotReady) {
+                startBtn.disabled = false;
+                updateStatus('Ready to start testing!', 'success');
+            }
+        }
+
+        // Testing functions
+        function startTest() {
+            if (questionsList.length === 0) {
+                updateStatus('Please load questions first', 'error');
+                return;
+            }
+            if (!chatbotReady) {
+                updateStatus('Please load chatbot first', 'error');
+                return;
+            }
+
+            const delay = parseInt(document.getElementById('delaySeconds').value) * 1000;
+            currentQuestionIndex = 0;
             
-            addToTranscript(question, 'user');
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            updateStatus('Testing in progress...', 'warning');
+            addMessage(`🚀 Starting test with ${questionsList.length} questions`);
+            
+            sendNextQuestion();
+            testInterval = setInterval(sendNextQuestion, delay);
+        }
+
+        function sendNextQuestion() {
+            if (currentQuestionIndex >= questionsList.length) {
+                stopTest();
+                updateStatus('All questions completed!', 'success');
+                addMessage('🎉 All questions completed!');
+                return;
+            }
+
+            const question = questionsList[currentQuestionIndex];
+            const questionNum = currentQuestionIndex + 1;
+            
+            addMessage(question, 'user');
             
             try {
+                const iframe = document.getElementById('chatIframe');
                 const voiceflow = iframe.contentWindow.voiceflow;
+                
                 if (voiceflow && voiceflow.chat && voiceflow.chat.interact) {
                     voiceflow.chat.interact({
                         type: 'text',
                         payload: question
                     });
                     
-                    log(`📤 Q${questionNumber}: ${question}`, 'info');
+                    console.log(`Sent Q${questionNum}: ${question}`);
                     
-                    testResults.push({
-                        questionNumber,
-                        question,
-                        timestamp: new Date().toISOString(),
-                        status: 'sent'
-                    });
-                    
+                    // Simulate bot response after delay
                     setTimeout(() => {
-                        tryCaptureBotResponse(questionNumber);
-                    }, 3000);
+                        addMessage('Response received (content not accessible via iframe)', 'bot');
+                    }, 2000);
                     
-                    return true;
                 } else {
-                    throw new Error('Voiceflow not accessible');
+                    addMessage('Error: Cannot access Voiceflow in iframe', 'system');
                 }
             } catch (error) {
-                log(`❌ Error sending Q${questionNumber}: ${error.message}`, 'error');
-                addToTranscript(`Error: ${error.message}`, 'system');
-                
-                testResults.push({
-                    questionNumber,
-                    question,
-                    timestamp: new Date().toISOString(),
-                    status: 'error',
-                    error: error.message
-                });
-                return false;
-            }
-        }
-
-        function tryCaptureBotResponse(questionNumber) {
-            try {
-                addToTranscript('Bot response received (content not accessible via iframe)', 'bot');
-                log(`📥 Response to Q${questionNumber} (iframe access limited)`, 'warning');
-            } catch (error) {
-                addToTranscript('Bot response received', 'bot');
-            }
-        }
-
-        function startTesting() {
-            if (!chatbotLoaded) {
-                updateStatus('Please load the chatbot first', 'error');
-                return;
+                addMessage(`Error sending question: ${error.message}`, 'system');
             }
 
-            if (questions.length === 0) {
-                updateStatus('Please load questions first', 'error');
-                return;
-            }
-
-            const startIndex = parseInt(document.getElementById('startIndex').value) - 1;
-            const delay = parseInt(document.getElementById('delay').value) * 1000;
-
-            if (startIndex < 0 || startIndex >= questions.length) {
-                updateStatus('Invalid start index', 'error');
-                return;
-            }
-
-            currentQuestionIndex = startIndex;
-            
-            log(`🚀 Starting test from question ${startIndex + 1}`, 'info');
-            addToTranscript(`🚀 Starting automated test from question ${startIndex + 1}`, 'system');
-            updateStatus('Testing in progress...', 'warning');
-            
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            
-            sendNextQuestion();
-            testingInterval = setInterval(sendNextQuestion, delay);
-        }
-
-        function sendNextQuestion() {
-            if (currentQuestionIndex >= questions.length) {
-                stopTesting();
-                log('✅ All questions completed!', 'success');
-                addToTranscript('✅ All questions completed!', 'system');
-                updateStatus('Testing completed!', 'success');
-                document.getElementById('exportBtn').disabled = false;
-                return;
-            }
-
-            const question = questions[currentQuestionIndex];
-            const questionNumber = currentQuestionIndex + 1;
-            
-            sendQuestion(question, questionNumber);
             currentQuestionIndex++;
-            
-            updateProgress();
-            updateQuestionsList();
         }
 
-        function stopTesting() {
-            if (testingInterval) {
-                clearInterval(testingInterval);
-                testingInterval = null;
+        function stopTest() {
+            if (testInterval) {
+                clearInterval(testInterval);
+                testInterval = null;
             }
             
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
             
-            log('⏹️ Testing stopped', 'warning');
-            addToTranscript('⏹️ Testing stopped by user', 'system');
-            updateStatus('Testing stopped', 'info');
+            updateStatus('Test stopped', 'info');
+            addMessage('⏹️ Test stopped');
         }
 
-        function exportResults() {
-            if (testResults.length === 0) {
-                updateStatus('No results to export', 'error');
-                return;
-            }
-
-            const csv = [
-                'Question Number,Question,Timestamp,Status,Error',
-                ...testResults.map(result => 
-                    `${result.questionNumber},"${result.question}","${result.timestamp}","${result.status}","${result.error || ''}"`
-                )
-            ].join('\n');
-
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `chatbot-test-results-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-
-            log('📄 Results exported to CSV', 'success');
+        // Utility functions
+        function clearTranscript() {
+            document.getElementById('transcript').innerHTML = 
+                '<div class="message system">Transcript cleared</div>';
         }
 
-        // Start with manual mode - no auto-loading
+        function copyToClipboard() {
+            const transcript = document.getElementById('transcript');
+            const text = Array.from(transcript.children)
+                .map(div => div.textContent)
+                .join('\n');
+            
+            navigator.clipboard.writeText(text).then(() => {
+                addMessage('📋 Transcript copied to clipboard');
+            });
+        }
+
+        // Initialize
         window.addEventListener('load', () => {
-            log('Tester loaded. Choose a method to load questions.', 'info');
-            updateStatus('Ready - choose how to load questions', 'info');
-            addToTranscript('🤖 Chatbot Tester Ready', 'system');
-            addToTranscript('Choose a method to load questions:', 'system');
-            addToTranscript('• Use Default Questions (fastest)', 'system');
-            addToTranscript('• Paste Manual Questions (reliable)', 'system');
-            addToTranscript('• Load from Google Sheets (if accessible)', 'system');
+            addMessage('🤖 Chatbot Tester v2 Ready');
+            addMessage('Step 1: Load questions using options above');
+            addMessage('Step 2: Load chatbot');
+            addMessage('Step 3: Start testing');
         });
     </script>
 </body>
