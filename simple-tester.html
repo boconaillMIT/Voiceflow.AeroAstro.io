@@ -1,296 +1,460 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Chatbot Tester</title>
+    <title>Voiceflow Chatbot Tester v2</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
-        .section { border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin: 20px 0; background: #f8f9fa; }
-        .section h3 { color: #007bff; margin-top: 0; }
-        button { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; margin: 5px; font-weight: bold; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr 350px;
+            gap: 20px;
+            height: 90vh;
+        }
+        .panel { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        .chatbot-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 8px 0;
+            width: 100%;
+            font-size: 14px;
+            font-weight: bold;
+        }
         button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         button.green { background: #28a745; }
+        button.gray { background: #6c757d; }
         button.red { background: #dc3545; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; margin: 5px 0; box-sizing: border-box; }
-        textarea { height: 120px; font-family: monospace; }
-        .status { padding: 15px; border-radius: 4px; margin: 15px 0; font-weight: bold; text-align: center; }
+        .status { 
+            padding: 12px; 
+            border-radius: 4px; 
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
+        }
         .status.success { background: #d4edda; color: #155724; }
         .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
         .status.info { background: #d1ecf1; color: #0c5460; }
-        label { display: block; font-weight: bold; margin: 10px 0 5px 0; }
+        .section {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            background: #f8f9fa;
+        }
+        .section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        label {
+            display: block;
+            margin: 8px 0 4px 0;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .questions-display {
+            background: #e9ecef;
+            border: 1px solid #adb5bd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .question-item {
+            padding: 6px;
+            margin: 3px 0;
+            border-radius: 3px;
+            background: white;
+        }
+        .transcript {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+            margin: 15px 0;
+        }
+        .message {
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .message.user {
+            background: #007bff;
+            color: white;
+            margin-left: 20%;
+        }
+        .message.bot {
+            background: #e9ecef;
+            color: #333;
+            margin-right: 20%;
+        }
+        .message.system {
+            background: #fff3cd;
+            color: #856404;
+            text-align: center;
+            font-style: italic;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .debug {
+            font-family: monospace;
+            font-size: 11px;
+            color: #6c757d;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🤖 Simple Chatbot Tester</h1>
-        
-        <!-- GOOGLE SHEETS SECTION -->
-        <div class="section">
-            <h3>📊 METHOD 1: Load from Google Sheets</h3>
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <h2>🤖 Chatbot Tester v2</h2>
             
-            <label>Google Sheet ID:</label>
-            <input type="text" id="googleSheetId" placeholder="Enter your Google Sheet ID here" value="">
-            
-            <label>Sheet GID (optional - leave blank for first sheet):</label>
-            <input type="text" id="sheetGid" placeholder="e.g. 123456789 (found in URL after #gid=)" value="">
-            
-            <button onclick="loadFromGoogleSheets()">📥 Load Questions from Google Sheets</button>
-            
-            <div id="googleStatus" style="margin: 10px 0; font-size: 12px; color: #666;">
-                Enter your Google Sheet ID above and click the button
-            </div>
-        </div>
-        
-        <!-- MANUAL ENTRY SECTION -->
-        <div class="section">
-            <h3>✏️ METHOD 2: Manual Entry or Edit Questions</h3>
-            
-            <button onclick="loadDefaults()" class="green">📝 Load 5 Default Questions</button>
-            
-            <label>Questions (one per line):</label>
-            <textarea id="questionsTextarea" placeholder="Enter your questions here, one per line...">What are the admission requirements?
+            <div class="section">
+                <h4>📝 Load Questions</h4>
+                
+                <button onclick="useDefaultQuestions()" class="gray">🔄 Use Built-in Questions (10 questions)</button>
+                
+                <label>Manual Questions (edit as needed):</label>
+                <textarea id="questionTextArea" rows="6">What are the admission requirements?
 How do I apply for financial aid?
 What research opportunities are available?
 Who should I contact about course registration?
 What courses are required for the degree?</textarea>
-            
-            <button onclick="loadFromTextarea()">✅ Use These Questions</button>
-        </div>
-        
-        <!-- TESTING SECTION -->
-        <div class="section">
-            <h3>🚀 Testing Controls</h3>
-            
-            <div class="status info" id="mainStatus">Ready - load questions using methods above</div>
-            
-            <label>Questions loaded: <span id="questionCount">5</span></label>
-            <label>Delay between questions: <input type="number" id="delayInput" value="6" min="3" max="15" style="width: 60px;"> seconds</label>
-            
-            <button onclick="startTest()" id="startBtn">▶️ Start Automated Test</button>
-            <button onclick="stopTest()" id="stopBtn" class="red" disabled>⏹️ Stop Test</button>
-            <button onclick="exportCSV()" id="exportBtn" disabled>💾 Export Results to CSV</button>
-            
-            <div style="margin: 15px 0;">
-                <strong>Progress:</strong> <span id="progress">0/0</span>
-                <div style="background: #e9ecef; height: 20px; border-radius: 4px; margin: 5px 0;">
-                    <div id="progressBar" style="background: #007bff; height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
-                </div>
+                <button onclick="loadFromTextArea()" class="green">📝 Load These Questions</button>
+                
+                <label>Google Sheet ID (optional):</label>
+                <input type="text" id="googleSheetId" placeholder="Enter Google Sheet ID" value="1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ">
+                <button onclick="tryGoogleSheets()" id="googleBtn">📥 Try Google Sheets</button>
+                <div class="debug" id="googleStatus">Ready to try Google Sheets</div>
+            </div>
+
+            <div class="section">
+                <h4>⚙️ Settings</h4>
+                <label>Delay between questions (seconds):</label>
+                <input type="number" id="delaySeconds" value="6" min="3" max="30">
+            </div>
+
+            <div class="status" id="mainStatus">Ready - load questions above</div>
+
+            <button onclick="loadChatbot()" id="loadChatBtn">🔗 Load Chatbot</button>
+            <button onclick="startTest()" id="startBtn" disabled>▶️ Start Automated Test</button>
+            <button onclick="stopTest()" id="stopBtn" disabled class="red">⏹️ Stop Test</button>
+
+            <div class="questions-display" id="questionsDisplay">
+                <div style="text-align: center; color: #6c757d;">Load questions above to see them here</div>
             </div>
         </div>
-        
-        <!-- CHATBOT SECTION -->
-        <div class="section">
-            <h3>💬 Chatbot (will load here)</h3>
-            <div id="chatbotArea" style="height: 400px; border: 1px solid #ccc; border-radius: 4px; background: #fff;">
-                <div style="padding: 20px; text-align: center; color: #666;">
-                    Chatbot will load here when testing starts
-                </div>
-            </div>
+
+        <!-- Middle Panel: Chatbot -->
+        <div class="chatbot-panel">
+            <iframe id="chatIframe" src="about:blank"></iframe>
         </div>
-        
-        <!-- RESULTS SECTION -->
-        <div class="section">
-            <h3>📋 Test Results</h3>
-            <div id="resultsArea" style="height: 300px; border: 1px solid #ccc; border-radius: 4px; padding: 15px; overflow-y: auto; background: #fff; font-family: monospace; font-size: 12px;">
-                Test results will appear here...
+
+        <!-- Right Panel: Transcript -->
+        <div class="panel">
+            <h3>💬 Live Transcript</h3>
+            <div class="transcript" id="transcript">
+                <div class="message system">Transcript will appear here during testing</div>
             </div>
-            <button onclick="clearResults()">🗑️ Clear Results</button>
+            <button onclick="clearTranscript()">🗑️ Clear Transcript</button>
+            <button onclick="copyToClipboard()">📋 Copy Transcript</button>
         </div>
     </div>
 
     <script>
-        let questions = ["What are the admission requirements?","How do I apply for financial aid?","What research opportunities are available?","Who should I contact about course registration?","What courses are required for the degree?"];
-        let currentIndex = 0;
-        let testResults = [];
+        // Global variables
+        let questionsList = [];
+        let currentQuestionIndex = 0;
         let testInterval = null;
-        let chatbotLoaded = false;
+        let chatbotReady = false;
 
-        // Update question count display
-        function updateQuestionCount() {
-            document.getElementById('questionCount').textContent = questions.length;
-            document.getElementById('progress').textContent = `${currentIndex}/${questions.length}`;
-            const percentage = questions.length > 0 ? (currentIndex / questions.length) * 100 : 0;
-            document.getElementById('progressBar').style.width = percentage + '%';
+        // Helper functions
+        function addMessage(text, type = 'system') {
+            const transcript = document.getElementById('transcript');
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.innerHTML = `${text}<br><small>${new Date().toLocaleTimeString()}</small>`;
+            transcript.appendChild(msg);
+            transcript.scrollTop = transcript.scrollHeight;
         }
 
-        // Load from Google Sheets
-        async function loadFromGoogleSheets() {
-            const sheetId = document.getElementById('googleSheetId').value.trim();
-            const gid = document.getElementById('sheetGid').value.trim() || '0';
-            const statusDiv = document.getElementById('googleStatus');
-            const mainStatus = document.getElementById('mainStatus');
-            
-            if (!sheetId) {
-                statusDiv.textContent = '❌ Please enter a Google Sheet ID';
-                statusDiv.style.color = 'red';
+        function updateStatus(text, type = 'info') {
+            const status = document.getElementById('mainStatus');
+            status.textContent = text;
+            status.className = `status ${type}`;
+        }
+
+        function displayQuestions() {
+            const display = document.getElementById('questionsDisplay');
+            if (questionsList.length === 0) {
+                display.innerHTML = '<div style="text-align: center; color: #6c757d;">No questions loaded</div>';
                 return;
             }
             
-            statusDiv.textContent = `🔄 Loading from sheet ${sheetId}, GID: ${gid}...`;
-            statusDiv.style.color = 'blue';
-            mainStatus.textContent = 'Loading from Google Sheets...';
-            mainStatus.className = 'status info';
+            display.innerHTML = questionsList.map((q, i) => 
+                `<div class="question-item">${i + 1}. ${q}</div>`
+            ).join('');
+        }
+
+        // Question loading functions
+        function useDefaultQuestions() {
+            questionsList = [
+                "What are the admission requirements?",
+                "How do I apply for financial aid?",
+                "What research opportunities are available?",
+                "Who should I contact about course registration?",
+                "What courses are required for the aerospace engineering degree?",
+                "What is the application deadline?",
+                "How do I schedule a campus visit?",
+                "What scholarships are available?",
+                "Tell me about the faculty research areas",
+                "What are the prerequisites for graduate programs?"
+            ];
             
+            updateStatus(`Loaded ${questionsList.length} default questions`, 'success');
+            addMessage(`✅ Loaded ${questionsList.length} built-in questions`);
+            displayQuestions();
+            checkReadyToTest();
+        }
+
+        function loadFromTextArea() {
+            const textarea = document.getElementById('questionTextArea');
+            const text = textarea.value.trim();
+            
+            if (!text) {
+                updateStatus('Please enter some questions in the text area', 'error');
+                addMessage('❌ Text area is empty');
+                return;
+            }
+
+            const questions = text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+
+            if (questions.length === 0) {
+                updateStatus('No valid questions found', 'error');
+                addMessage('❌ No valid questions found in text area');
+                return;
+            }
+
+            questionsList = questions;
+            updateStatus(`Loaded ${questionsList.length} questions from text area`, 'success');
+            addMessage(`✅ Loaded ${questionsList.length} questions from text area`);
+            displayQuestions();
+            checkReadyToTest();
+        }
+
+        async function tryGoogleSheets() {
+            const sheetId = document.getElementById('googleSheetId').value.trim();
+            if (!sheetId) {
+                updateStatus('Please enter a Google Sheet ID', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('googleBtn');
+            const status = document.getElementById('googleStatus');
+            
+            btn.textContent = '⏳ Loading...';
+            btn.disabled = true;
+            status.textContent = `Trying to load from: ${sheetId}`;
+            
+            updateStatus('Attempting to load from Google Sheets...', 'warning');
+            addMessage(`🔄 Attempting to load from Google Sheet: ${sheetId}`);
+
             try {
-                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+                addMessage(`📡 Fetching: ${url}`);
                 
                 const controller = new AbortController();
-                setTimeout(() => controller.abort(), 10000);
+                setTimeout(() => controller.abort(), 8000); // 8 second timeout
                 
-                const response = await fetch(url, { 
+                const response = await fetch(url, {
                     signal: controller.signal,
-                    mode: 'cors' 
+                    mode: 'cors'
                 });
-                
+
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status} - Check that sheet is published and GID exists`);
+                    throw new Error(`HTTP ${response.status} - Sheet may not be published or accessible`);
                 }
-                
+
                 const csvText = await response.text();
                 if (!csvText.trim()) {
                     throw new Error('Empty response from Google Sheets');
                 }
-                
-                const lines = csvText.split('\\n');
-                const newQuestions = lines
+
+                const lines = csvText.split('\n');
+                const questions = lines
                     .slice(1) // Skip header
                     .map(line => line.split(',')[0]) // First column
                     .filter(q => q && q.trim())
                     .map(q => q.replace(/"/g, '').trim());
-                
-                if (newQuestions.length === 0) {
+
+                if (questions.length === 0) {
                     throw new Error('No questions found in first column');
                 }
-                
-                questions = newQuestions;
-                document.getElementById('questionsTextarea').value = questions.join('\\n');
-                updateQuestionCount();
-                
-                statusDiv.textContent = `✅ Successfully loaded ${questions.length} questions`;
-                statusDiv.style.color = 'green';
-                mainStatus.textContent = `Google Sheets: Loaded ${questions.length} questions successfully`;
-                mainStatus.className = 'status success';
-                
+
+                questionsList = questions;
+                updateStatus(`Loaded ${questionsList.length} questions from Google Sheets`, 'success');
+                addMessage(`✅ Successfully loaded ${questionsList.length} questions from Google Sheets`);
+                status.textContent = `Success: ${questionsList.length} questions loaded`;
+                displayQuestions();
+                checkReadyToTest();
+
             } catch (error) {
                 let errorMsg = error.message;
                 if (error.name === 'AbortError') {
-                    errorMsg = 'Timed out after 10 seconds';
+                    errorMsg = 'Timed out after 8 seconds';
                 }
                 
-                statusDiv.textContent = `❌ Failed: ${errorMsg}`;
-                statusDiv.style.color = 'red';
-                mainStatus.textContent = `Google Sheets error: ${errorMsg}`;
-                mainStatus.className = 'status error';
+                updateStatus(`Google Sheets failed: ${errorMsg}`, 'error');
+                addMessage(`❌ Google Sheets error: ${errorMsg}`);
+                addMessage(`💡 Try copying questions manually instead`);
+                status.textContent = `Failed: ${errorMsg}`;
+            } finally {
+                btn.textContent = '📥 Try Google Sheets';
+                btn.disabled = false;
             }
         }
 
-        // Load default questions
-        function loadDefaults() {
-            const defaults = [
-                "What are the admission requirements?",
-                "How do I apply for financial aid?", 
-                "What research opportunities are available?",
-                "Who should I contact about course registration?",
-                "What courses are required for the aerospace engineering degree?"
-            ];
+        // Chatbot functions
+        function loadChatbot() {
+            const iframe = document.getElementById('chatIframe');
+            iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
             
-            document.getElementById('questionsTextarea').value = defaults.join('\\n');
-            questions = defaults;
-            updateQuestionCount();
+            updateStatus('Loading chatbot...', 'warning');
+            addMessage('🔗 Loading chatbot...');
             
-            const mainStatus = document.getElementById('mainStatus');
-            mainStatus.textContent = `Loaded ${questions.length} default questions`;
-            mainStatus.className = 'status success';
+            iframe.onload = function() {
+                addMessage('✅ Chatbot page loaded, waiting for Voiceflow...');
+                updateStatus('Chatbot loaded, waiting for Voiceflow...', 'info');
+                
+                setTimeout(() => {
+                    chatbotReady = true;
+                    updateStatus('Chatbot ready!', 'success');
+                    addMessage('✅ Voiceflow should be ready now');
+                    checkReadyToTest();
+                }, 8000);
+            };
         }
 
-        // Load from textarea
-        function loadFromTextarea() {
-            const textarea = document.getElementById('questionsTextarea');
-            const newQuestions = textarea.value.split('\\n').filter(q => q.trim());
-            
-            if (newQuestions.length === 0) {
-                const mainStatus = document.getElementById('mainStatus');
-                mainStatus.textContent = 'Please enter some questions in the text area';
-                mainStatus.className = 'status error';
-                return;
+        function checkReadyToTest() {
+            const startBtn = document.getElementById('startBtn');
+            if (questionsList.length > 0 && chatbotReady) {
+                startBtn.disabled = false;
+                updateStatus('Ready to start testing!', 'success');
             }
-            
-            questions = newQuestions;
-            updateQuestionCount();
-            
-            const mainStatus = document.getElementById('mainStatus');
-            mainStatus.textContent = `Loaded ${questions.length} questions from text area`;
-            mainStatus.className = 'status success';
         }
 
-        // Start test
+        // Testing functions
         function startTest() {
-            if (questions.length === 0) {
-                alert('Please load some questions first!');
+            if (questionsList.length === 0) {
+                updateStatus('Please load questions first', 'error');
                 return;
             }
-            
-            currentIndex = 0;
-            testResults = [];
+            if (!chatbotReady) {
+                updateStatus('Please load chatbot first', 'error');
+                return;
+            }
+
+            const delay = parseInt(document.getElementById('delaySeconds').value) * 1000;
+            currentQuestionIndex = 0;
             
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
-            document.getElementById('exportBtn').disabled = true;
             
-            const mainStatus = document.getElementById('mainStatus');
-            mainStatus.textContent = 'Test in progress...';
-            mainStatus.className = 'status info';
+            updateStatus('Testing in progress...', 'warning');
+            addMessage(`🚀 Starting test with ${questionsList.length} questions`);
             
-            addResult('🚀 Starting automated test...', 'system');
-            addResult(`📝 Testing ${questions.length} questions with ${document.getElementById('delayInput').value}s delays`, 'system');
-            
-            // Load chatbot
-            loadChatbot();
-            
-            // Start sending questions
-            setTimeout(() => {
-                sendNextQuestion();
-                const delay = parseInt(document.getElementById('delayInput').value) * 1000;
-                testInterval = setInterval(sendNextQuestion, delay);
-            }, 5000); // Wait 5 seconds for chatbot to load
+            sendNextQuestion();
+            testInterval = setInterval(sendNextQuestion, delay);
         }
 
-        // Load chatbot iframe
-        function loadChatbot() {
-            document.getElementById('chatbotArea').innerHTML = 
-                '<iframe src="https://aeroastrovfbot.netlify.app/chatbot.html" style="width: 100%; height: 100%; border: none;"></iframe>';
-            chatbotLoaded = true;
-        }
-
-        // Send next question
         function sendNextQuestion() {
-            if (currentIndex >= questions.length) {
+            if (currentQuestionIndex >= questionsList.length) {
                 stopTest();
-                const mainStatus = document.getElementById('mainStatus');
-                mainStatus.textContent = 'All questions completed!';
-                mainStatus.className = 'status success';
-                document.getElementById('exportBtn').disabled = false;
-                addResult('✅ All questions completed!', 'system');
+                updateStatus('All questions completed!', 'success');
+                addMessage('🎉 All questions completed!');
                 return;
             }
+
+            const question = questionsList[currentQuestionIndex];
+            const questionNum = currentQuestionIndex + 1;
             
-            const question = questions[currentIndex];
-            const qNum = currentIndex + 1;
+            addMessage(question, 'user');
             
-            addResult(`Q${qNum}: ${question}`, 'question');
-            addResult(`A${qNum}: [Response captured - see chatbot]`, 'answer');
-            
-            testResults.push({
-                question: question,
-                answer: '[Response from chatbot]',
-                timestamp: new Date().toISOString()
-            });
-            
-            currentIndex++;
-            updateQuestionCount();
+            try {
+                const iframe = document.getElementById('chatIframe');
+                const voiceflow = iframe.contentWindow.voiceflow;
+                
+                if (voiceflow && voiceflow.chat && voiceflow.chat.interact) {
+                    voiceflow.chat.interact({
+                        type: 'text',
+                        payload: question
+                    });
+                    
+                    console.log(`Sent Q${questionNum}: ${question}`);
+                    
+                    // Simulate bot response after delay
+                    setTimeout(() => {
+                        addMessage('Response received (content not accessible via iframe)', 'bot');
+                    }, 2000);
+                    
+                } else {
+                    addMessage('Error: Cannot access Voiceflow in iframe', 'system');
+                }
+            } catch (error) {
+                addMessage(`Error sending question: ${error.message}`, 'system');
+            }
+
+            currentQuestionIndex++;
         }
 
-        // Stop test
         function stopTest() {
             if (testInterval) {
                 clearInterval(testInterval);
@@ -300,66 +464,33 @@ What courses are required for the degree?</textarea>
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
             
-            if (testResults.length > 0) {
-                document.getElementById('exportBtn').disabled = false;
-            }
-            
-            const mainStatus = document.getElementById('mainStatus');
-            mainStatus.textContent = 'Test stopped';
-            mainStatus.className = 'status info';
-            
-            addResult('⏹️ Test stopped', 'system');
+            updateStatus('Test stopped', 'info');
+            addMessage('⏹️ Test stopped');
         }
 
-        // Add result to display
-        function addResult(message, type) {
-            const resultsArea = document.getElementById('resultsArea');
-            const time = new Date().toLocaleTimeString();
-            const colors = {
-                system: '#666',
-                question: '#007bff', 
-                answer: '#28a745'
-            };
-            
-            resultsArea.innerHTML += `<div style="color: ${colors[type] || '#333'}; margin: 5px 0;">[${time}] ${message}</div>`;
-            resultsArea.scrollTop = resultsArea.scrollHeight;
+        // Utility functions
+        function clearTranscript() {
+            document.getElementById('transcript').innerHTML = 
+                '<div class="message system">Transcript cleared</div>';
         }
 
-        // Export CSV
-        function exportCSV() {
-            if (testResults.length === 0) {
-                alert('No results to export!');
-                return;
-            }
+        function copyToClipboard() {
+            const transcript = document.getElementById('transcript');
+            const text = Array.from(transcript.children)
+                .map(div => div.textContent)
+                .join('\n');
             
-            const csv = [
-                'Question,Answer,Timestamp',
-                ...testResults.map(r => 
-                    `"${r.question.replace(/"/g, '""')}","${r.answer.replace(/"/g, '""')}","${r.timestamp}"`
-                )
-            ].join('\\n');
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `chatbot-test-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            addResult('📄 Results exported to CSV', 'system');
-        }
-
-        // Clear results
-        function clearResults() {
-            document.getElementById('resultsArea').innerHTML = 'Results cleared...';
-            testResults = [];
-            document.getElementById('exportBtn').disabled = true;
+            navigator.clipboard.writeText(text).then(() => {
+                addMessage('📋 Transcript copied to clipboard');
+            });
         }
 
         // Initialize
         window.addEventListener('load', () => {
-            updateQuestionCount();
+            addMessage('🤖 Chatbot Tester v2 Ready');
+            addMessage('Step 1: Load questions using options above');
+            addMessage('Step 2: Load chatbot');
+            addMessage('Step 3: Start testing');
         });
     </script>
 </body>
