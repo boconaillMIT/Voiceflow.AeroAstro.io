@@ -462,21 +462,37 @@ Who should I contact about course registration?"></textarea>
             updateStatus('Loading questions from Google Sheets...', 'warning');
             log('Fetching questions from Google Sheets...', 'info');
 
+            // Add a loading indicator
+            const loadButton = document.querySelector('button[onclick="loadQuestions()"]');
+            const originalText = loadButton.textContent;
+            loadButton.textContent = '⏳ Loading...';
+            loadButton.disabled = true;
+
             try {
                 const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
                 log(`📡 Full URL: ${csvUrl}`, 'info');
                 addToTranscript(`📡 Fetching: ${csvUrl}`, 'system');
                 
+                // Shorter timeout and better error handling
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                    log('⏰ Request timed out after 10 seconds', 'error');
+                }, 10000); // Reduced to 10 seconds
                 
                 const response = await fetch(csvUrl, {
                     signal: controller.signal,
-                    mode: 'cors',
+                    mode: 'no-cors', // Try no-cors mode
                     headers: { 'Accept': 'text/csv, text/plain, */*' }
                 });
                 
                 clearTimeout(timeoutId);
+                log(`📡 Response received - Status: ${response.status}, Type: ${response.type}`, 'info');
+                
+                if (response.type === 'opaque') {
+                    // no-cors mode returns opaque response
+                    throw new Error('CORS blocked - try manual entry or ensure sheet is published');
+                }
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: Make sure the Google Sheet is published and publicly viewable.`);
@@ -515,16 +531,21 @@ Who should I contact about course registration?"></textarea>
             } catch (error) {
                 let errorMessage = error.message;
                 if (error.name === 'AbortError') {
-                    errorMessage = 'Request timed out after 15 seconds.';
+                    errorMessage = 'Request timed out after 10 seconds. Try manual entry instead.';
                 }
                 
                 log(`❌ Google Sheets error for ${sheetId}: ${errorMessage}`, 'error');
                 addToTranscript(`❌ Failed to load from ${sheetId}: ${errorMessage}`, 'system');
+                addToTranscript(`💡 Try copying questions manually from your sheet`, 'system');
                 updateStatus(`Error: ${errorMessage}`, 'error');
                 
                 questions = [];
                 updateProgress();
                 updateQuestionsList();
+            } finally {
+                // Restore button
+                loadButton.textContent = originalText;
+                loadButton.disabled = false;
             }
         }
 
