@@ -236,6 +236,23 @@
                 return;
             }
 
+            // Reset everything first
+            questions = [];
+            currentQuestionIndex = 0;
+            testResults = [];
+            
+            // Stop any running tests
+            if (testingInterval) {
+                clearInterval(testingInterval);
+                testingInterval = null;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+            }
+            
+            // Clear transcript
+            clearTranscript();
+            addToTranscript(`🔄 Loading questions from new sheet: ${sheetId}`, 'system');
+
             updateStatus('Loading questions from Google Sheets...', 'warning');
             log('Fetching questions from Google Sheets...', 'info');
 
@@ -251,7 +268,7 @@
                 
                 // Parse CSV - assume questions are in first column
                 const lines = csvText.split('\n');
-                questions = lines
+                const newQuestions = lines
                     .slice(1) // Skip header row
                     .map(line => {
                         // Handle CSV parsing with commas in questions
@@ -261,35 +278,61 @@
                     .filter(q => q && q.trim())
                     .map(q => q.replace(/"/g, '').trim()); // Clean up quotes
 
-                if (questions.length === 0) {
+                if (newQuestions.length === 0) {
                     throw new Error('No questions found in the sheet');
                 }
 
-                log(`✅ Loaded ${questions.length} questions`, 'success');
+                // Update the global questions array
+                questions = newQuestions;
+
+                log(`✅ Loaded ${questions.length} questions from new sheet`, 'success');
+                addToTranscript(`✅ Successfully loaded ${questions.length} questions`, 'system');
                 updateStatus(`Loaded ${questions.length} questions successfully`, 'success');
                 
-                // Reset progress
-                currentQuestionIndex = 0;
-                testResults = [];
+                // Reset progress and display
                 updateProgress();
                 updateQuestionsList();
                 
-                // Enable load button
+                // Reset start index to 1
+                document.getElementById('startIndex').value = 1;
+                
+                // Enable/disable buttons appropriately
                 document.getElementById('loadBtn').disabled = false;
+                document.getElementById('exportBtn').disabled = true;
+                
+                if (chatbotLoaded) {
+                    document.getElementById('startBtn').disabled = false;
+                }
 
             } catch (error) {
+                // Clear questions on error
+                questions = [];
+                currentQuestionIndex = 0;
+                testResults = [];
+                
                 log(`❌ Error loading questions: ${error.message}`, 'error');
+                addToTranscript(`❌ Error loading questions: ${error.message}`, 'system');
                 updateStatus(`Error: ${error.message}`, 'error');
                 
-                // Use fallback questions
-                questions = [
-                    "What are the admission requirements?",
-                    "How do I apply for financial aid?",
-                    "What research opportunities are available?"
-                ];
-                log(`Using ${questions.length} fallback questions`, 'warning');
-                updateStatus(`Using ${questions.length} fallback questions`, 'warning');
+                // Clear displays
+                updateProgress();
                 updateQuestionsList();
+                
+                // Use fallback questions only if user wants them
+                const useFallback = confirm(`Failed to load from Google Sheets. Use fallback questions instead?\n\nError: ${error.message}`);
+                
+                if (useFallback) {
+                    questions = [
+                        "What are the admission requirements?",
+                        "How do I apply for financial aid?",
+                        "What research opportunities are available?"
+                    ];
+                    log(`Using ${questions.length} fallback questions`, 'warning');
+                    addToTranscript(`Using ${questions.length} fallback questions`, 'system');
+                    updateStatus(`Using ${questions.length} fallback questions`, 'warning');
+                    updateProgress();
+                    updateQuestionsList();
+                }
             }
         }
 
