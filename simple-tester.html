@@ -440,7 +440,7 @@ What courses are required for the degree?</textarea>
                     
                     console.log(`Sent Q${questionNum}: ${question}`);
                     
-                    // Try to capture actual bot response
+                    // Try to capture actual bot response with longer wait time
                     setTimeout(() => {
                         let botResponse = 'Response received (content not accessible via iframe)';
                         
@@ -465,7 +465,7 @@ What courses are required for the degree?</textarea>
                         }
                         
                         addMessage(botResponse, 'bot');
-                    }, 2000);
+                    }, 5000);
                     
                 } else {
                     addMessage('Error: Cannot access Voiceflow in iframe', 'system');
