@@ -1,42 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chatbot Tester - Overlay Version</title>
+    <title>Complete Chatbot Tester</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background: #f5f5f5;
         }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             padding: 20px;
+            text-align: center;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            height: calc(100vh - 120px);
+        }
+        .panel {
+            background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        .section {
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 15px 0;
+        .panel-header {
             background: #f8f9fa;
-        }
-        .section h3 {
-            margin: 0 0 15px 0;
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
             color: #495057;
+        }
+        .panel-content {
+            padding: 20px;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+        .chatbot-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
         }
         button {
             background: #007bff;
             color: white;
             border: none;
-            padding: 12px 20px;
+            padding: 10px 15px;
             border-radius: 4px;
             cursor: pointer;
-            margin: 8px 5px;
-            font-size: 14px;
+            margin: 5px 0;
+            width: 100%;
+            font-size: 13px;
             font-weight: bold;
         }
         button:hover { background: #0056b3; }
@@ -46,156 +67,247 @@
         button.orange { background: #fd7e14; }
         textarea {
             width: 100%;
-            height: 150px;
-            padding: 10px;
+            height: 120px;
+            padding: 8px;
             border: 1px solid #ced4da;
             border-radius: 4px;
             font-family: monospace;
-            font-size: 13px;
+            font-size: 12px;
             box-sizing: border-box;
             resize: vertical;
         }
-        .status {
-            padding: 12px;
-            border-radius: 4px;
-            margin: 15px 0;
-            font-weight: bold;
-            text-align: center;
-        }
-        .status.info { background: #d1ecf1; color: #0c5460; }
-        .status.success { background: #d4edda; color: #155724; }
-        .status.warning { background: #fff3cd; color: #856404; }
-        .status.error { background: #f8d7da; color: #721c24; }
-        .conversation-log {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 15px 0;
-            max-height: 300px;
-            overflow-y: auto;
-            font-size: 13px;
-        }
-        .qa-pair {
-            margin: 15px 0;
-            padding: 10px;
-            border-left: 4px solid #007bff;
-            background: white;
-        }
-        .question {
-            font-weight: bold;
-            color: #0056b3;
-            margin-bottom: 5px;
-        }
-        .answer {
-            color: #333;
-            margin-left: 10px;
-        }
-        .instructions {
-            background: #e7f3ff;
-            border: 1px solid #b8daff;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-        .instructions h4 {
-            margin: 0 0 10px 0;
-            color: #0066cc;
-        }
         input[type="number"] {
-            width: 80px;
+            width: 60px;
             padding: 5px;
             border: 1px solid #ced4da;
             border-radius: 4px;
             margin: 0 5px;
         }
-        .overlay-info {
-            background: #fffbf0;
-            border: 2px solid #ffc107;
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+            text-align: center;
+            font-size: 12px;
+        }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .conversation {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .message {
+            margin: 8px 0;
+            padding: 8px;
             border-radius: 6px;
-            padding: 15px;
-            margin: 20px 0;
+        }
+        .message.user {
+            background: #007bff;
+            color: white;
+            margin-left: 20%;
+        }
+        .message.bot {
+            background: #e9ecef;
+            color: #333;
+            margin-right: 20%;
+        }
+        .message.system {
+            background: #fff3cd;
+            color: #856404;
+            text-align: center;
+            font-style: italic;
+        }
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 4px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: #007bff;
+            height: 100%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .questions-list {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+        .question-item {
+            padding: 4px;
+            margin: 2px 0;
+            border-radius: 3px;
+            background: white;
+        }
+        .question-item.current {
+            background: #007bff;
+            color: white;
+        }
+        .question-item.completed {
+            background: #28a745;
+            color: white;
+        }
+        .chatbot-embed {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: relative;
+        }
+        .embed-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #666;
+        }
+        label {
+            display: block;
+            margin: 8px 0 4px 0;
+            font-weight: bold;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🤖 Chatbot Tester - Direct Access Version</h1>
-        
-        <div class="overlay-info">
-            <h4>📋 How This Works:</h4>
-            <p><strong>Step 1:</strong> Set up your questions below</p>
-            <p><strong>Step 2:</strong> Click "Generate Overlay Script" to create a custom script for your chatbot</p>
-            <p><strong>Step 3:</strong> Copy the script and paste it into your chatbot page</p>
-            <p><strong>✅ Result:</strong> Full conversation capture with both questions AND answers!</p>
-        </div>
+    <div class="header">
+        <h1>🤖 Complete Chatbot Tester</h1>
+        <p>Full conversation capture with questions and answers - No console required!</p>
+    </div>
 
-        <div class="section">
-            <h3>📝 Questions Setup</h3>
-            
-            <button onclick="useDefaultQuestions()" class="green">🔄 Load Default Questions</button>
-            <button onclick="clearQuestions()" class="red">🗑️ Clear Questions</button>
-            
-            <label><strong>Questions (one per line):</strong></label>
-            <textarea id="questionsTextarea" placeholder="What are the admission requirements?
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <div class="panel-header">⚙️ Test Controls</div>
+            <div class="panel-content">
+                
+                <button onclick="loadDefaultQuestions()" class="green">📝 Load Default Questions</button>
+                
+                <label>Questions (one per line):</label>
+                <textarea id="questionsInput">What are the admission requirements?
 How do I apply for financial aid?
 What research opportunities are available?
-Who should I contact about course registration?"></textarea>
-            
-            <p><strong>Delay between questions:</strong> 
-                <input type="number" id="delayInput" value="6" min="3" max="20"> seconds
-            </p>
-        </div>
-
-        <div class="section">
-            <h3>⚙️ Generate Script</h3>
-            
-            <button onclick="generateScript()" class="orange">🛠️ Generate Overlay Script</button>
-            
-            <div class="status info" id="status">Ready to generate script</div>
-            
-            <label><strong>Generated Script (copy this):</strong></label>
-            <textarea id="generatedScript" readonly placeholder="Generated script will appear here..."></textarea>
-            
-            <button onclick="copyScript()" id="copyBtn" disabled>📋 Copy Script to Clipboard</button>
-        </div>
-
-        <div class="section">
-            <h3>📋 Instructions</h3>
-            <div class="instructions">
-                <h4>How to Use the Generated Script:</h4>
-                <ol>
-                    <li><strong>Open your chatbot page:</strong> <code>https://aeroastrovfbot.netlify.app/chatbot.html</code></li>
-                    <li><strong>Wait for it to fully load</strong> (until you can type in the chat)</li>
-                    <li><strong>Press F12</strong> to open developer tools</li>
-                    <li><strong>Click the "Console" tab</strong></li>
-                    <li><strong>Paste the generated script</strong> and press Enter</li>
-                    <li><strong>Watch it run!</strong> It will show an overlay with progress and capture everything</li>
-                    <li><strong>Download results</strong> when complete</li>
-                </ol>
+Who should I contact about course registration?
+What courses are required for the degree?</textarea>
                 
-                <h4>What You'll Get:</h4>
-                <ul>
-                    <li>✅ <strong>Visual overlay</strong> showing progress</li>
-                    <li>✅ <strong>Both questions and answers</strong> captured</li>
-                    <li>✅ <strong>Automatic CSV export</strong> when done</li>
-                    <li>✅ <strong>No technical knowledge required</strong> - just copy and paste!</li>
-                </ul>
+                <label>Delay: <input type="number" id="delayInput" value="6" min="3" max="15"> seconds</label>
+                
+                <div class="status info" id="status">Ready to start testing</div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar" style="width: 0%">0%</div>
+                </div>
+                
+                <button onclick="startTesting()" id="startBtn">▶️ Start Automated Test</button>
+                <button onclick="stopTesting()" id="stopBtn" class="red" disabled>⏹️ Stop Test</button>
+                <button onclick="exportConversation()" id="exportBtn" class="orange" disabled>💾 Export CSV</button>
+                
+                <label>Loaded Questions:</label>
+                <div class="questions-list" id="questionsList">
+                    Questions will appear here...
+                </div>
             </div>
         </div>
 
-        <div class="section">
-            <h3>📊 Preview</h3>
-            <div id="questionsPreview" class="conversation-log">
-                <div style="text-align: center; color: #6c757d;">Questions will appear here after setup</div>
+        <!-- Middle Panel: Chatbot -->
+        <div class="chatbot-panel">
+            <div class="panel-header">💬 Chatbot Interface</div>
+            <div id="chatbotContainer" style="height: calc(100% - 50px); position: relative;">
+                <div class="embed-overlay" id="loadingOverlay">
+                    <div>
+                        <div>🔄 Loading Chatbot...</div>
+                        <div style="font-size: 12px; margin-top: 10px;">Please wait while the chatbot initializes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Conversation Log -->
+        <div class="panel">
+            <div class="panel-header">📋 Live Conversation</div>
+            <div class="panel-content">
+                <div class="conversation" id="conversationLog">
+                    <div class="message system">Conversation will appear here during testing...</div>
+                </div>
+                <button onclick="clearConversation()">🗑️ Clear Log</button>
+                <button onclick="copyConversation()">📋 Copy to Clipboard</button>
             </div>
         </div>
     </div>
 
+    <!-- Load the same authentication script as the original chatbot -->
+    <script src="https://aeroastrovfbot.netlify.app/index.js"></script>
+    
     <script>
-        let currentQuestions = [];
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let testingInterval = null;
+        let conversation = [];
+        let chatbotReady = false;
 
-        function useDefaultQuestions() {
+        // Initialize the page like the original chatbot
+        function initializeChatbot() {
+            // Use the same authentication logic as the original
+            authenticateAndLoadChat().then(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                chatbotReady = true;
+                updateStatus('Chatbot ready for testing!', 'success');
+                
+                // Load initial questions
+                loadQuestionsFromTextarea();
+            }).catch(error => {
+                document.getElementById('loadingOverlay').innerHTML = 
+                    '<div style="color: red;">Error loading chatbot: ' + error.message + '</div>';
+            });
+        }
+
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function addToConversation(message, type = 'system') {
+            const log = document.getElementById('conversationLog');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${type}`;
+            msgDiv.innerHTML = `${message}<br><small>${new Date().toLocaleTimeString()}</small>`;
+            log.appendChild(msgDiv);
+            log.scrollTop = log.scrollHeight;
+
+            // Store for export
+            conversation.push({
+                message: message,
+                type: type,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        function loadDefaultQuestions() {
             const defaultQuestions = [
                 "What are the admission requirements?",
                 "How do I apply for financial aid?",
@@ -209,305 +321,252 @@ Who should I contact about course registration?"></textarea>
                 "What are the prerequisites for graduate programs?"
             ];
             
-            document.getElementById('questionsTextarea').value = defaultQuestions.join('\n');
-            updatePreview();
-            updateStatus('Loaded 10 default questions', 'success');
+            document.getElementById('questionsInput').value = defaultQuestions.join('\\n');
+            loadQuestionsFromTextarea();
         }
 
-        function clearQuestions() {
-            document.getElementById('questionsTextarea').value = '';
-            updatePreview();
-            updateStatus('Questions cleared', 'info');
-        }
-
-        function updatePreview() {
-            const textarea = document.getElementById('questionsTextarea');
-            const questions = textarea.value.split('\n').filter(q => q.trim());
-            currentQuestions = questions;
+        function loadQuestionsFromTextarea() {
+            const textarea = document.getElementById('questionsInput');
+            const newQuestions = textarea.value.split('\\n').filter(q => q.trim());
             
-            const preview = document.getElementById('questionsPreview');
-            if (questions.length === 0) {
-                preview.innerHTML = '<div style="text-align: center; color: #6c757d;">No questions entered</div>';
+            if (newQuestions.length === 0) {
+                updateStatus('Please enter some questions', 'error');
                 return;
             }
             
-            preview.innerHTML = questions.map((q, i) => 
-                `<div class="qa-pair">
-                    <div class="question">Q${i + 1}: ${q}</div>
-                    <div class="answer">A${i + 1}: [Bot response will be captured here]</div>
-                </div>`
-            ).join('');
+            questions = newQuestions;
+            updateQuestionsList();
+            updateProgress();
+            updateStatus(`Loaded ${questions.length} questions`, 'success');
         }
 
-        function generateScript() {
-            const questions = document.getElementById('questionsTextarea').value.split('\n').filter(q => q.trim());
-            const delay = parseInt(document.getElementById('delayInput').value) * 1000;
-            
+        function updateQuestionsList() {
+            const list = document.getElementById('questionsList');
             if (questions.length === 0) {
-                updateStatus('Please enter some questions first', 'error');
+                list.innerHTML = '<div style="text-align: center; color: #6c757d;">No questions loaded</div>';
                 return;
             }
-            
-            const script = `
-// Chatbot Auto-Tester Script
-// Generated on ${new Date().toLocaleString()}
-// Questions: ${questions.length}, Delay: ${delay/1000} seconds
 
-(function() {
-    const questions = ${JSON.stringify(questions, null, 4)};
-    const delay = ${delay};
-    let currentIndex = 0;
-    let conversation = [];
-    let overlay = null;
-    
-    // Create overlay UI
-    function createOverlay() {
-        overlay = document.createElement('div');
-        overlay.style.cssText = \`
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 350px;
-            background: white;
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 10000;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-        \`;
-        
-        overlay.innerHTML = \`
-            <div style="background: #007bff; color: white; padding: 12px; border-radius: 6px 6px 0 0;">
-                <strong>🤖 Chatbot Auto-Tester</strong>
-                <button onclick="this.parentElement.parentElement.remove()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">×</button>
-            </div>
-            <div style="padding: 15px;">
-                <div id="testerStatus">Ready to start...</div>
-                <div style="margin: 10px 0;">
-                    <div>Progress: <span id="testerProgress">0/${questions.length}</span></div>
-                    <div style="background: #e9ecef; border-radius: 4px; height: 8px; margin: 5px 0;">
-                        <div id="testerProgressBar" style="background: #007bff; height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
-                    </div>
-                </div>
-                <div style="margin: 10px 0;">
-                    <button onclick="startTest()" id="testerStartBtn" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">▶️ Start Test</button>
-                    <button onclick="stopTest()" id="testerStopBtn" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" disabled>⏹️ Stop</button>
-                </div>
-                <div id="testerLog" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px; height: 120px; overflow-y: auto; font-size: 12px; font-family: monospace;"></div>
-                <button onclick="exportResults()" id="testerExportBtn" style="background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px;" disabled>📄 Export Results</button>
-            </div>
-        \`;
-        
-        document.body.appendChild(overlay);
-    }
-    
-    function log(message, type = 'info') {
-        const logDiv = document.getElementById('testerLog');
-        const time = new Date().toLocaleTimeString();
-        const colors = { info: '#333', success: '#28a745', error: '#dc3545', warning: '#fd7e14' };
-        logDiv.innerHTML += \`<div style="color: \${colors[type]}">[<span style="color:#007bff">\${time}</span>] \${message}</div>\`;
-        logDiv.scrollTop = logDiv.scrollHeight;
-    }
-    
-    function updateProgress() {
-        const progressSpan = document.getElementById('testerProgress');
-        const progressBar = document.getElementById('testerProgressBar');
-        const percentage = (currentIndex / questions.length) * 100;
-        
-        progressSpan.textContent = \`\${currentIndex}/\${questions.length}\`;
-        progressBar.style.width = percentage + '%';
-    }
-    
-    function captureResponse() {
-        try {
-            const shadowRoot = window.voiceflow.chat._shadowRoot;
-            if (shadowRoot) {
-                const selectors = [
-                    '.vfrc-message--assistant:last-child',
-                    '.bot-message:last-child',
-                    '[data-role="assistant"]:last-child'
-                ];
+            list.innerHTML = questions.map((q, index) => {
+                let className = 'question-item';
+                if (index < currentQuestionIndex) className += ' completed';
+                else if (index === currentQuestionIndex) className += ' current';
                 
-                for (const selector of selectors) {
-                    const element = shadowRoot.querySelector(selector);
-                    if (element) {
-                        const text = element.textContent || element.innerText;
-                        if (text && text.trim()) {
-                            return text.trim();
+                return `<div class="${className}">${index + 1}. ${q}</div>`;
+            }).join('');
+        }
+
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const percentage = questions.length > 0 ? (currentQuestionIndex / questions.length) * 100 : 0;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = `${Math.round(percentage)}% (${currentQuestionIndex}/${questions.length})`;
+        }
+
+        async function startTesting() {
+            if (!chatbotReady) {
+                updateStatus('Chatbot not ready yet', 'error');
+                return;
+            }
+
+            if (questions.length === 0) {
+                loadQuestionsFromTextarea();
+                if (questions.length === 0) {
+                    updateStatus('Please enter some questions first', 'error');
+                    return;
+                }
+            }
+
+            const delay = parseInt(document.getElementById('delayInput').value) * 1000;
+            currentQuestionIndex = 0;
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            updateStatus('Testing in progress...', 'warning');
+            addToConversation(`🚀 Starting automated test with ${questions.length} questions`, 'system');
+            
+            // Start the testing loop
+            await sendNextQuestion();
+            testingInterval = setInterval(sendNextQuestion, delay);
+        }
+
+        async function sendNextQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                stopTesting();
+                updateStatus('All questions completed!', 'success');
+                addToConversation('✅ All questions completed!', 'system');
+                document.getElementById('exportBtn').disabled = false;
+                return;
+            }
+
+            const question = questions[currentQuestionIndex];
+            const questionNum = currentQuestionIndex + 1;
+
+            addToConversation(`Q${questionNum}: ${question}`, 'user');
+            
+            try {
+                // Send question using Voiceflow's interact method
+                if (window.voiceflow && window.voiceflow.chat && window.voiceflow.chat.interact) {
+                    window.voiceflow.chat.interact({
+                        type: 'text',
+                        payload: question
+                    });
+
+                    // Wait a moment then try to capture the response
+                    setTimeout(() => {
+                        const response = captureLatestResponse();
+                        addToConversation(`A${questionNum}: ${response}`, 'bot');
+                    }, 3000);
+
+                } else {
+                    addToConversation('Error: Voiceflow not accessible', 'system');
+                }
+
+            } catch (error) {
+                addToConversation(`Error sending question: ${error.message}`, 'system');
+            }
+
+            currentQuestionIndex++;
+            updateProgress();
+            updateQuestionsList();
+        }
+
+        function captureLatestResponse() {
+            try {
+                // Try to access Voiceflow's shadow DOM
+                if (window.voiceflow && window.voiceflow.chat && window.voiceflow.chat._shadowRoot) {
+                    const shadowRoot = window.voiceflow.chat._shadowRoot;
+                    
+                    // Look for bot message elements
+                    const selectors = [
+                        '.vfrc-message--assistant:last-child',
+                        '.bot-message:last-child',
+                        '[data-role="assistant"]:last-child',
+                        '.vfrc-chat-response:last-child'
+                    ];
+                    
+                    for (const selector of selectors) {
+                        const element = shadowRoot.querySelector(selector);
+                        if (element) {
+                            const text = element.textContent || element.innerText;
+                            if (text && text.trim()) {
+                                return text.trim();
+                            }
                         }
                     }
                 }
-            }
-        } catch (error) {
-            console.log('Response capture error:', error);
-        }
-        return 'Response not captured';
-    }
-    
-    async function sendQuestion(question, index) {
-        log(\`Sending Q\${index + 1}: \${question.substring(0, 50)}...\`, 'info');
-        
-        try {
-            window.voiceflow.chat.interact({
-                type: 'text',
-                payload: question
-            });
-            
-            // Wait for response
-            await new Promise(resolve => setTimeout(resolve, 4000));
-            
-            const response = captureResponse();
-            log(\`Response: \${response.substring(0, 50)}...\`, 'success');
-            
-            conversation.push({
-                question: question,
-                answer: response,
-                timestamp: new Date().toISOString()
-            });
-            
-        } catch (error) {
-            log(\`Error: \${error.message}\`, 'error');
-            conversation.push({
-                question: question,
-                answer: \`Error: \${error.message}\`,
-                timestamp: new Date().toISOString()
-            });
-        }
-    }
-    
-    async function runTest() {
-        const statusDiv = document.getElementById('testerStatus');
-        statusDiv.textContent = 'Testing in progress...';
-        document.getElementById('testerStartBtn').disabled = true;
-        document.getElementById('testerStopBtn').disabled = false;
-        
-        log('Starting automated test...', 'info');
-        
-        for (let i = currentIndex; i < questions.length; i++) {
-            if (window.testerStopped) break;
-            
-            await sendQuestion(questions[i], i);
-            currentIndex = i + 1;
-            updateProgress();
-            
-            if (i < questions.length - 1 && !window.testerStopped) {
-                log(\`Waiting \${delay/1000} seconds before next question...\`, 'warning');
-                await new Promise(resolve => setTimeout(resolve, delay));
+                
+                return 'Response received (content not fully accessible)';
+                
+            } catch (error) {
+                return 'Response received (capture failed)';
             }
         }
-        
-        if (!window.testerStopped) {
-            statusDiv.textContent = 'Test completed!';
-            log('✅ All questions completed!', 'success');
-            document.getElementById('testerExportBtn').disabled = false;
-        }
-        
-        document.getElementById('testerStartBtn').disabled = false;
-        document.getElementById('testerStopBtn').disabled = true;
-    }
-    
-    window.startTest = function() {
-        window.testerStopped = false;
-        runTest();
-    };
-    
-    window.stopTest = function() {
-        window.testerStopped = true;
-        document.getElementById('testerStatus').textContent = 'Test stopped';
-        log('Test stopped by user', 'warning');
-        document.getElementById('testerStartBtn').disabled = false;
-        document.getElementById('testerStopBtn').disabled = true;
-        if (conversation.length > 0) {
-            document.getElementById('testerExportBtn').disabled = false;
-        }
-    };
-    
-    window.exportResults = function() {
-        if (conversation.length === 0) {
-            log('No conversation to export', 'error');
-            return;
-        }
-        
-        const csv = [
-            'Question,Answer,Timestamp',
-            ...conversation.map(item => 
-                \`"\${item.question.replace(/"/g, '""')}","\${item.answer.replace(/"/g, '""')}","\${item.timestamp}"\`
-            )
-        ].join('\\n');
-        
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = \`chatbot-conversation-\${new Date().toISOString().split('T')[0]}.csv\`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        log('📄 Conversation exported to CSV', 'success');
-    };
-    
-    // Initialize
-    createOverlay();
-    updateProgress();
-    log('Tester ready! Click Start Test to begin.', 'info');
-    
-})();`;
+
+        function stopTesting() {
+            if (testingInterval) {
+                clearInterval(testingInterval);
+                testingInterval = null;
+            }
             
-            document.getElementById('generatedScript').value = script;
-            document.getElementById('copyBtn').disabled = false;
-            updateStatus(`Script generated for ${questions.length} questions`, 'success');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            updateStatus('Testing stopped', 'info');
+            addToConversation('⏹️ Testing stopped', 'system');
+            
+            if (conversation.length > 2) {
+                document.getElementById('exportBtn').disabled = false;
+            }
         }
 
-        function copyScript() {
-            const scriptTextarea = document.getElementById('generatedScript');
-            scriptTextarea.select();
-            document.execCommand('copy');
-            updateStatus('Script copied to clipboard!', 'success');
+        function exportConversation() {
+            if (conversation.length === 0) {
+                updateStatus('No conversation to export', 'error');
+                return;
+            }
+
+            // Create CSV with questions and answers paired
+            const csvData = [];
+            let currentQ = '';
+            let currentA = '';
+
+            conversation.forEach(item => {
+                if (item.type === 'user' && item.message.startsWith('Q')) {
+                    if (currentQ && currentA) {
+                        csvData.push({ question: currentQ, answer: currentA, timestamp: item.timestamp });
+                    }
+                    currentQ = item.message.replace(/^Q\\d+:\\s*/, '');
+                    currentA = '';
+                } else if (item.type === 'bot' && item.message.startsWith('A')) {
+                    currentA = item.message.replace(/^A\\d+:\\s*/, '');
+                }
+            });
+
+            // Don't forget the last pair
+            if (currentQ && currentA) {
+                csvData.push({ question: currentQ, answer: currentA, timestamp: new Date().toISOString() });
+            }
+
+            const csv = [
+                'Question,Answer,Timestamp',
+                ...csvData.map(row => 
+                    `"${row.question.replace(/"/g, '""')}","${row.answer.replace(/"/g, '""')}","${row.timestamp}"`
+                )
+            ].join('\\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chatbot-conversation-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            updateStatus('Conversation exported to CSV', 'success');
         }
 
-        function updateStatus(message, type) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = `status ${type}`;
+        function clearConversation() {
+            document.getElementById('conversationLog').innerHTML = 
+                '<div class="message system">Conversation cleared...</div>';
+            conversation = [];
+            document.getElementById('exportBtn').disabled = true;
         }
 
-        // Event listeners
-        document.getElementById('questionsTextarea').addEventListener('input', updatePreview);
+        function copyConversation() {
+            const text = conversation.map(item => 
+                `[${item.type.toUpperCase()}] ${item.message}`
+            ).join('\\n');
+            
+            navigator.clipboard.writeText(text).then(() => {
+                updateStatus('Conversation copied to clipboard', 'success');
+            });
+        }
 
-        // Initialize
+        // Initialize when page loads
         window.addEventListener('load', () => {
-            useDefaultQuestions();
+            updateStatus('Initializing chatbot...', 'warning');
+            
+            // Load the Voiceflow widget
+            (function(d, t) {
+                var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+                v.onload = function() {
+                    // Initialize the chatbot after a delay
+                    setTimeout(initializeChatbot, 3000);
+                }
+                v.src = "https://cdn.voiceflow.com/widget/bundle.mjs"; 
+                v.type = "text/javascript"; 
+                s.parentNode.insertBefore(v, s);
+            })(document, 'script');
         });
-    </script>
-</body>
-</html>
-`;
-            
-            document.getElementById('generatedScript').value = script;
-            document.getElementById('copyBtn').disabled = false;
-            updateStatus(`Script generated for ${questions.length} questions`, 'success');
-        }
 
-        function copyScript() {
-            const scriptTextarea = document.getElementById('generatedScript');
-            scriptTextarea.select();
-            document.execCommand('copy');
-            updateStatus('Script copied to clipboard!', 'success');
-        }
-
-        function updateStatus(message, type) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = `status ${type}`;
-        }
-
-        // Event listeners
-        document.getElementById('questionsTextarea').addEventListener('input', updatePreview);
-
-        // Initialize
-        window.addEventListener('load', () => {
-            useDefaultQuestions();
+        // Update questions when textarea changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('questionsInput');
+            if (textarea) {
+                textarea.addEventListener('input', loadQuestionsFromTextarea);
+            }
         });
     </script>
 </body>
