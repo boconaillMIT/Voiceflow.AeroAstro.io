@@ -447,6 +447,10 @@ Who should I contact about course registration?"></textarea>
                 return;
             }
 
+            // Debug: Show what sheet ID we're actually using
+            log(`Using Sheet ID: ${sheetId}`, 'info');
+            addToTranscript(`🔍 Using Sheet ID: ${sheetId}`, 'system');
+
             resetTestState();
             addToTranscript(`🔄 Loading questions from sheet: ${sheetId}`, 'system');
             updateStatus('Loading questions from Google Sheets...', 'warning');
@@ -455,6 +459,7 @@ Who should I contact about course registration?"></textarea>
             try {
                 const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
                 log(`Attempting to fetch: ${csvUrl}`, 'info');
+                addToTranscript(`📡 Fetching: ${csvUrl}`, 'system');
                 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -472,6 +477,7 @@ Who should I contact about course registration?"></textarea>
                 }
                 
                 const csvText = await response.text();
+                log(`Received ${csvText.length} characters from Sheet ID: ${sheetId}`, 'info');
                 
                 if (!csvText || csvText.trim().length === 0) {
                     throw new Error('Empty response from Google Sheets');
@@ -492,8 +498,8 @@ Who should I contact about course registration?"></textarea>
                 }
 
                 questions = newQuestions;
-                log(`✅ Loaded ${questions.length} questions from Google Sheets`, 'success');
-                addToTranscript(`✅ Successfully loaded ${questions.length} questions`, 'system');
+                log(`✅ Loaded ${questions.length} questions from Sheet ID: ${sheetId}`, 'success');
+                addToTranscript(`✅ Successfully loaded ${questions.length} questions from ${sheetId}`, 'system');
                 updateStatus(`Loaded ${questions.length} questions successfully`, 'success');
                 
                 updateProgress();
@@ -506,8 +512,8 @@ Who should I contact about course registration?"></textarea>
                     errorMessage = 'Request timed out after 15 seconds.';
                 }
                 
-                log(`❌ Google Sheets error: ${errorMessage}`, 'error');
-                addToTranscript(`❌ Google Sheets failed: ${errorMessage}`, 'system');
+                log(`❌ Google Sheets error for ${sheetId}: ${errorMessage}`, 'error');
+                addToTranscript(`❌ Failed to load from ${sheetId}: ${errorMessage}`, 'system');
                 updateStatus(`Error: ${errorMessage}`, 'error');
                 
                 questions = [];
