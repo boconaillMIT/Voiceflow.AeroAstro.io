@@ -440,9 +440,40 @@ What courses are required for the degree?</textarea>
                     
                     console.log(`Sent Q${questionNum}: ${question}`);
                     
-                    // Simulate bot response after delay
+                    // Try to capture actual bot response
                     setTimeout(() => {
-                        addMessage('Response received (content not accessible via iframe)', 'bot');
+                        let botResponse = 'Response received (content not accessible via iframe)';
+                        
+                        try {
+                            // Try to access Voiceflow's shadow DOM for actual response
+                            const voiceflow = iframe.contentWindow.voiceflow;
+                            if (voiceflow && voiceflow.chat && voiceflow.chat._shadowRoot) {
+                                const shadowRoot = voiceflow.chat._shadowRoot;
+                                
+                                // Look for bot message elements
+                                const botMessageSelectors = [
+                                    '.vfrc-message--assistant:last-child',
+                                    '.bot-message:last-child',
+                                    '[data-role="assistant"]:last-child',
+                                    '.vfrc-chat-response:last-child'
+                                ];
+                                
+                                for (const selector of botMessageSelectors) {
+                                    const element = shadowRoot.querySelector(selector);
+                                    if (element) {
+                                        const text = element.textContent || element.innerText;
+                                        if (text && text.trim() && text.length > 10) {
+                                            botResponse = text.trim();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.log('Response capture error:', error);
+                        }
+                        
+                        addMessage(botResponse, 'bot');
                     }, 2000);
                     
                 } else {
