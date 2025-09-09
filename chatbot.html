@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroAstro Chatbot</title>
+    <title>AeroAstro Chatbot v4.3</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -200,143 +200,176 @@
         function setupTestingBridge() {
             // Only set up if we're in an iframe (being used by the tester)
             if (window.parent !== window) {
-                console.log('Setting up testing bridge for automated testing...');
+                console.log('🔧 NEW VERSION v4.0 - Setting up testing bridge for automated testing');
                 
-                // Method 1: Intercept Voiceflow API calls
+                // Method 1: Intercept Voiceflow API calls with proper SSE handling
                 if (!window.originalFetch) {
                     window.originalFetch = window.fetch;
                     window.fetch = function(...args) {
                         return window.originalFetch.apply(this, args).then(response => {
                             const url = args[0];
                             if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com')) {
-                                console.log('Intercepted Voiceflow API call:', url);
-                                // Clone response to read it
-                                const clonedResponse = response.clone();
-                                clonedResponse.json().then(data => {
-                                    console.log('Full Voiceflow response data:', data);
-                                    extractAndSendBotMessage(data);
-                                }).catch(e => console.log('Error parsing API response:', e));
+                                console.log('🌐 v4.0 Intercepted Voiceflow API call:', url);
+                                
+                                // Check if this is a streaming response
+                                if (url.includes('/stream')) {
+                                    console.log('📡 v4.0 Detected streaming response - setting up SSE parser');
+                                    // Clone response to read the stream
+                                    const clonedResponse = response.clone();
+                                    parseSSEStream(clonedResponse);
+                                } else {
+                                    console.log('📄 v4.0 Non-streaming response - using JSON parser');
+                                    const clonedResponse = response.clone();
+                                    clonedResponse.json().then(data => {
+                                        console.log('📄 v4.0 JSON response:', data);
+                                        extractAndSendBotMessage(data);
+                                    }).catch(e => console.log('❌ v4.0 JSON parse error:', e));
+                                }
                             }
                             return response;
                         });
                     };
                 }
                 
-                // Improved message extraction
+                // Parse Server-Sent Events stream
+                async function parseSSEStream(response) {
+                    console.log('🔄 v4.0 Starting SSE stream parsing...');
+                    try {
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+                        
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) {
+                                console.log('✅ v4.0 SSE stream ended');
+                                break;
+                            }
+                            
+                            buffer += decoder.decode(value, { stream: true });
+                            
+                            // Process complete SSE messages
+                            const lines = buffer.split('\n');
+                            buffer = lines.pop(); // Keep incomplete line in buffer
+                            
+                            let eventData = {};
+                            let eventType = '';
+                            
+                            for (const line of lines) {
+                                if (line.startsWith('event: ')) {
+                                    eventType = line.substring(7).trim();
+                                } else if (line.startsWith('data: ')) {
+                                    try {
+                                        const data = JSON.parse(line.substring(6));
+                                        eventData = data;
+                                        console.log(`🎯 v4.0 SSE Event [${eventType}]:`, data);
+                                        
+                                        // Extract bot message from this event
+                                        extractAndSendBotMessage(data);
+                                    } catch (e) {
+                                        console.log('⚠️ v4.0 Error parsing SSE data line:', line.substring(0, 50) + '...', e);
+                                    }
+                                } else if (line.trim() === '') {
+                                    // Empty line marks end of event
+                                    continue;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('❌ v4.0 Error reading SSE stream:', error);
+                    }
+                }
+                
+                // Extract bot message from Voiceflow response
                 function extractAndSendBotMessage(data) {
-                    console.log('Analyzing response structure:', data);
+                    console.log('🔍 v4.0 Analyzing response for bot message:', data);
                     let botMessage = null;
                     
                     try {
-                        // Method 1: Direct trace object (for SSE events)
+                        // Method 1: Direct trace object (for individual SSE events)
                         if (data.type === 'speak' && data.payload && data.payload.message) {
                             botMessage = data.payload.message;
-                            console.log('Found speak message:', botMessage);
+                            console.log('💬 v4.0 Found speak message:', botMessage);
                         } else if (data.type === 'text' && data.payload && data.payload.message) {
                             botMessage = data.payload.message;
-                            console.log('Found text message:', botMessage);
+                            console.log('💬 v4.0 Found text message:', botMessage);
                         }
                         
-                        // Method 2: Check for trace array
+                        // Method 2: Check for trace array (for batch responses)
                         if (!botMessage && data.trace && Array.isArray(data.trace)) {
-                            console.log('Found trace array with', data.trace.length, 'items');
+                            console.log('📋 v4.0 Found trace array with', data.trace.length, 'items');
                             for (const trace of data.trace) {
-                                console.log('Checking trace item:', trace);
                                 if (trace.type === 'speak' && trace.payload && trace.payload.message) {
                                     botMessage = trace.payload.message;
+                                    console.log('💬 v4.0 Found speak in trace:', botMessage);
                                     break;
                                 } else if (trace.type === 'text' && trace.payload && trace.payload.message) {
                                     botMessage = trace.payload.message;
+                                    console.log('💬 v4.0 Found text in trace:', botMessage);
                                     break;
                                 }
                             }
                         }
                         
-                        // Method 3: Check for direct message fields
+                        // Method 3: Direct message fields
                         if (!botMessage && data.message) {
-                            console.log('Found direct message:', data.message);
                             botMessage = data.message;
-                        }
-                        
-                        // Method 4: Check for response/reply field
-                        if (!botMessage && data.response) {
-                            console.log('Found response field:', data.response);
-                            botMessage = data.response;
+                            console.log('💬 v4.0 Found direct message:', botMessage);
                         }
                         
                         if (botMessage) {
-                            console.log('Final extracted bot message:', botMessage);
+                            console.log('✅ v4.0 SENDING BOT MESSAGE TO TESTER:', botMessage);
                             // Send to parent window
                             window.parent.postMessage({
                                 type: 'voiceflow_response',
                                 message: botMessage
                             }, '*');
                         } else {
-                            console.log('No bot message found in this event');
+                            console.log('🤷 v4.0 No bot message found in this data');
                         }
                         
                     } catch (error) {
-                        console.error('Error in extractAndSendBotMessage:', error);
+                        console.error('❌ v4.0 Error extracting message:', error);
                     }
                 }
                 
-                // Method 2: Watch for DOM changes (keeping as fallback)
+                // Method 2: DOM observer as fallback
                 function observeChatWidget() {
-                    const observer = new MutationObserver(function(mutations) {
-                        mutations.forEach(function(mutation) {
-                            mutation.addedNodes.forEach(function(node) {
-                                if (node.nodeType === 1) {
-                                    const botMessage = findBotMessage(node);
-                                    if (botMessage) {
-                                        console.log('Found bot message via DOM:', botMessage);
-                                        window.parent.postMessage({
-                                            type: 'voiceflow_response',
-                                            message: botMessage
-                                        }, '*');
-                                    }
-                                }
-                            });
-                        });
-                    });
+                    let lastMessageCount = 0;
                     
-                    observer.observe(document.body, { 
-                        childList: true, 
-                        subtree: true 
-                    });
-                    
-                    console.log('DOM observer setup complete');
-                }
-                
-                function findBotMessage(element) {
-                    const selectors = [
-                        '[data-testid="assistant-message"]',
-                        '.vfrc-message--assistant',
-                        '.vfrc-assistant-message',
-                        '[class*="assistant"]',
-                        '[class*="bot"]',
-                        '.vfrc-message:not([class*="user"])',
-                        '[class*="vfrc-message"]:not([class*="user"])'
-                    ];
-                    
-                    for (const selector of selectors) {
-                        let messageEl = element.matches && element.matches(selector) ? 
-                            element : element.querySelector(selector);
+                    function checkForNewMessages() {
+                        const messageElements = document.querySelectorAll('[class*="message"], [class*="chat"], [class*="bubble"], div[class*="vfrc"]');
+                        
+                        if (messageElements.length > lastMessageCount) {
+                            console.log(`👀 v4.0 DOM: Found ${messageElements.length} total messages (was ${lastMessageCount})`);
                             
-                        if (messageEl) {
-                            const text = messageEl.textContent.trim();
-                            if (text && !text.toLowerCase().includes('user') && text.length > 2) {
-                                return text;
+                            // Check the latest messages
+                            for (let i = lastMessageCount; i < messageElements.length; i++) {
+                                const element = messageElements[i];
+                                const text = element.textContent.trim();
+                                
+                                if (text && text.length > 5 && !text.toLowerCase().includes('user') && !text.includes('Send message')) {
+                                    console.log('💬 v4.0 DOM: Potential bot message:', text);
+                                    window.parent.postMessage({
+                                        type: 'voiceflow_response',
+                                        message: text
+                                    }, '*');
+                                }
                             }
+                            
+                            lastMessageCount = messageElements.length;
                         }
                     }
                     
-                    return null;
+                    // Check every 3 seconds
+                    setInterval(checkForNewMessages, 3000);
+                    console.log('👁️ v4.0 DOM observer setup complete (polling every 3s)');
                 }
                 
-                // Start DOM observer after a delay
-                setTimeout(observeChatWidget, 2000);
+                // Start DOM observer after delay
+                setTimeout(observeChatWidget, 5000);
                 
-                console.log('Testing bridge setup complete');
+                console.log('🎉 v4.0 Testing bridge setup complete!');
             }
         }
 
