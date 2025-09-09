@@ -418,8 +418,82 @@ who supports sertac karaman?</textarea>
             updateStatus('Testing in progress...', 'warning');
             addMessage(`🚀 Starting test with ${questionsList.length} questions`);
             
+            // Set up API response interception
+            setupAPIInterception();
+            
             sendNextQuestion();
             testInterval = setInterval(sendNextQuestion, delay);
+        }
+
+        // Set up interception of Voiceflow API responses
+        function setupAPIInterception() {
+            try {
+                const iframe = document.getElementById('chatIframe');
+                if (!iframe.contentWindow) {
+                    addMessage('⚠️ Cannot access iframe - using fallback response capture', 'system');
+                    return;
+                }
+
+                // Listen for messages from the iframe
+                window.addEventListener('message', function(event) {
+                    if (event.data && event.data.type === 'voiceflow_response') {
+                        addMessage(event.data.message, 'bot');
+                    }
+                });
+
+                // Try to inject interception code into iframe
+                setTimeout(() => {
+                    try {
+                        iframe.contentWindow.eval(`
+                            if (!window.originalFetch) {
+                                window.originalFetch = window.fetch;
+                                window.fetch = function(...args) {
+                                    return window.originalFetch.apply(this, args).then(response => {
+                                        // Check if this is a Voiceflow API response
+                                        if (response.url && response.url.includes('general-runtime.voiceflow.com')) {
+                                            // Clone the response so we can read it
+                                            const clonedResponse = response.clone();
+                                            clonedResponse.json().then(data => {
+                                                // Extract bot messages from traces
+                                                if (data.trace) {
+                                                    const botMessage = extractBotMessage(data.trace);
+                                                    if (botMessage) {
+                                                        // Send message to parent window
+                                                        window.parent.postMessage({
+                                                            type: 'voiceflow_response',
+                                                            message: botMessage
+                                                        }, '*');
+                                                    }
+                                                }
+                                            }).catch(e => {});
+                                        }
+                                        return response;
+                                    });
+                                };
+
+                                function extractBotMessage(traces) {
+                                    for (const trace of traces) {
+                                        if (trace.type === 'speak' && trace.payload && trace.payload.message) {
+                                            return trace.payload.message;
+                                        }
+                                    }
+                                    return null;
+                                }
+                                
+                                console.log('Voiceflow API interception setup complete');
+                            }
+                        `);
+                        addMessage('✅ API interception setup complete', 'system');
+                    } catch (error) {
+                        addMessage('⚠️ API interception failed - iframe security restrictions', 'system');
+                        console.log('Interception error:', error);
+                    }
+                }, 2000);
+
+            } catch (error) {
+                addMessage('⚠️ Could not setup API interception', 'system');
+                console.log('Setup error:', error);
+            }
         }
 
         function sendNextQuestion() {
