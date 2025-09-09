@@ -196,138 +196,162 @@
             return userID;
         }
 
-        // Add communication bridge for automated testing
-        function setupTestingBridge() {
-            if (window.parent !== window) {
-                console.log('STABLE VERSION v4.2 - Setting up testing bridge');
-                
-                let sentMessages = new Set();
-                let sseActive = false;
-                
-                function sendBotMessage(message) {
-                    const messageHash = message.substring(0, 30) + message.length;
-                    
-                    if (!sentMessages.has(messageHash)) {
-                        sentMessages.add(messageHash);
-                        console.log('SENDING BOT MESSAGE:', message);
-                        try {
-                            window.parent.postMessage({
-                                type: 'voiceflow_response',
-                                message: message
-                            }, '*');
-                        } catch (e) {
-                            console.error('Error sending message to parent:', e);
-                        }
-                        
-                        if (sentMessages.size > 5) {
-                            const firstHash = sentMessages.values().next().value;
-                            sentMessages.delete(firstHash);
-                        }
-                    }
+       function setupTestingBridge() {
+    if (window.parent !== window) {
+        console.log('FIXED VERSION v4.3 - Setting up testing bridge');
+        
+        let sentMessages = new Set();
+        let sseActive = false;
+        let domFallbackActive = false;
+        
+        function sendBotMessage(message, source = 'unknown') {
+            const messageHash = message.substring(0, 40) + message.length;
+            
+            if (!sentMessages.has(messageHash)) {
+                sentMessages.add(messageHash);
+                console.log(`SENDING BOT MESSAGE (${source}):`, message);
+                try {
+                    window.parent.postMessage({
+                        type: 'voiceflow_response',
+                        message: message
+                    }, '*');
+                } catch (e) {
+                    console.error('Error sending message to parent:', e);
                 }
                 
-                // Safer API interception
-                if (!window.originalFetch) {
-                    window.originalFetch = window.fetch;
-                    window.fetch = function(...args) {
-                        return window.originalFetch.apply(this, args).then(response => {
-                            try {
-                                const url = args[0];
-                                if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com') && url.includes('/stream')) {
-                                    console.log('Intercepted stream URL');
-                                    if (!sseActive) {
-                                        sseActive = true;
-                                        parseSSEStreamSafe(response.clone());
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error in fetch intercept:', e);
-                            }
-                            return response;
-                        });
-                    };
+                // Clean up old hashes
+                if (sentMessages.size > 8) {
+                    const oldHashes = Array.from(sentMessages).slice(0, 3);
+                    oldHashes.forEach(hash => sentMessages.delete(hash));
                 }
-                
-                // Safer SSE parsing
-                async function parseSSEStreamSafe(response) {
-                    console.log('Starting safe SSE parsing');
-                    try {
-                        const reader = response.body.getReader();
-                        const decoder = new TextDecoder();
-                        let buffer = '';
-                        let errorCount = 0;
-                        
-                        while (true && errorCount < 5) {
-                            try {
-                                const result = await reader.read();
-                                if (result.done) break;
-                                
-                                buffer += decoder.decode(result.value, { stream: true });
-                                const lines = buffer.split('\n');
-                                buffer = lines.pop() || '';
-                                
-                                for (const line of lines) {
-                                    if (line.startsWith('data: ')) {
-                                        try {
-                                            const data = JSON.parse(line.substring(6));
-                                            if (data.type === 'speak' && data.payload && data.payload.message) {
-                                                sendBotMessage(data.payload.message);
-                                            } else if (data.type === 'text' && data.payload && data.payload.message) {
-                                                sendBotMessage(data.payload.message);
-                                            }
-                                        } catch (parseError) {
-                                            // Ignore individual parse errors
-                                        }
-                                    }
-                                }
-                            } catch (readError) {
-                                errorCount++;
-                                console.log('SSE read error:', errorCount);
-                                await new Promise(resolve => setTimeout(resolve, 1000));
-                            }
-                        }
-                    } catch (streamError) {
-                        console.error('SSE stream error:', streamError);
-                    } finally {
-                        sseActive = false;
-                    }
-                }
-                
-                // Fallback DOM observer
-                function setupDOMFallback() {
-                    let lastCheck = Date.now();
-                    
-                    function checkMessages() {
-                        try {
-                            const messages = document.querySelectorAll('[class*="message"], [class*="chat"], div[class*="vfrc"]');
-                            const now = Date.now();
-                            
-                            messages.forEach(msg => {
-                                const text = msg.textContent.trim();
-                                if (text && text.length > 10 && !text.includes('user') && !text.includes('User')) {
-                                    // Check if this message appeared recently
-                                    if (now - lastCheck < 10000) { // Within last 10 seconds
-                                        sendBotMessage(text);
-                                    }
-                                }
-                            });
-                            
-                            lastCheck = now;
-                        } catch (e) {
-                            console.error('DOM check error:', e);
-                        }
-                    }
-                    
-                    setInterval(checkMessages, 4000);
-                    console.log('DOM fallback active');
-                }
-                
-                // Start DOM fallback after delay
-                setTimeout(setupDOMFallback, 8000);
-                
-                console.log('Testing bridge v4.2 setup complete');
+            } else {
+                console.log(`BLOCKED DUPLICATE (${source}):`, message.substring(0, 30) + '...');
             }
         }
+        
+        // Primary: SSE Stream Capture
+        if (!window.originalFetch) {
+            window.originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                return window.originalFetch.apply(this, args).then(response => {
+                    try {
+                        const url = args[0];
+                        if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com') && url.includes('/stream')) {
+                            console.log('SSE stream detected');
+                            if (!sseActive) {
+                                sseActive = true;
+                                parseSSEStream(response.clone());
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Fetch intercept error:', e);
+                    }
+                    return response;
+                });
+            };
+        }
+        
+        // SSE Stream Parser
+        async function parseSSEStream(response) {
+            console.log('Starting SSE stream parsing');
+            try {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    try {
+                        const result = await reader.read();
+                        if (result.done) break;
+                        
+                        buffer += decoder.decode(result.value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.substring(6));
+                                    if (data.type === 'speak' && data.payload && data.payload.message) {
+                                        sendBotMessage(data.payload.message, 'SSE-speak');
+                                        // Disable DOM fallback since SSE is working
+                                        domFallbackActive = false;
+                                    } else if (data.type === 'text' && data.payload && data.payload.message) {
+                                        sendBotMessage(data.payload.message, 'SSE-text');
+                                        domFallbackActive = false;
+                                    }
+                                } catch (parseError) {
+                                    // Ignore parse errors
+                                }
+                            }
+                        }
+                    } catch (readError) {
+                        console.log('SSE read error, enabling DOM fallback');
+                        domFallbackActive = true;
+                        break;
+                    }
+                }
+            } catch (streamError) {
+                console.log('SSE stream failed, enabling DOM fallback');
+                domFallbackActive = true;
+            } finally {
+                sseActive = false;
+            }
+        }
+        
+        // Fallback: DOM Observer (only when SSE fails)
+        function setupDOMFallback() {
+            let lastMessageCount = 0;
+            let checkCount = 0;
+            
+            function checkForNewMessages() {
+                checkCount++;
+                
+                // Only run DOM fallback if SSE isn't working
+                if (!domFallbackActive && checkCount < 5) {
+                    return;
+                }
+                
+                try {
+                    const allMessages = document.querySelectorAll('[class*="message"], [class*="chat"], div[class*="vfrc"]');
+                    
+                    if (allMessages.length > lastMessageCount) {
+                        console.log(`DOM: Found ${allMessages.length} messages (was ${lastMessageCount})`);
+                        
+                        // Check only the newest messages
+                        for (let i = lastMessageCount; i < allMessages.length; i++) {
+                            const msg = allMessages[i];
+                            const text = msg.textContent.trim();
+                            
+                            // Filter for bot messages
+                            if (text && 
+                                text.length > 15 && 
+                                !text.toLowerCase().includes('user') && 
+                                !text.includes('Send message') &&
+                                !text.includes('Welcome! Starting')) {
+                                
+                                sendBotMessage(text, 'DOM-fallback');
+                            }
+                        }
+                        
+                        lastMessageCount = allMessages.length;
+                    }
+                } catch (e) {
+                    console.error('DOM check error:', e);
+                }
+            }
+            
+            // Check every 3 seconds, but be smart about when to activate
+            setInterval(checkForNewMessages, 3000);
+            console.log('DOM fallback monitoring started');
+        }
+        
+        // Start DOM fallback monitoring after delay
+        setTimeout(setupDOMFallback, 6000);
+        
+        console.log('Testing bridge v4.3 setup complete');
+    }
+}
 
         // Load Voiceflow and set OAuth variables
         function loadVoiceflow(userID, userData) {
@@ -410,3 +434,4 @@
     </script>
 </body>
 </html>
+
