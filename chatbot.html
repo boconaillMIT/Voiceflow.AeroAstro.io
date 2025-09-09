@@ -196,89 +196,116 @@
             return userID;
         }
 
-        // Add communication bridge for automated testing
-        function setupTestingBridge() {
-            // Only set up if we're in an iframe (being used by the tester)
-            if (window.parent !== window) {
-                console.log('🔧 NEW VERSION v4.0 - Setting up testing bridge for automated testing');
+       // Add communication bridge for automated testing
+function setupTestingBridge() {
+    // Only set up if we're in an iframe (being used by the tester)
+    if (window.parent !== window) {
+        console.log('🔧 NEW VERSION v4.1 - Setting up testing bridge for automated testing');
+        
+        let sentMessages = new Set(); // Track sent messages to prevent duplicates
+        
+        function sendBotMessage(message) {
+            // Create a simple hash of the message to detect duplicates
+            const messageHash = message.substring(0, 50) + message.length;
+            
+            if (!sentMessages.has(messageHash)) {
+                sentMessages.add(messageHash);
+                console.log('✅ v4.1 SENDING UNIQUE BOT MESSAGE:', message);
+                window.parent.postMessage({
+                    type: 'voiceflow_response',
+                    message: message
+                }, '*');
                 
-                // Method 1: Intercept Voiceflow API calls with proper SSE handling
-                if (!window.originalFetch) {
-                    window.originalFetch = window.fetch;
-                    window.fetch = function(...args) {
-                        return window.originalFetch.apply(this, args).then(response => {
-                            const url = args[0];
-                            if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com')) {
-                                console.log('🌐 v4.0 Intercepted Voiceflow API call:', url);
-                                
-                                // Check if this is a streaming response
-                                if (url.includes('/stream')) {
-                                    console.log('📡 v4.0 Detected streaming response - setting up SSE parser');
-                                    // Clone response to read the stream
-                                    const clonedResponse = response.clone();
-                                    parseSSEStream(clonedResponse);
-                                } else {
-                                    console.log('📄 v4.0 Non-streaming response - using JSON parser');
-                                    const clonedResponse = response.clone();
-                                    clonedResponse.json().then(data => {
-                                        console.log('📄 v4.0 JSON response:', data);
-                                        extractAndSendBotMessage(data);
-                                    }).catch(e => console.log('❌ v4.0 JSON parse error:', e));
-                                }
-                            }
-                            return response;
-                        });
-                    };
+                // Clean up old hashes to prevent memory issues
+                if (sentMessages.size > 10) {
+                    const firstHash = sentMessages.values().next().value;
+                    sentMessages.delete(firstHash);
                 }
-                
-                // Parse Server-Sent Events stream
-                async function parseSSEStream(response) {
-                    console.log('🔄 v4.0 Starting SSE stream parsing...');
-                    try {
-                        const reader = response.body.getReader();
-                        const decoder = new TextDecoder();
-                        let buffer = '';
+            } else {
+                console.log('🚫 v4.1 DUPLICATE MESSAGE BLOCKED:', message.substring(0, 50) + '...');
+            }
+        }
+        
+        // Method 1: Intercept Voiceflow API calls with proper SSE handling
+        if (!window.originalFetch) {
+            window.originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                return window.originalFetch.apply(this, args).then(response => {
+                    const url = args[0];
+                    if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com')) {
+                        console.log('🌐 v4.1 Intercepted Voiceflow API call:', url);
                         
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) {
-                                console.log('✅ v4.0 SSE stream ended');
-                                break;
-                            }
-                            
-                            buffer += decoder.decode(value, { stream: true });
-                            
-                            // Process complete SSE messages
-                            const lines = buffer.split('\n');
-                            buffer = lines.pop(); // Keep incomplete line in buffer
-                            
-                            let eventData = {};
-                            let eventType = '';
-                            
-                            for (const line of lines) {
-                                if (line.startsWith('event: ')) {
-                                    eventType = line.substring(7).trim();
-                                } else if (line.startsWith('data: ')) {
-                                    try {
-                                        const data = JSON.parse(line.substring(6));
-                                        eventData = data;
-                                        console.log(`🎯 v4.0 SSE Event [${eventType}]:`, data);
-                                        
-                                        // Extract bot message from this event
-                                        extractAndSendBotMessage(data);
-                                    } catch (e) {
-                                        console.log('⚠️ v4.0 Error parsing SSE data line:', line.substring(0, 50) + '...', e);
-                                    }
-                                } else if (line.trim() === '') {
-                                    // Empty line marks end of event
-                                    continue;
-                                }
+                        // Check if this is a streaming response
+                        if (url.includes('/stream')) {
+                            console.log('📡 v4.1 Detected streaming response - setting up SSE parser');
+                            const clonedResponse = response.clone();
+                            parseSSEStream(clonedResponse);
+                        }
+                    }
+                    return response;
+                });
+            };
+        }
+        
+        // Parse Server-Sent Events stream
+        async function parseSSEStream(response) {
+            console.log('🔄 v4.1 Starting SSE stream parsing...');
+            try {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        console.log('✅ v4.1 SSE stream ended');
+                        break;
+                    }
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                extractAndSendBotMessage(data);
+                            } catch (e) {
+                                // Ignore parse errors for SSE
                             }
                         }
-                    } catch (error) {
-                        console.error('❌ v4.0 Error reading SSE stream:', error);
                     }
                 }
+            } catch (error) {
+                console.error('❌ v4.1 Error reading SSE stream:', error);
+            }
+        }
+        
+        // Extract bot message from Voiceflow response
+        function extractAndSendBotMessage(data) {
+            let botMessage = null;
+            
+            try {
+                // Check for speak/text messages
+                if (data.type === 'speak' && data.payload && data.payload.message) {
+                    botMessage = data.payload.message;
+                } else if (data.type === 'text' && data.payload && data.payload.message) {
+                    botMessage = data.payload.message;
+                }
+                
+                if (botMessage) {
+                    console.log('💬 v4.1 Found bot message via SSE:', botMessage);
+                    sendBotMessage(botMessage);
+                }
+            } catch (error) {
+                console.error('❌ v4.1 Error extracting message:', error);
+            }
+        }
+        
+        console.log('🎉 v4.1 Testing bridge setup complete!');
+    }
+}
                 
                 // Extract bot message from Voiceflow response
                 function extractAndSendBotMessage(data) {
@@ -454,3 +481,4 @@
     </script>
 </body>
 </html>
+
