@@ -222,15 +222,23 @@
                     };
                 }
                 
-                // Improved message extraction that handles different response formats
+                // Improved message extraction
                 function extractAndSendBotMessage(data) {
                     console.log('Analyzing response structure:', data);
                     let botMessage = null;
                     
-                    // Handle different possible response structures
                     try {
-                        // Method 1: Check for trace array
-                        if (data.trace && Array.isArray(data.trace)) {
+                        // Method 1: Direct trace object (for SSE events)
+                        if (data.type === 'speak' && data.payload && data.payload.message) {
+                            botMessage = data.payload.message;
+                            console.log('Found speak message:', botMessage);
+                        } else if (data.type === 'text' && data.payload && data.payload.message) {
+                            botMessage = data.payload.message;
+                            console.log('Found text message:', botMessage);
+                        }
+                        
+                        // Method 2: Check for trace array
+                        if (!botMessage && data.trace && Array.isArray(data.trace)) {
                             console.log('Found trace array with', data.trace.length, 'items');
                             for (const trace of data.trace) {
                                 console.log('Checking trace item:', trace);
@@ -244,43 +252,16 @@
                             }
                         }
                         
-                        // Method 2: Check for direct message
+                        // Method 3: Check for direct message fields
                         if (!botMessage && data.message) {
                             console.log('Found direct message:', data.message);
                             botMessage = data.message;
                         }
                         
-                        // Method 3: Check for response/reply field
+                        // Method 4: Check for response/reply field
                         if (!botMessage && data.response) {
                             console.log('Found response field:', data.response);
                             botMessage = data.response;
-                        }
-                        
-                        // Method 4: Check for output field
-                        if (!botMessage && data.output && data.output.length > 0) {
-                            console.log('Found output array:', data.output);
-                            botMessage = data.output[0].speak || data.output[0].text || data.output[0].message;
-                        }
-                        
-                        // Method 5: Look for any text-like properties
-                        if (!botMessage) {
-                            console.log('Searching all properties for text...');
-                            const searchForText = (obj, depth = 0) => {
-                                if (depth > 3) return null; // Prevent infinite recursion
-                                
-                                for (const [key, value] of Object.entries(obj)) {
-                                    if (typeof value === 'string' && value.length > 5 && value.length < 500) {
-                                        console.log(`Found potential message in ${key}:`, value);
-                                        return value;
-                                    } else if (typeof value === 'object' && value !== null) {
-                                        const result = searchForText(value, depth + 1);
-                                        if (result) return result;
-                                    }
-                                }
-                                return null;
-                            };
-                            
-                            botMessage = searchForText(data);
                         }
                         
                         if (botMessage) {
@@ -291,7 +272,7 @@
                                 message: botMessage
                             }, '*');
                         } else {
-                            console.log('No bot message found in response');
+                            console.log('No bot message found in this event');
                         }
                         
                     } catch (error) {
