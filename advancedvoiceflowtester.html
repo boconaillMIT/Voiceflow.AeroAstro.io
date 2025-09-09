@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v2</title>
+    <title>Voiceflow Chatbot Tester v3</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -153,12 +153,12 @@
     <div class="container">
         <!-- Left Panel: Controls -->
         <div class="panel">
-            <h2>🤖 Advanced Chatbot Tester</h2>
+            <h2>🤖 Advanced Chatbot Tester v3</h2>
             
             <div class="section">
                 <h4>📝 Load Questions</h4>
                 
-                <button onclick="useDefaultQuestions()" class="gray">🔄 Use Built-in Questions (10 questions)</button>
+                <button onclick="useDefaultQuestions()" class="gray">🔄 Use Built-in Questions (11 questions)</button>
                 
                 <label>Manual Questions (edit as needed):</label>
                 <textarea id="questionTextArea" rows="6">who is the department head
@@ -210,6 +210,7 @@ who supports sertac karaman?</textarea>
             </div>
             <button onclick="clearTranscript()">🗑️ Clear Transcript</button>
             <button onclick="copyToClipboard()">📋 Copy Transcript</button>
+            <button onclick="downloadTranscript()">💾 Download as Text</button>
         </div>
     </div>
 
@@ -419,183 +420,33 @@ who supports sertac karaman?</textarea>
             updateStatus('Testing in progress...', 'warning');
             addMessage(`🚀 Starting test with ${questionsList.length} questions`);
             
-            // Set up API response interception
-            setupAPIInterception();
+            // Set up simplified communication
+            setupCommunication();
             
             sendNextQuestion();
             testInterval = setInterval(sendNextQuestion, delay);
         }
 
-        // Improved API interception setup
-        function setupAPIInterception() {
-            try {
-                const iframe = document.getElementById('chatIframe');
-                
-                // Listen for messages from the iframe
-                window.addEventListener('message', function(event) {
+        // Simplified communication setup
+        function setupCommunication() {
+            // Listen for messages from the chatbot iframe
+            window.addEventListener('message', function(event) {
+                // Make sure the message is from our chatbot iframe
+                if (event.source === document.getElementById('chatIframe').contentWindow) {
                     if (event.data && event.data.type === 'voiceflow_response') {
                         addMessage(event.data.message, 'bot');
+                        console.log('Received bot response:', event.data.message);
+                        
                         // Clear any pending timeout since we got a response
                         if (responseTimeout) {
                             clearTimeout(responseTimeout);
                             responseTimeout = null;
                         }
                     }
-                });
-
-                // Wait a bit for iframe to load, then inject interception
-                setTimeout(() => {
-                    try {
-                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                        const script = iframeDoc.createElement('script');
-                        script.innerHTML = `
-                            (function() {
-                                console.log('Setting up Voiceflow response capture...');
-                                
-                                // Method 1: Intercept fetch requests
-                                if (!window.originalFetch) {
-                                    window.originalFetch = window.fetch;
-                                    window.fetch = function(...args) {
-                                        const url = args[0];
-                                        return window.originalFetch.apply(this, args).then(response => {
-                                            // Check if this is a Voiceflow API response
-                                            if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com')) {
-                                                console.log('Intercepted Voiceflow API call:', url);
-                                                const clonedResponse = response.clone();
-                                                clonedResponse.json().then(data => {
-                                                    console.log('Voiceflow response data:', data);
-                                                    extractAndSendBotMessage(data);
-                                                }).catch(e => console.log('Error parsing response:', e));
-                                            }
-                                            return response;
-                                        });
-                                    };
-                                }
-
-                                // Method 2: Watch for DOM changes in chat area
-                                function setupDOMObserver() {
-                                    const chatContainer = document.querySelector('.vfrc-chat--list, .vf-chat-list, [class*="chat"], [class*="message"]');
-                                    if (chatContainer) {
-                                        console.log('Found chat container, setting up observer');
-                                        const observer = new MutationObserver(function(mutations) {
-                                            mutations.forEach(function(mutation) {
-                                                mutation.addedNodes.forEach(function(node) {
-                                                    if (node.nodeType === 1) { // Element node
-                                                        // Look for bot messages
-                                                        const botMessage = extractBotMessageFromDOM(node);
-                                                        if (botMessage) {
-                                                            window.parent.postMessage({
-                                                                type: 'voiceflow_response',
-                                                                message: botMessage
-                                                            }, '*');
-                                                        }
-                                                    }
-                                                });
-                                            });
-                                        });
-                                        observer.observe(chatContainer, { childList: true, subtree: true });
-                                    } else {
-                                        // Retry in 2 seconds
-                                        setTimeout(setupDOMObserver, 2000);
-                                    }
-                                }
-
-                                // Method 3: Listen for Voiceflow events
-                                if (window.voiceflow && window.voiceflow.chat) {
-                                    const originalInteract = window.voiceflow.chat.interact;
-                                    if (originalInteract) {
-                                        window.voiceflow.chat.interact = function(...args) {
-                                            console.log('Voiceflow interact called with:', args);
-                                            const result = originalInteract.apply(this, args);
-                                            
-                                            // Try to capture the response
-                                            if (result && result.then) {
-                                                result.then(response => {
-                                                    console.log('Voiceflow interact response:', response);
-                                                    extractAndSendBotMessage(response);
-                                                });
-                                            }
-                                            
-                                            return result;
-                                        };
-                                    }
-                                }
-
-                                function extractAndSendBotMessage(data) {
-                                    let botMessage = null;
-                                    
-                                    if (data.trace && Array.isArray(data.trace)) {
-                                        for (const trace of data.trace) {
-                                            if (trace.type === 'speak' && trace.payload && trace.payload.message) {
-                                                botMessage = trace.payload.message;
-                                                break;
-                                            }
-                                            if (trace.type === 'text' && trace.payload && trace.payload.message) {
-                                                botMessage = trace.payload.message;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    
-                                    if (botMessage) {
-                                        console.log('Extracted bot message:', botMessage);
-                                        window.parent.postMessage({
-                                            type: 'voiceflow_response',
-                                            message: botMessage
-                                        }, '*');
-                                    }
-                                }
-
-                                function extractBotMessageFromDOM(element) {
-                                    // Look for common Voiceflow message selectors
-                                    const selectors = [
-                                        '.vfrc-message--assistant',
-                                        '.vf-assistant-message',
-                                        '[class*="assistant"]',
-                                        '[class*="bot"]',
-                                        '.vfrc-message:not(.vfrc-message--user)'
-                                    ];
-                                    
-                                    for (const selector of selectors) {
-                                        const messageEl = element.matches && element.matches(selector) ? 
-                                            element : element.querySelector(selector);
-                                        if (messageEl) {
-                                            const text = messageEl.textContent.trim();
-                                            if (text && !text.includes('User:') && !text.includes('You:')) {
-                                                return text;
-                                            }
-                                        }
-                                    }
-                                    return null;
-                                }
-
-                                // Start DOM observer
-                                setupDOMObserver();
-                                
-                                console.log('Voiceflow response capture setup complete');
-                            })();
-                        `;
-                        iframeDoc.head.appendChild(script);
-                        addMessage('✅ Enhanced response capture setup complete', 'system');
-                    } catch (error) {
-                        addMessage('⚠️ Enhanced setup failed, using basic capture', 'system');
-                        console.log('Enhanced setup error:', error);
-                        
-                        // Fallback to basic message listener
-                        setupBasicCapture();
-                    }
-                }, 3000);
-
-            } catch (error) {
-                addMessage('⚠️ Could not setup enhanced capture, using fallback', 'system');
-                console.log('Setup error:', error);
-                setupBasicCapture();
-            }
-        }
-
-        function setupBasicCapture() {
-            // Basic fallback - just log that we're using timeout-based capture
-            addMessage('📝 Using timeout-based response capture', 'system');
+                }
+            });
+            
+            addMessage('✅ Communication bridge established', 'system');
         }
 
         function sendNextQuestion() {
@@ -609,7 +460,7 @@ who supports sertac karaman?</textarea>
             const question = questionsList[currentQuestionIndex];
             const questionNum = currentQuestionIndex + 1;
             
-            addMessage(question, 'user');
+            addMessage(`Q${questionNum}: ${question}`, 'user');
             
             try {
                 const iframe = document.getElementById('chatIframe');
@@ -623,16 +474,23 @@ who supports sertac karaman?</textarea>
                     
                     console.log(`Sent Q${questionNum}: ${question}`);
                     
-                    // Set a timeout to capture response via fallback method if API interception fails
+                    // Set a timeout to show if no response is received
                     responseTimeout = setTimeout(() => {
-                        addMessage('⏱️ [Response timeout - bot may have responded]', 'bot');
-                    }, 4000);
+                        addMessage('⏱️ [No response captured - check console for errors]', 'system');
+                        responseTimeout = null;
+                    }, 5000);
                     
                 } else {
-                    addMessage('Error: Cannot access Voiceflow in iframe', 'system');
+                    addMessage('❌ Error: Cannot access Voiceflow in iframe', 'system');
+                    console.error('Voiceflow object not available:', {
+                        voiceflow: !!iframe.contentWindow.voiceflow,
+                        chat: !!(iframe.contentWindow.voiceflow && iframe.contentWindow.voiceflow.chat),
+                        interact: !!(iframe.contentWindow.voiceflow && iframe.contentWindow.voiceflow.chat && iframe.contentWindow.voiceflow.chat.interact)
+                    });
                 }
             } catch (error) {
-                addMessage(`Error sending question: ${error.message}`, 'system');
+                addMessage(`❌ Error sending question: ${error.message}`, 'system');
+                console.error('Send question error:', error);
             }
 
             currentQuestionIndex++;
@@ -670,15 +528,45 @@ who supports sertac karaman?</textarea>
             
             navigator.clipboard.writeText(text).then(() => {
                 addMessage('📋 Transcript copied to clipboard');
+            }).catch(err => {
+                addMessage('❌ Failed to copy to clipboard');
+                console.error('Copy failed:', err);
             });
+        }
+
+        function downloadTranscript() {
+            const transcript = document.getElementById('transcript');
+            const messages = Array.from(transcript.children).map(div => {
+                const text = div.textContent;
+                const type = div.className.includes('user') ? 'USER' : 
+                           div.className.includes('bot') ? 'BOT' : 'SYSTEM';
+                return `[${type}] ${text}`;
+            });
+            
+            const content = `Voiceflow Chatbot Test Results\n${'='.repeat(50)}\n\n${messages.join('\n\n')}`;
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voiceflow-test-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            addMessage('💾 Transcript downloaded');
         }
 
         // Initialize
         window.addEventListener('load', () => {
-            addMessage('🤖 Chatbot Tester v2 Ready');
+            addMessage('🤖 Chatbot Tester v3 Ready');
             addMessage('Step 1: Load questions using options above');
             addMessage('Step 2: Load chatbot');
             addMessage('Step 3: Start testing');
+            
+            // Test communication setup on load
+            setupCommunication();
         });
     </script>
 </body>
