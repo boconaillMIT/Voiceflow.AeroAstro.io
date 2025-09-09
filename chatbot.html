@@ -198,17 +198,27 @@
 
 function setupTestingBridge() {
     if (window.parent !== window) {
-        console.log('FINAL VERSION v4.4 - Setting up testing bridge');
+        console.log('SIMPLE VERSION v5.0 - Setting up testing bridge');
         
-        let sentMessages = new Set();
-        let activeStreamCount = 0;
+        let recentMessages = new Map(); // Store with timestamp
+        const MESSAGE_TIMEOUT = 2000; // 2 seconds
         
-        function sendBotMessage(message, source = 'unknown') {
-            const messageHash = message.substring(0, 40) + message.length;
+        function sendBotMessage(message, source = 'SSE') {
+            // Clean old messages first
+            const now = Date.now();
+            for (const [hash, timestamp] of recentMessages.entries()) {
+                if (now - timestamp > MESSAGE_TIMEOUT) {
+                    recentMessages.delete(hash);
+                }
+            }
             
-            if (!sentMessages.has(messageHash)) {
-                sentMessages.add(messageHash);
-                console.log(`SENDING UNIQUE MESSAGE (${source}):`, message);
+            // Create hash from first 50 chars + length
+            const messageHash = message.substring(0, 50) + message.length;
+            
+            if (!recentMessages.has(messageHash)) {
+                recentMessages.set(messageHash, now);
+                console.log(`SENDING (${source}):`, message);
+                
                 try {
                     window.parent.postMessage({
                         type: 'voiceflow_response',
@@ -217,18 +227,12 @@ function setupTestingBridge() {
                 } catch (e) {
                     console.error('Error sending message:', e);
                 }
-                
-                // Clean up old hashes
-                if (sentMessages.size > 10) {
-                    const oldHashes = Array.from(sentMessages).slice(0, 5);
-                    oldHashes.forEach(hash => sentMessages.delete(hash));
-                }
             } else {
-                console.log(`DUPLICATE BLOCKED (${source}):`, message.substring(0, 30) + '...');
+                console.log(`BLOCKED DUPLICATE (${source}):`, message.substring(0, 30) + '...');
             }
         }
         
-        // SSE Stream Capture with better stream management
+        // Single SSE handler - don't limit streams, just handle duplicates better
         if (!window.originalFetch) {
             window.originalFetch = window.fetch;
             window.fetch = function(...args) {
@@ -236,18 +240,11 @@ function setupTestingBridge() {
                     try {
                         const url = args[0];
                         if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com') && url.includes('/stream')) {
-                            console.log('SSE stream detected, active streams:', activeStreamCount);
-                            
-                            // Only parse if we don't have too many active streams
-                            if (activeStreamCount < 2) {
-                                activeStreamCount++;
-                                parseSSEStream(response.clone());
-                            } else {
-                                console.log('Too many active streams, skipping');
-                            }
+                            console.log('New SSE stream started');
+                            parseSSEStream(response.clone());
                         }
                     } catch (e) {
-                        console.error('Fetch intercept error:', e);
+                        console.error('Fetch error:', e);
                     }
                     return response;
                 });
@@ -255,49 +252,47 @@ function setupTestingBridge() {
         }
         
         async function parseSSEStream(response) {
-            console.log('Starting SSE stream parsing, streams active:', activeStreamCount);
             try {
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
                 
                 while (true) {
-                    try {
-                        const result = await reader.read();
-                        if (result.done) break;
-                        
-                        buffer += decoder.decode(result.value, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop() || '';
-                        
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                try {
-                                    const data = JSON.parse(line.substring(6));
-                                    if (data.type === 'speak' && data.payload && data.payload.message) {
-                                        sendBotMessage(data.payload.message, 'SSE');
-                                    } else if (data.type === 'text' && data.payload && data.payload.message) {
-                                        sendBotMessage(data.payload.message, 'SSE');
-                                    }
-                                } catch (parseError) {
-                                    // Ignore parse errors
+                    const result = await reader.read();
+                    if (result.done) break;
+                    
+                    buffer += decoder.decode(result.value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                
+                                // Extract message from any valid payload
+                                let message = null;
+                                if (data.type === 'speak' && data.payload && data.payload.message) {
+                                    message = data.payload.message;
+                                } else if (data.type === 'text' && data.payload && data.payload.message) {
+                                    message = data.payload.message;
                                 }
+                                
+                                if (message && message.trim().length > 5) {
+                                    sendBotMessage(message, 'SSE');
+                                }
+                            } catch (parseError) {
+                                // Ignore parse errors
                             }
                         }
-                    } catch (readError) {
-                        console.log('SSE read error, stopping stream');
-                        break;
                     }
                 }
             } catch (streamError) {
                 console.error('SSE stream error:', streamError);
-            } finally {
-                activeStreamCount--;
-                console.log('SSE stream ended, active streams:', activeStreamCount);
             }
         }
         
-        console.log('Testing bridge v4.4 setup complete');
+        console.log('Simple bridge v5.0 setup complete');
     }
 }
         // Load Voiceflow and set OAuth variables
@@ -381,5 +376,6 @@ function setupTestingBridge() {
     </script>
 </body>
 </html>
+
 
 
