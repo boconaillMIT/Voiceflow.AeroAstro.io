@@ -196,6 +196,127 @@
             return userID;
         }
 
+        // Add communication bridge for automated testing
+        function setupTestingBridge() {
+            // Only set up if we're in an iframe (being used by the tester)
+            if (window.parent !== window) {
+                console.log('Setting up testing bridge for automated testing...');
+                
+                // Method 1: Intercept Voiceflow API calls
+                if (!window.originalFetch) {
+                    window.originalFetch = window.fetch;
+                    window.fetch = function(...args) {
+                        return window.originalFetch.apply(this, args).then(response => {
+                            const url = args[0];
+                            if (typeof url === 'string' && url.includes('general-runtime.voiceflow.com')) {
+                                console.log('Intercepted Voiceflow API call:', url);
+                                // Clone response to read it
+                                const clonedResponse = response.clone();
+                                clonedResponse.json().then(data => {
+                                    console.log('Voiceflow response data:', data);
+                                    if (data.trace && Array.isArray(data.trace)) {
+                                        // Extract bot messages from trace
+                                        for (const trace of data.trace) {
+                                            let botMessage = null;
+                                            
+                                            if (trace.type === 'speak' && trace.payload && trace.payload.message) {
+                                                botMessage = trace.payload.message;
+                                            } else if (trace.type === 'text' && trace.payload && trace.payload.message) {
+                                                botMessage = trace.payload.message;
+                                            }
+                                            
+                                            if (botMessage) {
+                                                console.log('Extracted bot message:', botMessage);
+                                                // Send to parent window
+                                                window.parent.postMessage({
+                                                    type: 'voiceflow_response',
+                                                    message: botMessage
+                                                }, '*');
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }).catch(e => console.log('Error parsing API response:', e));
+                            }
+                            return response;
+                        });
+                    };
+                }
+                
+                // Method 2: Watch for DOM changes in the chat widget
+                function observeChatWidget() {
+                    const observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            mutation.addedNodes.forEach(function(node) {
+                                if (node.nodeType === 1) { // Element node
+                                    // Look for Voiceflow assistant messages
+                                    const botMessage = findBotMessage(node);
+                                    if (botMessage) {
+                                        console.log('Found bot message via DOM:', botMessage);
+                                        window.parent.postMessage({
+                                            type: 'voiceflow_response',
+                                            message: botMessage
+                                        }, '*');
+                                    }
+                                }
+                            });
+                        });
+                    });
+                    
+                    // Start observing the entire document for changes
+                    observer.observe(document.body, { 
+                        childList: true, 
+                        subtree: true 
+                    });
+                    
+                    console.log('DOM observer setup complete');
+                }
+                
+                function findBotMessage(element) {
+                    // Common Voiceflow widget selectors
+                    const selectors = [
+                        '[data-testid="assistant-message"]',
+                        '.vfrc-message--assistant',
+                        '.vfrc-assistant-message',
+                        '[class*="assistant"]',
+                        '[class*="bot"]',
+                        '.vfrc-message:not([class*="user"])',
+                        '[class*="vfrc-message"]:not([class*="user"])'
+                    ];
+                    
+                    for (const selector of selectors) {
+                        let messageEl = element.matches && element.matches(selector) ? 
+                            element : element.querySelector(selector);
+                            
+                        if (messageEl) {
+                            const text = messageEl.textContent.trim();
+                            if (text && !text.toLowerCase().includes('user') && text.length > 2) {
+                                return text;
+                            }
+                        }
+                    }
+                    
+                    // Fallback: look for any new text content that might be a bot message
+                    if (element.textContent && element.textContent.trim().length > 5) {
+                        const text = element.textContent.trim();
+                        // Simple heuristic: if it's not obviously user input, treat as bot message
+                        if (!text.toLowerCase().startsWith('you:') && 
+                            !text.toLowerCase().startsWith('user:') &&
+                            !text.includes('Send message')) {
+                            return text;
+                        }
+                    }
+                    
+                    return null;
+                }
+                
+                // Start observing after a short delay
+                setTimeout(observeChatWidget, 2000);
+                
+                console.log('Testing bridge setup complete');
+            }
+        }
+
         // Load Voiceflow and set OAuth variables
         function loadVoiceflow(userID, userData) {
             (function(d, t) {
@@ -232,6 +353,8 @@
                     setTimeout(() => {
                         try {
                             window.voiceflow.chat.open();
+                            // Set up testing bridge after chat opens
+                            setupTestingBridge();
                         } catch (openError) {
                             console.error('Error opening chat:', openError.message);
                         }
