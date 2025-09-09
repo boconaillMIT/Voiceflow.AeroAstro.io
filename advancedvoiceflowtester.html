@@ -427,27 +427,33 @@ who supports sertac karaman?</textarea>
             testInterval = setInterval(sendNextQuestion, delay);
         }
 
-        // Simplified communication setup
-        function setupCommunication() {
-            // Listen for messages from the chatbot iframe
-            window.addEventListener('message', function(event) {
-                // Make sure the message is from our chatbot iframe
-                if (event.source === document.getElementById('chatIframe').contentWindow) {
-                    if (event.data && event.data.type === 'voiceflow_response') {
-                        addMessage(event.data.message, 'bot');
-                        console.log('Received bot response:', event.data.message);
-                        
-                        // Clear any pending timeout since we got a response
-                        if (responseTimeout) {
-                            clearTimeout(responseTimeout);
-                            responseTimeout = null;
-                        }
-                    }
-                }
-            });
+// Simplified communication setup
+function setupCommunication() {
+    // Remove any existing listeners first
+    window.removeEventListener('message', handleVoiceflowMessage);
+    
+    // Add single listener
+    window.addEventListener('message', handleVoiceflowMessage);
+    
+    addMessage('✅ Communication bridge established', 'system');
+}
+
+function handleVoiceflowMessage(event) {
+    // Make sure the message is from our chatbot iframe
+    if (event.source === document.getElementById('chatIframe').contentWindow) {
+        if (event.data && event.data.type === 'voiceflow_response') {
+            addMessage(event.data.message, 'bot');
+            console.log('Received bot response:', event.data.message);
             
-            addMessage('✅ Communication bridge established', 'system');
+            // Clear any pending timeout since we got a response
+            if (responseTimeout) {
+                clearTimeout(responseTimeout);
+                responseTimeout = null;
+            }
         }
+    }
+}
+            
 
         function sendNextQuestion() {
             if (currentQuestionIndex >= questionsList.length) {
