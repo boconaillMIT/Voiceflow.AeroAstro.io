@@ -18,6 +18,31 @@
             border-radius: 10px;
             margin-bottom: 20px;
             text-align: center;
+            position: relative;
+        }
+        .admin-access {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        .admin-access:hover {
+            opacity: 1;
+        }
+        .admin-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 12px;
+            padding: 4px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .admin-link:hover {
+            color: white;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.1);
         }
         .user-info {
             background: white;
@@ -55,6 +80,9 @@
     <div class="header">
         <h1>AeroAstro Chatbot</h1>
         <p>AI Assistant for MIT's Department of Aeronautics and Astronautics</p>
+        <div class="admin-access">
+            <a href="admin.html" class="admin-link" id="adminLink" style="display: none;">Admin</a>
+        </div>
     </div>
 
     <div class="user-info" id="user-info">
@@ -95,6 +123,15 @@
             } catch (e) {
                 console.error('Error parsing localStorage:', e.message);
                 return null;
+            }
+        }
+
+        // Check if user should see admin link
+        function checkAdminAccess(userData) {
+            // Show admin link for oconaill
+            // TODO: In future, check QuickBase for administrator flag
+            if (userData.kerberos === 'oconaill') {
+                document.getElementById('adminLink').style.display = 'inline-block';
             }
         }
 
@@ -175,6 +212,9 @@
                 document.getElementById('display-department').textContent = userData.department || 'Not provided';
                 
                 document.getElementById('user-info').classList.add('visible');
+                
+                // Check for admin access
+                checkAdminAccess(userData);
             }
         }
 
@@ -376,6 +416,3 @@ function setupTestingBridge() {
     </script>
 </body>
 </html>
-
-
-
