@@ -401,12 +401,14 @@
             try {
                 console.log('Updating record:', recordId, 'New status:', newStatus);
                 
+                // Try alternative QuickBase update format
                 const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "3": { "value": recordId },
-                        "8": { "value": newStatus }
-                    }]
+                        "3": {"value": parseInt(recordId)},
+                        "8": {"value": newStatus}
+                    }],
+                    mergeFieldId: 3
                 };
                 
                 console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
@@ -418,10 +420,26 @@
                 loadUsers();
             } catch (error) {
                 console.error('Full error details:', error);
-                showMessage('Error updating user: ' + error.message, 'error');
                 
-                // Additional debug info
-                showMessage(`Debug info - Record ID: ${recordId}, Status: ${newStatus}`, 'error');
+                // Try alternative approach with upsert
+                try {
+                    console.log('Trying upsert approach...');
+                    const upsertPayload = {
+                        to: QUICKBASE_CONFIG.tableId,
+                        data: [{
+                            "3": {"value": parseInt(recordId)},
+                            "8": {"value": newStatus}
+                        }]
+                    };
+                    
+                    const upsertResponse = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
+                    console.log('Upsert response:', upsertResponse);
+                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully (upsert)`, 'success');
+                    loadUsers();
+                } catch (upsertError) {
+                    console.error('Upsert also failed:', upsertError);
+                    showMessage('Error updating user: ' + error.message + ' (Record ID: ' + recordId + ')', 'error');
+                }
             } finally {
                 showLoading(false);
             }
