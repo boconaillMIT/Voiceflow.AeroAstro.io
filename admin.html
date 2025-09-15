@@ -159,12 +159,11 @@
         <!-- Authentication Section -->
         <div class="auth-section" id="authSection">
             <h3>Administrator Authentication</h3>
-            <p>Please enter your Kerberos ID to access the admin panel:</p>
-            <div class="form-group">
-                <label for="adminKerberos">Kerberos ID:</label>
-                <input type="text" id="adminKerberos" placeholder="Enter your Kerberos ID">
+            <p>Verifying your credentials automatically...</p>
+            <div id="authLoading" class="loading">
+                <div class="spinner"></div>
+                <p>Checking authentication...</p>
             </div>
-            <button class="btn" onclick="authenticateAdmin()">Login</button>
             <div id="authMessage" class="status-message"></div>
         </div>
 
