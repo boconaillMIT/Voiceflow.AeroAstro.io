@@ -469,12 +469,13 @@
             addUser();
         });
 
-        // Allow Enter key in Kerberos field to authenticate
-        document.getElementById('adminKerberos').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                authenticateAdmin();
-            }
+        // Initialize authentication on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-start authentication process
+            authenticateAdmin();
         });
+
+        // Remove the Enter key listener since there's no input field now
     </script>
 </body>
 </html>
