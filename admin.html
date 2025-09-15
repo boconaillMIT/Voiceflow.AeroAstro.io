@@ -399,18 +399,29 @@
 
             showLoading(true);
             try {
-                await makeQuickBaseRequest('POST', 'records', {
+                console.log('Updating record:', recordId, 'New status:', newStatus);
+                
+                const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        3: { value: recordId },
-                        8: { value: newStatus }
+                        "3": { "value": recordId },
+                        "8": { "value": newStatus }
                     }]
-                });
+                };
+                
+                console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
+                
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Update response:', response);
 
                 showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 loadUsers();
             } catch (error) {
+                console.error('Full error details:', error);
                 showMessage('Error updating user: ' + error.message, 'error');
+                
+                // Additional debug info
+                showMessage(`Debug info - Record ID: ${recordId}, Status: ${newStatus}`, 'error');
             } finally {
                 showLoading(false);
             }
