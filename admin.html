@@ -287,445 +287,162 @@
         </div>
     </div>
 
-    <script>
-        // Configuration
-        const QUICKBASE_CONFIG = {
-            realm: 'mit.quickbase.com',
-            appId: 'buuhxhtmv',
-            tableId: 'bve87f9um',
-            userToken: 'b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h'
-        };
+<script>
+// Configuration
+const QUICKBASE_CONFIG = {
+    realm: 'mit.quickbase.com',
+    appId: 'buuhxhtmv',
+    tableId: 'bve87f9um',
+    userToken: 'b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h'
+};
 
-        // Extract Kerberos ID using the same method as your chatbot system
-        function extractKerberosFromAuth() {
-            // Method 1: Check URL parameters (from OAuth callback)
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlKerberos = urlParams.get('kerberos');
-            if (urlKerberos) {
-                console.log('Found Kerberos in URL parameters:', urlKerberos);
-                return urlKerberos;
-            }
-
-            // Method 2: Check localStorage (same as chatbot.html)
-            try {
-                const storedMetadata = localStorage.getItem('user_metadata');
-                if (storedMetadata) {
-                    const userData = JSON.parse(storedMetadata);
-                    if (userData.kerberos) {
-                        console.log('Found Kerberos in localStorage:', userData.kerberos);
-                        return userData.kerberos;
-                    }
-                }
-            } catch (e) {
-                console.error('Error parsing user_metadata from localStorage:', e);
-            }
-
-            // Method 3: Try to extract from URL query parameters directly (fallback)
-            const searchParams = window.location.search;
-            const kerberosMatch = searchParams.match(/kerberos=([^&]+)/);
-            if (kerberosMatch) {
-                console.log('Found Kerberos via regex:', kerberosMatch[1]);
-                return decodeURIComponent(kerberosMatch[1]);
-            }
-
-            console.log('No Kerberos ID found in any location');
-            return null;
-        }
-
-        // Check if user is authenticated using same logic as chatbot
-        function checkUserAuthentication() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const storedData = localStorage.getItem('user_metadata');
-            
-            // Check if authenticated via URL params
-            if (urlParams.get('authenticated') === 'true') {
-                return true;
-            }
-
-            // Check if we have stored authentication data
-            if (storedData) {
-                try {
-                    const userData = JSON.parse(storedData);
-                    return !!(userData.kerberos && userData.authenticated !== false);
-                } catch (e) {
-                    return false;
-                }
-            }
-
+// Simple authentication
+function authenticateUser() {
+    console.log('Starting authentication...');
+    
+    try {
+        const storedData = localStorage.getItem('user_metadata');
+        if (!storedData) {
+            showError('No authentication data found. Please login to the chatbot first.');
             return false;
         }
-
-        // Original authentication functions for reference
-        function extractKerberosFromAuth() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlKerberos = urlParams.get('kerberos');
-            if (urlKerberos) {
-                console.log('Found Kerberos in URL parameters:', urlKerberos);
-                return urlKerberos;
-            }
-
-            try {
-                const storedMetadata = localStorage.getItem('user_metadata');
-                if (storedMetadata) {
-                    const userData = JSON.parse(storedMetadata);
-                    if (userData.kerberos) {
-                        console.log('Found Kerberos in localStorage:', userData.kerberos);
-                        return userData.kerberos;
-                    }
-                }
-            } catch (e) {
-                console.error('Error parsing user_metadata from localStorage:', e);
-            }
-
-            console.log('No Kerberos ID found in any location');
-            return null;
-        }
-
-        function checkUserAuthentication() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const storedData = localStorage.getItem('user_metadata');
-            
-            if (urlParams.get('authenticated') === 'true') {
-                return true;
-            }
-
-            if (storedData) {
-                try {
-                    const userData = JSON.parse(storedData);
-                    return !!(userData.kerberos && userData.authenticated !== false);
-                } catch (e) {
-                    return false;
-                }
-            }
-
+        
+        const userData = JSON.parse(storedData);
+        console.log('Found user data for:', userData.kerberos);
+        
+        if (userData.kerberos === 'oconaill') {
+            showSuccess('Admin access granted for ' + userData.kerberos);
+            return true;
+        } else {
+            showError('Access denied. User ' + userData.kerberos + ' is not authorized.');
             return false;
         }
+        
+    } catch (error) {
+        console.error('Auth error:', error);
+        showError('Authentication error: ' + error.message);
+        return false;
+    }
+}
 
-        function showAuthMessage(message, type) {
-            const authMessage = document.getElementById('authMessage');
-            authMessage.textContent = message;
-            authMessage.className = `status-message status-${type}`;
-            authMessage.style.display = 'block';
-        }
+function showSuccess(message) {
+    document.getElementById('authLoading').style.display = 'none';
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    console.log('Success:', message);
+}
 
-        function showMessage(message, type) {
-            const statusMessage = document.getElementById('statusMessage');
-            statusMessage.textContent = message;
-            statusMessage.className = `status-message status-${type}`;
-            statusMessage.style.display = 'block';
-            setTimeout(() => {
-                statusMessage.style.display = 'none';
-            }, 5000);
-        }
+function showError(message) {
+    document.getElementById('authLoading').style.display = 'none';
+    const authMessage = document.getElementById('authMessage');
+    authMessage.textContent = message;
+    authMessage.className = 'status-message status-error';
+    authMessage.style.display = 'block';
+    console.log('Error:', message);
+}
 
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
+function showAuthMessage(message, type) {
+    const authMessage = document.getElementById('authMessage');
+    authMessage.textContent = message;
+    authMessage.className = `status-message status-${type}`;
+    authMessage.style.display = 'block';
+}
 
-        // QuickBase API functions
-        async function makeQuickBaseRequest(method, endpoint, body = null) {
-            const url = `https://api.quickbase.com/v1/${endpoint}`;
-            const headers = {
-                'QB-Realm-Hostname': QUICKBASE_CONFIG.realm,
-                'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`,
-                'Content-Type': 'application/json'
-            };
+function showMessage(message, type) {
+    const statusMessage = document.getElementById('statusMessage');
+    statusMessage.textContent = message;
+    statusMessage.className = `status-message status-${type}`;
+    statusMessage.style.display = 'block';
+    setTimeout(() => {
+        statusMessage.style.display = 'none';
+    }, 5000);
+}
 
-            try {
-                const response = await fetch(url, {
-                    method: method,
-                    headers: headers,
-                    body: body ? JSON.stringify(body) : null
-                });
+function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+// QuickBase API functions
+async function makeQuickBaseRequest(method, endpoint, body) {
+    const url = `https://api.quickbase.com/v1/${endpoint}`;
+    const headers = {
+        'QB-Realm-Hostname': QUICKBASE_CONFIG.realm,
+        'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`,
+        'Content-Type': 'application/json'
+    };
 
-                return await response.json();
-            } catch (error) {
-                console.error('QuickBase API error:', error);
-                throw error;
-            }
-        }
-
-        async function loadUsers() {
-            showLoading(true);
-            try {
-                const response = await makeQuickBaseRequest('POST', 'records/query', {
-                    from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 13, 14], // Added field 14 (Is Administrator)
-                    options: {
-                        orderBy: [{ fieldId: 6, order: 'ASC' }] // Sort by Kerberos ID
-                    }
-                });
-
-                displayUsers(response.data);
-                showMessage('User list loaded successfully', 'success');
-            } catch (error) {
-                showMessage('Error loading users: ' + error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        function displayUsers(users) {
-            const tbody = document.getElementById('userTableBody');
-            tbody.innerHTML = '';
-
-            users.forEach(user => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${user[6]?.value || ''}</td>
-                    <td>${user[7]?.value || ''}</td>
-                    <td>${user[8]?.value ? 'Yes' : 'No'}</td>
-                    <td>${user[14]?.value ? 'Yes' : 'No'}</td>
-                    <td>${user[11]?.value || 0}</td>
-                    <td>${user[10]?.value ? new Date(user[10].value).toLocaleDateString() : 'Never'}</td>
-                    <td>${user[13]?.value || ''}</td>
-                    <td>
-                        <button class="btn btn-danger" onclick="toggleExceptionAccess(${user[3].value}, ${user[8]?.value || false})">
-                            ${user[8]?.value ? 'Remove Exception' : 'Grant Exception'}
-                        </button>
-                        <button class="btn" onclick="toggleAdminAccess(${user[3].value}, ${user[14]?.value || false})">
-                            ${user[14]?.value ? 'Remove Admin' : 'Grant Admin'}
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteUser(${user[3].value}, '${user[6]?.value}')">Delete</button>
-                    </td>
-                `;
-            });
-        }
-
-        async function addUser() {
-            const kerberos = document.getElementById('newKerberos').value.trim();
-            const department = document.getElementById('newDepartment').value.trim();
-            const isException = document.getElementById('newIsException').checked;
-            const isAdmin = document.getElementById('newIsAdmin').checked;
-            const notes = document.getElementById('newNotes').value.trim();
-
-            if (!kerberos || !department) {
-                showMessage('Please fill in all required fields', 'error');
-                return;
-            }
-
-            showLoading(true);
-            try {
-                await makeQuickBaseRequest('POST', 'records', {
-                    to: QUICKBASE_CONFIG.tableId,
-                    data: [{
-                        6: { value: kerberos },
-                        7: { value: department },
-                        8: { value: isException },
-                        9: { value: new Date().toISOString() },
-                        10: { value: new Date().toISOString() },
-                        11: { value: 0 },
-                        13: { value: notes },
-                        14: { value: isAdmin }
-                    }]
-                });
-
-                showMessage('User added successfully', 'success');
-                document.getElementById('addUserForm').reset();
-                document.getElementById('newIsException').checked = true; // Reset to checked
-                document.getElementById('newIsAdmin').checked = false; // Reset to unchecked
-                loadUsers();
-            } catch (error) {
-                showMessage('Error adding user: ' + error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        async function toggleExceptionAccess(recordId, currentStatus) {
-            const newStatus = !currentStatus;
-            const action = newStatus ? 'grant' : 'remove';
-            
-            if (!confirm(`Are you sure you want to ${action} exception access for this user?`)) {
-                return;
-            }
-
-            showLoading(true);
-            try {
-                console.log('Updating record:', recordId, 'New status:', newStatus);
-                
-                // Try alternative QuickBase update format
-                const updatePayload = {
-                    to: QUICKBASE_CONFIG.tableId,
-                    data: [{
-                        "3": {"value": parseInt(recordId)},
-                        "8": {"value": newStatus}
-                    }],
-                    mergeFieldId: 3
-                };
-                
-                console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
-                
-                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
-                console.log('Update response:', response);
-
-                showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                loadUsers();
-            } catch (error) {
-                console.error('Full error details:', error);
-                
-                // Try alternative approach with upsert
-                try {
-                    console.log('Trying upsert approach...');
-                    const upsertPayload = {
-                        to: QUICKBASE_CONFIG.tableId,
-                        data: [{
-                            "3": {"value": parseInt(recordId)},
-                            "8": {"value": newStatus}
-                        }]
-                    };
-                    
-                    const upsertResponse = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
-                    console.log('Upsert response:', upsertResponse);
-                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully (upsert)`, 'success');
-                    loadUsers();
-                } catch (upsertError) {
-                    console.error('Upsert also failed:', upsertError);
-                    showMessage('Error updating user: ' + error.message + ' (Record ID: ' + recordId + ')', 'error');
-                }
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        async function toggleAdminAccess(recordId, currentStatus) {
-            const newStatus = !currentStatus;
-            const action = newStatus ? 'grant' : 'remove';
-            
-            if (!confirm(`Are you sure you want to ${action} administrator privileges for this user?`)) {
-                return;
-            }
-
-            showLoading(true);
-            try {
-                console.log('Updating admin status for record:', recordId, 'New status:', newStatus);
-                
-                const updatePayload = {
-                    to: QUICKBASE_CONFIG.tableId,
-                    data: [{
-                        "3": {"value": parseInt(recordId)},
-                        "14": {"value": newStatus}
-                    }],
-                    mergeFieldId: 3
-                };
-                
-                console.log('Admin update payload:', JSON.stringify(updatePayload, null, 2));
-                
-                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
-                console.log('Admin update response:', response);
-
-                showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                loadUsers();
-            } catch (error) {
-                console.error('Admin update error:', error);
-                
-                // Try alternative approach with upsert
-                try {
-                    console.log('Trying upsert approach for admin update...');
-                    const upsertPayload = {
-                        to: QUICKBASE_CONFIG.tableId,
-                        data: [{
-                            "3": {"value": parseInt(recordId)},
-                            "14": {"value": newStatus}
-                        }]
-                    };
-                    
-                    const upsertResponse = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
-                    console.log('Admin upsert response:', upsertResponse);
-                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully (upsert)`, 'success');
-                    loadUsers();
-                } catch (upsertError) {
-                    console.error('Admin upsert also failed:', upsertError);
-                    showMessage('Error updating administrator privileges: ' + error.message + ' (Record ID: ' + recordId + ')', 'error');
-                }
-            } finally {
-                showLoading(false);
-            }
-        }
-            if (!confirm(`Are you sure you want to delete user "${kerberosId}"? This action cannot be undone.`)) {
-                return;
-            }
-
-            showLoading(true);
-            try {
-                await makeQuickBaseRequest('DELETE', `records?from=${QUICKBASE_CONFIG.tableId}&where={3.EX.${recordId}}`);
-                
-                showMessage('User deleted successfully', 'success');
-                loadUsers();
-            } catch (error) {
-                showMessage('Error deleting user: ' + error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        // Form submission
-        document.getElementById('addUserForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            addUser();
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: headers,
+            body: body ? JSON.stringify(body) : null
         });
 
-        // Simplified authentication for debugging
-        function simpleAuth() {
-            console.log('Simple auth function called');
-            const authLoading = document.getElementById('authLoading');
-            const authMessage = document.getElementById('authMessage');
-            
-            if (authLoading) {
-                authLoading.style.display = 'none';
-            }
-            
-            // For now, just check localStorage directly
-            try {
-                const storedData = localStorage.getItem('user_metadata');
-                console.log('Stored data:', storedData);
-                
-                if (storedData) {
-                    const userData = JSON.parse(storedData);
-                    console.log('Parsed user data:', userData);
-                    
-                    if (userData.kerberos === 'oconaill') {
-                        console.log('Admin access granted for oconaill');
-                        document.getElementById('authSection').style.display = 'none';
-                        document.getElementById('adminPanel').style.display = 'block';
-                        return;
-                    }
-                }
-                
-                // If we get here, authentication failed
-                console.log('Authentication failed or user not oconaill');
-                if (authMessage) {
-                    authMessage.textContent = 'Access denied or authentication required. Please login to the chatbot first.';
-                    authMessage.className = 'status-message status-error';
-                    authMessage.style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Simple auth error:', error);
-                if (authMessage) {
-                    authMessage.textContent = 'Authentication error: ' + error.message;
-                    authMessage.className = 'status-message status-error';
-                    authMessage.style.display = 'block';
-                }
-            }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        // Initialize with simple version
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, starting simple authentication');
-            simpleAuth();
-        });
+        return await response.json();
+    } catch (error) {
+        console.error('QuickBase API error:', error);
+        throw error;
+    }
+}
 
-        // Fallback - also try after window load
-        window.addEventListener('load', function() {
-            console.log('Window loaded, trying simple auth as fallback');
-            if (document.getElementById('authSection').style.display !== 'none') {
-                simpleAuth();
+async function loadUsers() {
+    showLoading(true);
+    try {
+        const response = await makeQuickBaseRequest('POST', 'records/query', {
+            from: QUICKBASE_CONFIG.tableId,
+            select: [3, 6, 7, 8, 9, 10, 11, 13, 14],
+            options: {
+                orderBy: [{ fieldId: 6, order: 'ASC' }]
             }
         });
-    </script>
+
+        displayUsers(response.data);
+        showMessage('User list loaded successfully', 'success');
+    } catch (error) {
+        showMessage('Error loading users: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function displayUsers(users) {
+    const tbody = document.getElementById('userTableBody');
+    tbody.innerHTML = '';
+
+    users.forEach(user => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${user[6]?.value || ''}</td>
+            <td>${user[7]?.value || ''}</td>
+            <td>${user[8]?.value ? 'Yes' : 'No'}</td>
+            <td>${user[14]?.value ? 'Yes' : 'No'}</td>
+            <td>${user[11]?.value || 0}</td>
+            <td>${user[10]?.value ? new Date(user[10].value).toLocaleDateString() : 'Never'}</td>
+            <td>${user[13]?.value || ''}</td>
+            <td>
+                <button class="btn btn-danger" onclick="toggleExceptionAccess(${user[3].value}, ${user[8]?.value || false})">
+                    ${user[8]?.value ? 'Remove Exception' : 'Grant Exception'}
+                </button>
+                <button class="btn" onclick="toggleAdminAccess(${user[3].value}, ${user[14]?.value || false})">
+                    ${user[14]?.value ? 'Remove Admin' : 'Grant Admin'}
+                </button>
+                <button class="btn btn-danger" onclick="deleteUser(${user[3].value}, '${user[6]?.value}')">Delete</button>
+            </td>
+        `;
+    });
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, starting auth...');
+    if (authenticateUser()) {
+        loadUsers();
+    }
+});
+</script>
 </body>
 </html>
