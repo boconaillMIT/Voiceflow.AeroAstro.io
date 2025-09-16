@@ -394,16 +394,36 @@
             try {
                 const response = await makeQuickBaseRequest('POST', 'records/query', {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 13, 14],
+                    select: [3, 6, 7, 8, 9, 10, 11, 13, 14], // Include field 14 (Is Administrator)
                     options: {
                         orderBy: [{ fieldId: 6, order: 'ASC' }]
                     }
                 });
 
+                console.log('Raw user data from QuickBase:', response.data);
                 displayUsers(response.data);
                 showMessage('User list loaded successfully', 'success');
             } catch (error) {
+                console.error('Load users error:', error);
                 showMessage('Error loading users: ' + error.message, 'error');
+                
+                // If field 14 doesn't exist, try without it
+                try {
+                    console.log('Retrying without field 14...');
+                    const retryResponse = await makeQuickBaseRequest('POST', 'records/query', {
+                        from: QUICKBASE_CONFIG.tableId,
+                        select: [3, 6, 7, 8, 9, 10, 11, 13], // Without field 14
+                        options: {
+                            orderBy: [{ fieldId: 6, order: 'ASC' }]
+                        }
+                    });
+                    
+                    console.log('Retry successful, field 14 (Is Administrator) may not exist in QuickBase');
+                    displayUsers(retryResponse.data);
+                    showMessage('User list loaded (Note: Administrator field may not exist in QuickBase)', 'success');
+                } catch (retryError) {
+                    showMessage('Error loading users even without admin field: ' + retryError.message, 'error');
+                }
             } finally {
                 showLoading(false);
             }
