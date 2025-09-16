@@ -494,10 +494,15 @@
                     }]
                 };
                 
-                await makeQuickBaseRequest('POST', 'records', updatePayload);
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Exception update response:', response);
+                
                 showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                loadUsers();
+                
+                // Reload users to refresh button states
+                await loadUsers();
             } catch (error) {
+                console.error('Exception update error:', error);
                 showMessage('Error updating user: ' + error.message, 'error');
             } finally {
                 showLoading(false);
@@ -522,10 +527,15 @@
                     }]
                 };
                 
-                await makeQuickBaseRequest('POST', 'records', updatePayload);
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Admin update response:', response);
+                
                 showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                loadUsers();
+                
+                // Reload users to refresh button states
+                await loadUsers();
             } catch (error) {
+                console.error('Admin update error:', error);
                 showMessage('Error updating admin privileges: ' + error.message, 'error');
             } finally {
                 showLoading(false);
