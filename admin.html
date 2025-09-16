@@ -515,71 +515,43 @@
 
             showLoading(true);
             try {
-                // Use PATCH method to update specific record - this is the correct way for QuickBase
-                const url = `https://api.quickbase.com/v1/records`;
-                const headers = {
-                    'QB-Realm-Hostname': QUICKBASE_CONFIG.realm,
-                    'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`,
-                    'Content-Type': 'application/json'
-                };
-
-                const updatePayload = {
+                // Use the upsert method with mergeFieldId - this is the most reliable way
+                const upsertPayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "14": {"value": newStatus}
+                        "3": {"value": parseInt(recordId)},  // Record ID for merging
+                        "14": {"value": newStatus}           // Admin field to update
                     }],
+                    mergeFieldId: 3,  // Use record ID (field 3) as merge key
                     fieldsToReturn: [3, 6, 14]
                 };
                 
-                // Use query parameters to specify which record to update
-                const queryParams = new URLSearchParams({
-                    tableId: QUICKBASE_CONFIG.tableId,
-                    where: `{3.EX.${recordId}}`
-                });
+                console.log('Admin upsert payload:', JSON.stringify(upsertPayload, null, 2));
                 
-                console.log('Admin update payload:', JSON.stringify(updatePayload, null, 2));
-                console.log('Query params:', queryParams.toString());
+                const response = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
+                console.log('Admin upsert response:', response);
                 
-                const response = await fetch(`${url}?${queryParams}`, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(updatePayload)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Update failed, trying alternative method...');
+                if (response && response.data && response.data.length > 0) {
+                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                } else {
+                    console.warn('Upsert succeeded but no data returned, trying alternative...');
                     
-                    // Alternative: Use the query + update approach
-                    // First, get the record to confirm it exists
-                    const queryResponse = await makeQuickBaseRequest('POST', 'records/query', {
-                        from: QUICKBASE_CONFIG.tableId,
-                        select: [3, 6, 14],
-                        where: `{3.EX.${recordId}}`
-                    });
-                    
-                    if (queryResponse.data.length === 0) {
-                        throw new Error('Record not found');
-                    }
-                    
-                    // Now update using the correct upsert method with merge field
-                    const upsertPayload = {
+                    // Fallback: Use the newer batch update method
+                    const batchUpdatePayload = {
                         to: QUICKBASE_CONFIG.tableId,
                         data: [{
                             "3": {"value": parseInt(recordId)},
                             "14": {"value": newStatus}
-                        }],
-                        mergeFieldId: 3  // Use record ID as merge key
+                        }]
                     };
                     
-                    const upsertResponse = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
-                    console.log('Upsert response:', upsertResponse);
-                } else {
-                    const result = await response.json();
-                    console.log('Admin update response:', result);
+                    console.log('Trying batch update method:', JSON.stringify(batchUpdatePayload, null, 2));
+                    const batchResponse = await makeQuickBaseRequest('POST', 'records', batchUpdatePayload);
+                    console.log('Batch update response:', batchResponse);
+                    
+                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 }
                 
-                showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 await loadUsers();
             } catch (error) {
                 console.error('Admin update error:', error);
@@ -599,71 +571,43 @@
 
             showLoading(true);
             try {
-                // Use PATCH method to update specific record - this is the correct way for QuickBase
-                const url = `https://api.quickbase.com/v1/records`;
-                const headers = {
-                    'QB-Realm-Hostname': QUICKBASE_CONFIG.realm,
-                    'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`,
-                    'Content-Type': 'application/json'
-                };
-
-                const updatePayload = {
+                // Use the upsert method with mergeFieldId - this is the most reliable way
+                const upsertPayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "8": {"value": newStatus}
+                        "3": {"value": parseInt(recordId)},  // Record ID for merging
+                        "8": {"value": newStatus}            // Exception field to update
                     }],
+                    mergeFieldId: 3,  // Use record ID (field 3) as merge key
                     fieldsToReturn: [3, 6, 8]
                 };
                 
-                // Use query parameters to specify which record to update
-                const queryParams = new URLSearchParams({
-                    tableId: QUICKBASE_CONFIG.tableId,
-                    where: `{3.EX.${recordId}}`
-                });
+                console.log('Exception upsert payload:', JSON.stringify(upsertPayload, null, 2));
                 
-                console.log('Exception update payload:', JSON.stringify(updatePayload, null, 2));
-                console.log('Query params:', queryParams.toString());
+                const response = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
+                console.log('Exception upsert response:', response);
                 
-                const response = await fetch(`${url}?${queryParams}`, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(updatePayload)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Update failed, trying alternative method...');
+                if (response && response.data && response.data.length > 0) {
+                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                } else {
+                    console.warn('Upsert succeeded but no data returned, trying alternative...');
                     
-                    // Alternative: Use the query + update approach
-                    // First, get the record to confirm it exists
-                    const queryResponse = await makeQuickBaseRequest('POST', 'records/query', {
-                        from: QUICKBASE_CONFIG.tableId,
-                        select: [3, 6, 8],
-                        where: `{3.EX.${recordId}}`
-                    });
-                    
-                    if (queryResponse.data.length === 0) {
-                        throw new Error('Record not found');
-                    }
-                    
-                    // Now update using the correct upsert method with merge field
-                    const upsertPayload = {
+                    // Fallback: Use the newer batch update method
+                    const batchUpdatePayload = {
                         to: QUICKBASE_CONFIG.tableId,
                         data: [{
                             "3": {"value": parseInt(recordId)},
                             "8": {"value": newStatus}
-                        }],
-                        mergeFieldId: 3  // Use record ID as merge key
+                        }]
                     };
                     
-                    const upsertResponse = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
-                    console.log('Upsert response:', upsertResponse);
-                } else {
-                    const result = await response.json();
-                    console.log('Exception update response:', result);
+                    console.log('Trying batch update method:', JSON.stringify(batchUpdatePayload, null, 2));
+                    const batchResponse = await makeQuickBaseRequest('POST', 'records', batchUpdatePayload);
+                    console.log('Batch update response:', batchResponse);
+                    
+                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 }
                 
-                showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 await loadUsers();
             } catch (error) {
                 console.error('Exception update error:', error);
