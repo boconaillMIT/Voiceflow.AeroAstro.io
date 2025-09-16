@@ -355,69 +355,50 @@
             return false;
         }
 
-        // Debug version of authentication
-        async function authenticateAdmin() {
-            const authMessage = document.getElementById('authMessage');
-            const authLoading = document.getElementById('authLoading');
-            
-            console.log('Starting authentication process...');
-            authLoading.style.display = 'block';
-            
-            try {
-                // Add debug logging
-                console.log('Checking URL parameters...');
-                const urlParams = new URLSearchParams(window.location.search);
-                console.log('URL params:', urlParams.toString());
-                
-                console.log('Checking localStorage...');
-                const storedData = localStorage.getItem('user_metadata');
-                console.log('Stored data:', storedData);
-                
-                // Check if user is authenticated at all
-                if (!checkUserAuthentication()) {
-                    console.log('User not authenticated, redirecting...');
-                    authLoading.style.display = 'none';
-                    showAuthMessage('You are not authenticated. Redirecting to login...', 'error');
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000);
-                    return;
-                }
-                
-                console.log('User is authenticated, extracting Kerberos...');
-                const kerberosId = extractKerberosFromAuth();
-                console.log('Extracted Kerberos ID:', kerberosId);
-                
-                authLoading.style.display = 'none';
-                
-                if (!kerberosId) {
-                    console.log('No Kerberos ID found');
-                    showAuthMessage('Unable to extract Kerberos ID from authentication data. Please re-login.', 'error');
-                    setTimeout(() => {
-                        window.location.href = 'login.html?force_login=true';
-                    }, 3000);
-                    return;
-                }
-                
-                console.log('Checking admin access for:', kerberosId);
-                
-                // For now, only allow 'oconaill'
-                // TODO: In future, check QuickBase for administrator flag
-                if (kerberosId === 'oconaill') {
-                    console.log('Admin access granted');
-                    document.getElementById('authSection').style.display = 'none';
-                    document.getElementById('adminPanel').style.display = 'block';
-                    showAuthMessage(`Welcome, ${kerberosId}! Admin access granted.`, 'success');
-                    loadUsers();
-                } else {
-                    console.log('Admin access denied for:', kerberosId);
-                    showAuthMessage(`Access denied for user: ${kerberosId}. You are not authorized to access this admin panel.`, 'error');
-                }
-            } catch (error) {
-                authLoading.style.display = 'none';
-                console.error('Authentication error:', error);
-                showAuthMessage('Authentication failed: ' + error.message, 'error');
+        // Original authentication functions for reference
+        function extractKerberosFromAuth() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlKerberos = urlParams.get('kerberos');
+            if (urlKerberos) {
+                console.log('Found Kerberos in URL parameters:', urlKerberos);
+                return urlKerberos;
             }
+
+            try {
+                const storedMetadata = localStorage.getItem('user_metadata');
+                if (storedMetadata) {
+                    const userData = JSON.parse(storedMetadata);
+                    if (userData.kerberos) {
+                        console.log('Found Kerberos in localStorage:', userData.kerberos);
+                        return userData.kerberos;
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing user_metadata from localStorage:', e);
+            }
+
+            console.log('No Kerberos ID found in any location');
+            return null;
+        }
+
+        function checkUserAuthentication() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const storedData = localStorage.getItem('user_metadata');
+            
+            if (urlParams.get('authenticated') === 'true') {
+                return true;
+            }
+
+            if (storedData) {
+                try {
+                    const userData = JSON.parse(storedData);
+                    return !!(userData.kerberos && userData.authenticated !== false);
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            return false;
         }
 
         function showAuthMessage(message, type) {
@@ -688,10 +669,62 @@
             addUser();
         });
 
-        // Initialize authentication on page load
+        // Simplified authentication for debugging
+        function simpleAuth() {
+            console.log('Simple auth function called');
+            const authLoading = document.getElementById('authLoading');
+            const authMessage = document.getElementById('authMessage');
+            
+            if (authLoading) {
+                authLoading.style.display = 'none';
+            }
+            
+            // For now, just check localStorage directly
+            try {
+                const storedData = localStorage.getItem('user_metadata');
+                console.log('Stored data:', storedData);
+                
+                if (storedData) {
+                    const userData = JSON.parse(storedData);
+                    console.log('Parsed user data:', userData);
+                    
+                    if (userData.kerberos === 'oconaill') {
+                        console.log('Admin access granted for oconaill');
+                        document.getElementById('authSection').style.display = 'none';
+                        document.getElementById('adminPanel').style.display = 'block';
+                        return;
+                    }
+                }
+                
+                // If we get here, authentication failed
+                console.log('Authentication failed or user not oconaill');
+                if (authMessage) {
+                    authMessage.textContent = 'Access denied or authentication required. Please login to the chatbot first.';
+                    authMessage.className = 'status-message status-error';
+                    authMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Simple auth error:', error);
+                if (authMessage) {
+                    authMessage.textContent = 'Authentication error: ' + error.message;
+                    authMessage.className = 'status-message status-error';
+                    authMessage.style.display = 'block';
+                }
+            }
+        }
+
+        // Initialize with simple version
         document.addEventListener('DOMContentLoaded', function() {
-            // Auto-start authentication process
-            authenticateAdmin();
+            console.log('DOM loaded, starting simple authentication');
+            simpleAuth();
+        });
+
+        // Fallback - also try after window load
+        window.addEventListener('load', function() {
+            console.log('Window loaded, trying simple auth as fallback');
+            if (document.getElementById('authSection').style.display !== 'none') {
+                simpleAuth();
+            }
         });
     </script>
 </body>
