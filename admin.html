@@ -496,42 +496,6 @@
             }
         }
 
-        async function toggleExceptionAccess(recordId, currentStatus) {
-            const newStatus = !currentStatus;
-            const action = newStatus ? 'grant' : 'remove';
-            
-            if (!confirm(`Are you sure you want to ${action} exception access for this user?`)) {
-                return;
-            }
-
-            showLoading(true);
-            try {
-                // Use record ID (field 3) to identify which record to update
-                const updatePayload = {
-                    to: QUICKBASE_CONFIG.tableId,
-                    data: [{
-                        "3": {"value": parseInt(recordId)}, // Record ID to identify the record
-                        "8": {"value": newStatus}           // Exception field to update
-                    }]
-                };
-                
-                console.log('Exception update payload:', JSON.stringify(updatePayload, null, 2));
-                
-                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
-                console.log('Exception update response:', response);
-                
-                showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                
-                // Reload users to refresh button states
-                await loadUsers();
-            } catch (error) {
-                console.error('Exception update error:', error);
-                showMessage('Error updating user: ' + error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
-        }
-
         async function toggleAdminAccess(recordId, currentStatus) {
             const newStatus = !currentStatus;
             const action = newStatus ? 'grant' : 'remove';
@@ -542,27 +506,61 @@
 
             showLoading(true);
             try {
-                // Use record ID (field 3) to identify which record to update
+                // Use the upsert endpoint which is more reliable for updates
                 const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "3": {"value": parseInt(recordId)}, // Record ID to identify the record
-                        "14": {"value": newStatus}          // Administrator field to update
-                    }]
+                        "3": {"value": parseInt(recordId)},
+                        "14": {"value": newStatus}
+                    }],
+                    mergeFieldId: 3  // Use record ID as merge key
                 };
                 
                 console.log('Admin update payload:', JSON.stringify(updatePayload, null, 2));
                 
-                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                const response = await makeQuickBaseRequest('POST', 'records/upsert', updatePayload);
                 console.log('Admin update response:', response);
                 
                 showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                
-                // Reload users to refresh button states
                 await loadUsers();
             } catch (error) {
                 console.error('Admin update error:', error);
                 showMessage('Error updating admin privileges: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function toggleExceptionAccess(recordId, currentStatus) {
+            const newStatus = !currentStatus;
+            const action = newStatus ? 'grant' : 'remove';
+            
+            if (!confirm(`Are you sure you want to ${action} exception access for this user?`)) {
+                return;
+            }
+
+            showLoading(true);
+            try {
+                // Use the upsert endpoint which is more reliable for updates
+                const updatePayload = {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        "3": {"value": parseInt(recordId)},
+                        "8": {"value": newStatus}
+                    }],
+                    mergeFieldId: 3  // Use record ID as merge key
+                };
+                
+                console.log('Exception update payload:', JSON.stringify(updatePayload, null, 2));
+                
+                const response = await makeQuickBaseRequest('POST', 'records/upsert', updatePayload);
+                console.log('Exception update response:', response);
+                
+                showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                await loadUsers();
+            } catch (error) {
+                console.error('Exception update error:', error);
+                showMessage('Error updating user: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
@@ -575,10 +573,17 @@
 
             showLoading(true);
             try {
-                await makeQuickBaseRequest('DELETE', `records?from=${QUICKBASE_CONFIG.tableId}&where={3.EX.${recordId}}`);
+                // Use the correct delete endpoint syntax
+                const deleteUrl = `records?from=${QUICKBASE_CONFIG.tableId}&where={3.EX.${recordId}}`;
+                console.log('Delete URL:', deleteUrl);
+                
+                const response = await makeQuickBaseRequest('DELETE', deleteUrl);
+                console.log('Delete response:', response);
+                
                 showMessage('User deleted successfully', 'success');
-                loadUsers();
+                await loadUsers();
             } catch (error) {
+                console.error('Delete error:', error);
                 showMessage('Error deleting user: ' + error.message, 'error');
             } finally {
                 showLoading(false);
