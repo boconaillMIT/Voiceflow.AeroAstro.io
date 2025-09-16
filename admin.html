@@ -515,41 +515,31 @@
 
             showLoading(true);
             try {
-                // Use the upsert method with mergeFieldId - this is the most reliable way
-                const upsertPayload = {
+                // Use the standard records endpoint with the record ID included in the data
+                // This is the correct way to update existing records in QuickBase
+                const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "3": {"value": parseInt(recordId)},  // Record ID for merging
+                        "3": {"value": parseInt(recordId)},  // Record ID - required for updates
                         "14": {"value": newStatus}           // Admin field to update
-                    }],
-                    mergeFieldId: 3,  // Use record ID (field 3) as merge key
-                    fieldsToReturn: [3, 6, 14]
+                    }]
                 };
                 
-                console.log('Admin upsert payload:', JSON.stringify(upsertPayload, null, 2));
+                console.log('Admin update payload:', JSON.stringify(updatePayload, null, 2));
                 
-                const response = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
-                console.log('Admin upsert response:', response);
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Admin update response:', response);
                 
+                // Check if the update was successful
                 if (response && response.data && response.data.length > 0) {
-                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    const updatedRecord = response.data[0];
+                    if (updatedRecord && updatedRecord['14'] && updatedRecord['14'].value === newStatus) {
+                        showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    } else {
+                        showMessage('Update may not have been applied correctly', 'error');
+                    }
                 } else {
-                    console.warn('Upsert succeeded but no data returned, trying alternative...');
-                    
-                    // Fallback: Use the newer batch update method
-                    const batchUpdatePayload = {
-                        to: QUICKBASE_CONFIG.tableId,
-                        data: [{
-                            "3": {"value": parseInt(recordId)},
-                            "14": {"value": newStatus}
-                        }]
-                    };
-                    
-                    console.log('Trying batch update method:', JSON.stringify(batchUpdatePayload, null, 2));
-                    const batchResponse = await makeQuickBaseRequest('POST', 'records', batchUpdatePayload);
-                    console.log('Batch update response:', batchResponse);
-                    
-                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    showMessage('Update completed but response was unexpected', 'success');
                 }
                 
                 await loadUsers();
@@ -571,41 +561,31 @@
 
             showLoading(true);
             try {
-                // Use the upsert method with mergeFieldId - this is the most reliable way
-                const upsertPayload = {
+                // Use the standard records endpoint with the record ID included in the data
+                // This is the correct way to update existing records in QuickBase
+                const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "3": {"value": parseInt(recordId)},  // Record ID for merging
+                        "3": {"value": parseInt(recordId)},  // Record ID - required for updates
                         "8": {"value": newStatus}            // Exception field to update
-                    }],
-                    mergeFieldId: 3,  // Use record ID (field 3) as merge key
-                    fieldsToReturn: [3, 6, 8]
+                    }]
                 };
                 
-                console.log('Exception upsert payload:', JSON.stringify(upsertPayload, null, 2));
+                console.log('Exception update payload:', JSON.stringify(updatePayload, null, 2));
                 
-                const response = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
-                console.log('Exception upsert response:', response);
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Exception update response:', response);
                 
+                // Check if the update was successful
                 if (response && response.data && response.data.length > 0) {
-                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    const updatedRecord = response.data[0];
+                    if (updatedRecord && updatedRecord['8'] && updatedRecord['8'].value === newStatus) {
+                        showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    } else {
+                        showMessage('Update may not have been applied correctly', 'error');
+                    }
                 } else {
-                    console.warn('Upsert succeeded but no data returned, trying alternative...');
-                    
-                    // Fallback: Use the newer batch update method
-                    const batchUpdatePayload = {
-                        to: QUICKBASE_CONFIG.tableId,
-                        data: [{
-                            "3": {"value": parseInt(recordId)},
-                            "8": {"value": newStatus}
-                        }]
-                    };
-                    
-                    console.log('Trying batch update method:', JSON.stringify(batchUpdatePayload, null, 2));
-                    const batchResponse = await makeQuickBaseRequest('POST', 'records', batchUpdatePayload);
-                    console.log('Batch update response:', batchResponse);
-                    
-                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    showMessage('Update completed but response was unexpected', 'success');
                 }
                 
                 await loadUsers();
