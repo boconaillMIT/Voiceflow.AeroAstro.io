@@ -372,17 +372,26 @@
             };
 
             try {
+                console.log(`Making ${method} request to: ${url}`);
+                console.log('Request body:', body ? JSON.stringify(body, null, 2) : 'No body');
+                
                 const response = await fetch(url, {
                     method: method,
                     headers: headers,
                     body: body ? JSON.stringify(body) : null
                 });
 
+                console.log('Response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('Response error text:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                 }
 
-                return await response.json();
+                const result = await response.json();
+                console.log('Response result:', result);
+                return result;
             } catch (error) {
                 console.error('QuickBase API error:', error);
                 throw error;
@@ -506,26 +515,40 @@
 
             showLoading(true);
             try {
-                // Use the upsert endpoint which is more reliable for updates
+                // Use the standard records update endpoint instead of upsert
                 const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
                         "3": {"value": parseInt(recordId)},
                         "14": {"value": newStatus}
-                    }],
-                    mergeFieldId: 3  // Use record ID as merge key
+                    }]
                 };
                 
                 console.log('Admin update payload:', JSON.stringify(updatePayload, null, 2));
                 
-                const response = await makeQuickBaseRequest('POST', 'records/upsert', updatePayload);
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
                 console.log('Admin update response:', response);
                 
                 showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 await loadUsers();
             } catch (error) {
                 console.error('Admin update error:', error);
-                showMessage('Error updating admin privileges: ' + error.message, 'error');
+                
+                // Try alternative update method if the first fails
+                try {
+                    console.log('Trying PUT method for record update...');
+                    const putResponse = await makeQuickBaseRequest('PUT', `records/${recordId}`, {
+                        to: QUICKBASE_CONFIG.tableId,
+                        data: [{
+                            "14": {"value": newStatus}
+                        }]
+                    });
+                    
+                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    await loadUsers();
+                } catch (putError) {
+                    showMessage('Error updating admin privileges: ' + error.message, 'error');
+                }
             } finally {
                 showLoading(false);
             }
@@ -541,26 +564,40 @@
 
             showLoading(true);
             try {
-                // Use the upsert endpoint which is more reliable for updates
+                // Use the standard records update endpoint instead of upsert
                 const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
                         "3": {"value": parseInt(recordId)},
                         "8": {"value": newStatus}
-                    }],
-                    mergeFieldId: 3  // Use record ID as merge key
+                    }]
                 };
                 
                 console.log('Exception update payload:', JSON.stringify(updatePayload, null, 2));
                 
-                const response = await makeQuickBaseRequest('POST', 'records/upsert', updatePayload);
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
                 console.log('Exception update response:', response);
                 
                 showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 await loadUsers();
             } catch (error) {
                 console.error('Exception update error:', error);
-                showMessage('Error updating user: ' + error.message, 'error');
+                
+                // Try alternative update method if the first fails
+                try {
+                    console.log('Trying PUT method for record update...');
+                    const putResponse = await makeQuickBaseRequest('PUT', `records/${recordId}`, {
+                        to: QUICKBASE_CONFIG.tableId,
+                        data: [{
+                            "8": {"value": newStatus}
+                        }]
+                    });
+                    
+                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                    await loadUsers();
+                } catch (putError) {
+                    showMessage('Error updating user: ' + error.message, 'error');
+                }
             } finally {
                 showLoading(false);
             }
@@ -573,18 +610,54 @@
 
             showLoading(true);
             try {
-                // Use the correct delete endpoint syntax
-                const deleteUrl = `records?from=${QUICKBASE_CONFIG.tableId}&where={3.EX.${recordId}}`;
-                console.log('Delete URL:', deleteUrl);
+                // Use the correct delete syntax for QuickBase API
+                const deletePayload = {
+                    from: QUICKBASE_CONFIG.tableId,
+                    where: `{3.EX.${recordId}}`
+                };
                 
-                const response = await makeQuickBaseRequest('DELETE', deleteUrl);
+                console.log('Delete payload:', JSON.stringify(deletePayload, null, 2));
+                
+                const response = await makeQuickBaseRequest('DELETE', 'records', deletePayload);
                 console.log('Delete response:', response);
                 
                 showMessage('User deleted successfully', 'success');
                 await loadUsers();
             } catch (error) {
                 console.error('Delete error:', error);
-                showMessage('Error deleting user: ' + error.message, 'error');
+                
+                // Try alternative delete method
+                try {
+                    console.log('Trying alternative delete method...');
+                    const altResponse = await makeQuickBaseRequest('POST', 'records/query', {
+                        from: QUICKBASE_CONFIG.tableId,
+                        select: [3],
+                        where: `{3.EX.${recordId}}`
+                    });
+                    
+                    if (altResponse.data.length > 0) {
+                        // Record exists, try direct DELETE to specific record
+                        const directDeleteResponse = await fetch(`https://api.quickbase.com/v1/records/${recordId}?tableId=${QUICKBASE_CONFIG.tableId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'QB-Realm-Hostname': QUICKBASE_CONFIG.realm,
+                                'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (directDeleteResponse.ok) {
+                            showMessage('User deleted successfully', 'success');
+                            await loadUsers();
+                        } else {
+                            throw new Error('Failed to delete user using direct method');
+                        }
+                    } else {
+                        showMessage('User not found or already deleted', 'error');
+                    }
+                } catch (altError) {
+                    showMessage('Error deleting user: ' + error.message, 'error');
+                }
             } finally {
                 showLoading(false);
             }
