@@ -515,68 +515,46 @@
 
             showLoading(true);
             try {
-                // Simple approach: Use QuickBase's XML API which is more reliable for updates
-                // The JSON API has restrictions on Record ID usage, but XML API is more flexible
-                const xmlApiUrl = `https://${QUICKBASE_CONFIG.realm}/db/${QUICKBASE_CONFIG.tableId}`;
+                // First, get the Kerberos ID for this record since that's the key field
+                console.log('Getting Kerberos ID for record:', recordId);
                 
-                const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
-                <qdbapi>
-                    <rid>${recordId}</rid>
-                    <field fid="14">${newStatus}</field>
-                </qdbapi>`;
-                
-                console.log('Using XML API for update...');
-                console.log('XML Payload:', xmlPayload);
-                
-                const response = await fetch(xmlApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'QUICKBASE-ACTION': 'API_EditRecord'
-                    },
-                    body: xmlPayload
+                const recordData = await makeQuickBaseRequest('POST', 'records/query', {
+                    from: QUICKBASE_CONFIG.tableId,
+                    select: [3, 6, 14], // Record ID, Kerberos ID, Admin field
+                    where: `{3.EX.${recordId}}`
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`XML API failed with status: ${response.status}`);
+                if (!recordData.data || recordData.data.length === 0) {
+                    throw new Error('Record not found');
                 }
                 
-                const xmlResult = await response.text();
-                console.log('XML API response:', xmlResult);
+                const kerberosId = recordData.data[0][6]?.value;
+                console.log('Found Kerberos ID:', kerberosId);
                 
-                // Check if the XML response indicates success
-                if (xmlResult.includes('<errcode>0</errcode>') || xmlResult.includes('No error')) {
-                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                } else {
-                    throw new Error('XML API returned an error');
+                if (!kerberosId) {
+                    throw new Error('Kerberos ID not found for this record');
                 }
                 
+                // Now update using Kerberos ID as the key field (field 6)
+                const updatePayload = {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        "6": {"value": kerberosId},  // Kerberos ID as key field
+                        "14": {"value": newStatus}   // Admin field to update
+                    }]
+                };
+                
+                console.log('Admin update payload (using Kerberos key):', JSON.stringify(updatePayload, null, 2));
+                
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Admin update response:', response);
+                
+                showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 await loadUsers();
+                
             } catch (error) {
                 console.error('Admin update error:', error);
-                
-                // Fallback: Try a direct HTTP approach
-                try {
-                    console.log('XML API failed, trying direct HTTP...');
-                    
-                    const directUrl = `https://${QUICKBASE_CONFIG.realm}/db/${QUICKBASE_CONFIG.tableId}?a=API_EditRecord&rid=${recordId}&_fid_14=${newStatus}`;
-                    
-                    const directResponse = await fetch(directUrl, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`
-                        }
-                    });
-                    
-                    if (directResponse.ok) {
-                        showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                        await loadUsers();
-                    } else {
-                        throw new Error('Direct HTTP also failed');
-                    }
-                } catch (directError) {
-                    showMessage('Error updating admin privileges. QuickBase may require specific permissions for field updates.', 'error');
-                }
+                showMessage('Error updating admin privileges: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
@@ -592,68 +570,46 @@
 
             showLoading(true);
             try {
-                // Simple approach: Use QuickBase's XML API which is more reliable for updates
-                // The JSON API has restrictions on Record ID usage, but XML API is more flexible
-                const xmlApiUrl = `https://${QUICKBASE_CONFIG.realm}/db/${QUICKBASE_CONFIG.tableId}`;
+                // First, get the Kerberos ID for this record since that's the key field
+                console.log('Getting Kerberos ID for record:', recordId);
                 
-                const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
-                <qdbapi>
-                    <rid>${recordId}</rid>
-                    <field fid="8">${newStatus}</field>
-                </qdbapi>`;
-                
-                console.log('Using XML API for exception update...');
-                console.log('XML Payload:', xmlPayload);
-                
-                const response = await fetch(xmlApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'QUICKBASE-ACTION': 'API_EditRecord'
-                    },
-                    body: xmlPayload
+                const recordData = await makeQuickBaseRequest('POST', 'records/query', {
+                    from: QUICKBASE_CONFIG.tableId,
+                    select: [3, 6, 8], // Record ID, Kerberos ID, Exception field
+                    where: `{3.EX.${recordId}}`
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`XML API failed with status: ${response.status}`);
+                if (!recordData.data || recordData.data.length === 0) {
+                    throw new Error('Record not found');
                 }
                 
-                const xmlResult = await response.text();
-                console.log('XML API response:', xmlResult);
+                const kerberosId = recordData.data[0][6]?.value;
+                console.log('Found Kerberos ID:', kerberosId);
                 
-                // Check if the XML response indicates success
-                if (xmlResult.includes('<errcode>0</errcode>') || xmlResult.includes('No error')) {
-                    showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                } else {
-                    throw new Error('XML API returned an error');
+                if (!kerberosId) {
+                    throw new Error('Kerberos ID not found for this record');
                 }
                 
+                // Now update using Kerberos ID as the key field (field 6)
+                const updatePayload = {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        "6": {"value": kerberosId},  // Kerberos ID as key field
+                        "8": {"value": newStatus}    // Exception field to update
+                    }]
+                };
+                
+                console.log('Exception update payload (using Kerberos key):', JSON.stringify(updatePayload, null, 2));
+                
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Exception update response:', response);
+                
+                showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
                 await loadUsers();
+                
             } catch (error) {
                 console.error('Exception update error:', error);
-                
-                // Fallback: Try a direct HTTP approach
-                try {
-                    console.log('XML API failed, trying direct HTTP...');
-                    
-                    const directUrl = `https://${QUICKBASE_CONFIG.realm}/db/${QUICKBASE_CONFIG.tableId}?a=API_EditRecord&rid=${recordId}&_fid_8=${newStatus}`;
-                    
-                    const directResponse = await fetch(directUrl, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`
-                        }
-                    });
-                    
-                    if (directResponse.ok) {
-                        showMessage(`Exception access ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
-                        await loadUsers();
-                    } else {
-                        throw new Error('Direct HTTP also failed');
-                    }
-                } catch (directError) {
-                    showMessage('Error updating exception access. QuickBase may require specific permissions for field updates.', 'error');
-                }
+                showMessage('Error updating exception access: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
