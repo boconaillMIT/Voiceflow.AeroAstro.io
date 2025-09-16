@@ -506,13 +506,16 @@
 
             showLoading(true);
             try {
+                // Use record ID (field 3) to identify which record to update
                 const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "3": {"value": parseInt(recordId)},
-                        "8": {"value": newStatus}
+                        "3": {"value": parseInt(recordId)}, // Record ID to identify the record
+                        "8": {"value": newStatus}           // Exception field to update
                     }]
                 };
+                
+                console.log('Exception update payload:', JSON.stringify(updatePayload, null, 2));
                 
                 const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
                 console.log('Exception update response:', response);
