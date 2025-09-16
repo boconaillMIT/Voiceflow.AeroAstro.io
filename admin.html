@@ -23,10 +23,49 @@
             border-bottom: 2px solid #e74c3c;
             padding-bottom: 15px;
             margin-bottom: 20px;
+            position: relative;
         }
         .header h1 {
             color: #c0392b;
             margin: 0;
+        }
+        .quick-links {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 6px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-width: 200px;
+        }
+        .quick-links h4 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .quick-links ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .quick-links li {
+            margin-bottom: 4px;
+        }
+        .quick-links a {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 11px;
+            display: block;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+        .quick-links a:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+            text-decoration: underline;
         }
         .auth-section {
             background: #ecf0f1;
@@ -154,6 +193,19 @@
         <div class="header">
             <h1>AeroAstro Bot - User Access Administration</h1>
             <p>Manage user access permissions for the chatbot system</p>
+            
+            <!-- Quick Links Panel -->
+            <div class="quick-links">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="https://app.netlify.com/projects/aeroastrovfbot/deploys" target="_blank">Netlify Deploy</a></li>
+                    <li><a href="https://us2.make.com/62284/scenarios/2987098/edit" target="_blank">Make.com Scenario</a></li>
+                    <li><a href="https://github.com/boconaillMIT/Voiceflow.AeroAstro.io/blob/main/admin.html" target="_blank">GitHub Repository</a></li>
+                    <li><a href="https://trial-2518356.okta.com/oauth2/v1/authorize?client_id=okta.2b1959c8-bcc0-56eb-a589-cfcfb7422f26&code_challenge=vnT4xmDXZwoFlX1Eu2q1zEm_ltCqHeUnW7bEl9Ty968&code_challenge_method=S256&nonce=lkZkXHv9A5IlGNiz5ATIX1sqUoZX7bcZbge4CHHIqjcdEZEJOje1eaJUdLjf6gPi&redirect_uri=https%3A%2F%2Ftrial-2518356.okta.com%2Fenduser%2Fcallback&response_type=code&state=uTUsxMRyrxBKRF3afVaHlbfLyWifOGvtORMhJOJwDvMJzVhawpBc1bNSRnIYXpVz&scope=openid%20profile%20email%20okta.users.read.self%20okta.users.manage.self%20okta.internal.enduser.read%20okta.internal.enduser.manage%20okta.enduser.dashboard.read%20okta.enduser.dashboard.manage%20okta.myAccount.sessions.manage" target="_blank">Okta Admin</a></li>
+                    <li><a href="https://mit.quickbase.com/nav/main/action/myqb" target="_blank">QuickBase</a></li>
+                    <li><a href="https://aeroastrovfbot.netlify.app/advancedvoiceflowtester.html" target="_blank">Auto Tester</a></li>
+                </ul>
+            </div>
         </div>
 
         <!-- Authentication Section -->
