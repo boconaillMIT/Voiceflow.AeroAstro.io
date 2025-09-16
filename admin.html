@@ -249,6 +249,10 @@
                             <input type="checkbox" id="newIsException" checked>
                             <label for="newIsException">Grant Exception Access</label>
                         </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="newIsAdmin">
+                            <label for="newIsAdmin">Grant Administrator Privileges</label>
+                        </div>
                         <div class="form-group">
                             <label for="newNotes">Notes (reason for access):</label>
                             <textarea id="newNotes" placeholder="Enter reason for granting access..."></textarea>
@@ -267,6 +271,7 @@
                                 <th>Kerberos ID</th>
                                 <th>Department</th>
                                 <th>Exception User</th>
+                                <th>Administrator</th>
                                 <th>Login Count</th>
                                 <th>Last Login</th>
                                 <th>Notes</th>
@@ -453,7 +458,7 @@
             try {
                 const response = await makeQuickBaseRequest('POST', 'records/query', {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 13], // Record ID, Kerberos, Dept, Exception, First Login, Last Login, Count, Notes
+                    select: [3, 6, 7, 8, 9, 10, 11, 13, 14], // Added field 14 (Is Administrator)
                     options: {
                         orderBy: [{ fieldId: 6, order: 'ASC' }] // Sort by Kerberos ID
                     }
@@ -478,12 +483,16 @@
                     <td>${user[6]?.value || ''}</td>
                     <td>${user[7]?.value || ''}</td>
                     <td>${user[8]?.value ? 'Yes' : 'No'}</td>
+                    <td>${user[14]?.value ? 'Yes' : 'No'}</td>
                     <td>${user[11]?.value || 0}</td>
                     <td>${user[10]?.value ? new Date(user[10].value).toLocaleDateString() : 'Never'}</td>
                     <td>${user[13]?.value || ''}</td>
                     <td>
                         <button class="btn btn-danger" onclick="toggleExceptionAccess(${user[3].value}, ${user[8]?.value || false})">
                             ${user[8]?.value ? 'Remove Exception' : 'Grant Exception'}
+                        </button>
+                        <button class="btn" onclick="toggleAdminAccess(${user[3].value}, ${user[14]?.value || false})">
+                            ${user[14]?.value ? 'Remove Admin' : 'Grant Admin'}
                         </button>
                         <button class="btn btn-danger" onclick="deleteUser(${user[3].value}, '${user[6]?.value}')">Delete</button>
                     </td>
@@ -495,6 +504,7 @@
             const kerberos = document.getElementById('newKerberos').value.trim();
             const department = document.getElementById('newDepartment').value.trim();
             const isException = document.getElementById('newIsException').checked;
+            const isAdmin = document.getElementById('newIsAdmin').checked;
             const notes = document.getElementById('newNotes').value.trim();
 
             if (!kerberos || !department) {
@@ -513,13 +523,15 @@
                         9: { value: new Date().toISOString() },
                         10: { value: new Date().toISOString() },
                         11: { value: 0 },
-                        13: { value: notes }
+                        13: { value: notes },
+                        14: { value: isAdmin }
                     }]
                 });
 
                 showMessage('User added successfully', 'success');
                 document.getElementById('addUserForm').reset();
                 document.getElementById('newIsException').checked = true; // Reset to checked
+                document.getElementById('newIsAdmin').checked = false; // Reset to unchecked
                 loadUsers();
             } catch (error) {
                 showMessage('Error adding user: ' + error.message, 'error');
@@ -584,7 +596,60 @@
             }
         }
 
-        async function deleteUser(recordId, kerberosId) {
+        async function toggleAdminAccess(recordId, currentStatus) {
+            const newStatus = !currentStatus;
+            const action = newStatus ? 'grant' : 'remove';
+            
+            if (!confirm(`Are you sure you want to ${action} administrator privileges for this user?`)) {
+                return;
+            }
+
+            showLoading(true);
+            try {
+                console.log('Updating admin status for record:', recordId, 'New status:', newStatus);
+                
+                const updatePayload = {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        "3": {"value": parseInt(recordId)},
+                        "14": {"value": newStatus}
+                    }],
+                    mergeFieldId: 3
+                };
+                
+                console.log('Admin update payload:', JSON.stringify(updatePayload, null, 2));
+                
+                const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
+                console.log('Admin update response:', response);
+
+                showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully`, 'success');
+                loadUsers();
+            } catch (error) {
+                console.error('Admin update error:', error);
+                
+                // Try alternative approach with upsert
+                try {
+                    console.log('Trying upsert approach for admin update...');
+                    const upsertPayload = {
+                        to: QUICKBASE_CONFIG.tableId,
+                        data: [{
+                            "3": {"value": parseInt(recordId)},
+                            "14": {"value": newStatus}
+                        }]
+                    };
+                    
+                    const upsertResponse = await makeQuickBaseRequest('POST', 'records/upsert', upsertPayload);
+                    console.log('Admin upsert response:', upsertResponse);
+                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully (upsert)`, 'success');
+                    loadUsers();
+                } catch (upsertError) {
+                    console.error('Admin upsert also failed:', upsertError);
+                    showMessage('Error updating administrator privileges: ' + error.message + ' (Record ID: ' + recordId + ')', 'error');
+                }
+            } finally {
+                showLoading(false);
+            }
+        }
             if (!confirm(`Are you sure you want to delete user "${kerberosId}"? This action cannot be undone.`)) {
                 return;
             }
