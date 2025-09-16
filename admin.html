@@ -355,16 +355,27 @@
             return false;
         }
 
-        // Admin authentication using same system as chatbot
+        // Debug version of authentication
         async function authenticateAdmin() {
             const authMessage = document.getElementById('authMessage');
             const authLoading = document.getElementById('authLoading');
             
+            console.log('Starting authentication process...');
             authLoading.style.display = 'block';
             
             try {
-                // First check if user is authenticated at all
+                // Add debug logging
+                console.log('Checking URL parameters...');
+                const urlParams = new URLSearchParams(window.location.search);
+                console.log('URL params:', urlParams.toString());
+                
+                console.log('Checking localStorage...');
+                const storedData = localStorage.getItem('user_metadata');
+                console.log('Stored data:', storedData);
+                
+                // Check if user is authenticated at all
                 if (!checkUserAuthentication()) {
+                    console.log('User not authenticated, redirecting...');
                     authLoading.style.display = 'none';
                     showAuthMessage('You are not authenticated. Redirecting to login...', 'error');
                     setTimeout(() => {
@@ -372,13 +383,15 @@
                     }, 2000);
                     return;
                 }
-
-                // Extract Kerberos ID using same method as chatbot
+                
+                console.log('User is authenticated, extracting Kerberos...');
                 const kerberosId = extractKerberosFromAuth();
+                console.log('Extracted Kerberos ID:', kerberosId);
                 
                 authLoading.style.display = 'none';
                 
                 if (!kerberosId) {
+                    console.log('No Kerberos ID found');
                     showAuthMessage('Unable to extract Kerberos ID from authentication data. Please re-login.', 'error');
                     setTimeout(() => {
                         window.location.href = 'login.html?force_login=true';
@@ -386,16 +399,18 @@
                     return;
                 }
                 
-                console.log('Authenticated user Kerberos ID:', kerberosId);
+                console.log('Checking admin access for:', kerberosId);
                 
                 // For now, only allow 'oconaill'
                 // TODO: In future, check QuickBase for administrator flag
                 if (kerberosId === 'oconaill') {
+                    console.log('Admin access granted');
                     document.getElementById('authSection').style.display = 'none';
                     document.getElementById('adminPanel').style.display = 'block';
                     showAuthMessage(`Welcome, ${kerberosId}! Admin access granted.`, 'success');
                     loadUsers();
                 } else {
+                    console.log('Admin access denied for:', kerberosId);
                     showAuthMessage(`Access denied for user: ${kerberosId}. You are not authorized to access this admin panel.`, 'error');
                 }
             } catch (error) {
