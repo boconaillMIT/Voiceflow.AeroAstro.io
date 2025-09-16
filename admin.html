@@ -539,12 +539,12 @@
 
             showLoading(true);
             try {
-                // Try the same approach that works for exception users (field 8)
+                // Use record ID (field 3) to identify which record to update
                 const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "6": {"value": recordId.toString()}, // Use Kerberos ID as identifier
-                        "14": {"value": newStatus}
+                        "3": {"value": parseInt(recordId)}, // Record ID to identify the record
+                        "14": {"value": newStatus}          // Administrator field to update
                     }]
                 };
                 
@@ -558,28 +558,8 @@
                 // Reload users to refresh button states
                 await loadUsers();
             } catch (error) {
-                console.error('Admin update failed, trying alternative approach...');
-                
-                // Alternative approach - try with record ID field 3
-                try {
-                    const altPayload = {
-                        to: QUICKBASE_CONFIG.tableId,
-                        data: [{
-                            "3": {"value": recordId},
-                            "14": {"value": newStatus}
-                        }]
-                    };
-                    
-                    console.log('Alternative admin update payload:', JSON.stringify(altPayload, null, 2));
-                    const altResponse = await makeQuickBaseRequest('POST', 'records', altPayload);
-                    console.log('Alternative admin update response:', altResponse);
-                    
-                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully (alternative method)`, 'success');
-                    await loadUsers();
-                } catch (altError) {
-                    console.error('Both admin update methods failed:', error, altError);
-                    showMessage('Error updating admin privileges. Check console for details.', 'error');
-                }
+                console.error('Admin update error:', error);
+                showMessage('Error updating admin privileges: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
