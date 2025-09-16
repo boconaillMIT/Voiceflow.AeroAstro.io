@@ -539,13 +539,16 @@
 
             showLoading(true);
             try {
+                // Try the same approach that works for exception users (field 8)
                 const updatePayload = {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
-                        "3": {"value": parseInt(recordId)},
+                        "6": {"value": recordId.toString()}, // Use Kerberos ID as identifier
                         "14": {"value": newStatus}
                     }]
                 };
+                
+                console.log('Admin update payload:', JSON.stringify(updatePayload, null, 2));
                 
                 const response = await makeQuickBaseRequest('POST', 'records', updatePayload);
                 console.log('Admin update response:', response);
@@ -555,8 +558,28 @@
                 // Reload users to refresh button states
                 await loadUsers();
             } catch (error) {
-                console.error('Admin update error:', error);
-                showMessage('Error updating admin privileges: ' + error.message, 'error');
+                console.error('Admin update failed, trying alternative approach...');
+                
+                // Alternative approach - try with record ID field 3
+                try {
+                    const altPayload = {
+                        to: QUICKBASE_CONFIG.tableId,
+                        data: [{
+                            "3": {"value": recordId},
+                            "14": {"value": newStatus}
+                        }]
+                    };
+                    
+                    console.log('Alternative admin update payload:', JSON.stringify(altPayload, null, 2));
+                    const altResponse = await makeQuickBaseRequest('POST', 'records', altPayload);
+                    console.log('Alternative admin update response:', altResponse);
+                    
+                    showMessage(`Administrator privileges ${newStatus ? 'granted' : 'removed'} successfully (alternative method)`, 'success');
+                    await loadUsers();
+                } catch (altError) {
+                    console.error('Both admin update methods failed:', error, altError);
+                    showMessage('Error updating admin privileges. Check console for details.', 'error');
+                }
             } finally {
                 showLoading(false);
             }
