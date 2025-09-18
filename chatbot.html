@@ -170,19 +170,28 @@
             }
         }
             // Add this function to your chatbot.html
-            function checkAdminAccess(userData, validationResult) {
-                const isAdmin = validationResult.isAdmin === true || 
-                               validationResult.isAdmin === "true" || 
-                               validationResult.isAdmin === '1';
-                
-                if (isAdmin) {
-                    const adminLink = document.getElementById('adminLink');
-                    if (adminLink) {
-                        adminLink.style.display = 'inline-block';
-                    }
-                    console.log('Admin access granted for user:', userData.kerberos);
+        function checkAdminAccess(userData, validationResult) {
+            console.log('Checking admin access for:', userData.kerberos);
+            console.log('Validation result:', validationResult);
+            
+            const isAdmin = validationResult.isAdmin === true || 
+                           validationResult.isAdmin === "true" || 
+                           validationResult.isAdmin === '1';
+            
+            console.log('isAdmin check result:', isAdmin);
+            
+            if (isAdmin) {
+                const adminLink = document.getElementById('adminLink');
+                if (adminLink) {
+                    adminLink.style.display = 'inline-block';
+                    console.log('Admin button shown');
+                } else {
+                    console.log('Admin link element not found');
                 }
+            } else {
+                console.log('User is not an admin');
             }
+        }
         // SECURE: Collect user data (never trust authenticated parameter)
         function collectUserData() {
             console.log('Starting secure user data collection...');
@@ -431,6 +440,7 @@
     </script>
 </body>
 </html>
+
 
 
 
