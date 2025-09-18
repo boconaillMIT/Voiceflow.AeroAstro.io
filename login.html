@@ -425,10 +425,17 @@ function setupTestingBridge() {
         document.addEventListener('DOMContentLoaded', function() {
             initializePage();
             
-            // Clean URL after page has processed the parameters
+            // Clean URL only after successful authentication and chatbot load
             setTimeout(() => {
-                cleanUrl();
-            }, 2000); // Wait 2 seconds to let everything initialize first
+                const userData = collectUserData();
+                if (userData.authenticated || userData.kerberos) {
+                    // Only clean URL if user is actually authenticated
+                    if (window.location.search) {
+                        console.log('User authenticated, cleaning URL for security...');
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                }
+            }, 5000); // Wait 5 seconds for everything to fully initialize
         });
     </script>
 </body>
