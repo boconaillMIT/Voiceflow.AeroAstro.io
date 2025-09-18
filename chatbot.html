@@ -144,7 +144,7 @@
             }
         }
 
-        // Validate user authentication via QuickBase/Make.com
+        // Validate user authentication via Netlify Function (proxy to QuickBase/Make.com)
         async function validateUserAccess(userData) {
             if (!userData.kerberos) {
                 console.log('No Kerberos ID provided');
@@ -154,8 +154,8 @@
             try {
                 console.log('Validating user access for:', userData.kerberos);
                 
-                // Call Make.com webhook to validate user in QuickBase
-                const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+                // Call Netlify Function (which proxies to Make.com)
+                const response = await fetch('/.netlify/functions/validate-user', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -167,31 +167,35 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Validation failed: ${response.status} - ${errorText}`);
                 }
 
                 const validationResult = await response.json();
                 console.log('Access validation result:', validationResult);
 
-                // Authentication is valid if the user has access
-                // (either AeroAstro department OR exception user)
-                const isAuthenticated = validationResult.hasAccess === true;
-                
+                // Handle different response formats (your debug showed both string and boolean values)
+                const hasAccess = validationResult.hasAccess === true || validationResult.hasAccess === "1" || validationResult.hasAccess === 1;
+                const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
+                const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
+
                 return {
-                    authenticated: isAuthenticated,
-                    hasAccess: validationResult.hasAccess,
-                    isFirstLogin: validationResult.isFirstLogin,
-                    isExceptionUser: validationResult.isExceptionUser,
+                    authenticated: hasAccess,
+                    hasAccess: hasAccess,
+                    isFirstLogin: isFirstLogin,
+                    isExceptionUser: isExceptionUser,
                     accessType: validationResult.accessType,
                     error: null
                 };
 
             } catch (error) {
                 console.error('Error validating user access:', error);
+                
                 return { 
                     authenticated: false, 
                     hasAccess: false, 
-                    error: error.message 
+                    error: `Authentication service error: ${error.message}`,
+                    serviceDown: true
                 };
             }
         }
@@ -225,10 +229,19 @@
 
             if (!validation.authenticated) {
                 // User is not authorized - show access denied
+                let errorMessage = 'You are not authorized to access this chatbot.';
+                let reasonMessage = 'You must be a member of the Department of Aeronautics and Astronautics or have special access granted.';
+                
+                if (validation.serviceDown) {
+                    errorMessage = 'Authentication Service Unavailable';
+                    reasonMessage = 'The authentication system is temporarily unavailable. Please try again in a few moments.';
+                }
+
                 container.innerHTML = `
-                    <h1>Access Denied</h1>
-                    <p>You are not authorized to access this chatbot.</p>
-                    <p><strong>Reason:</strong> You must be a member of the Department of Aeronautics and Astronautics or have special access granted.</p>
+                    <h1>${validation.serviceDown ? 'Service Error' : 'Access Denied'}</h1>
+                    <p>${errorMessage}</p>
+                    <p><strong>Reason:</strong> ${reasonMessage}</p>
+                    ${validation.error ? `<p><strong>Technical Details:</strong> ${validation.error}</p>` : ''}
                     <p>If you believe this is an error, please contact the administrator.</p>
                     <p><a href="/auth/login">Try logging in again</a></p>
                 `;
