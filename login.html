@@ -110,46 +110,20 @@
     </div>
 
     <script type="text/javascript">
-        // URL CLEANUP FIX - Store parameters first, then clean URL
+        // URL CLEANUP FIX - Store parameters first, then clean URL after processing
         function cleanUrl() {
             if (window.location.search) {
-                // First, capture all URL parameters and store them
-                const urlParams = new URLSearchParams(window.location.search);
-                const paramData = {};
-                for (const [key, value] of urlParams.entries()) {
-                    paramData[key] = value;
-                }
-                
-                // Store in sessionStorage temporarily so getURLParameter can access them
-                if (Object.keys(paramData).length > 0) {
-                    sessionStorage.setItem('url_params', JSON.stringify(paramData));
-                }
-                
-                // Now clean the URL
+                console.log('Cleaning URL...');
+                // Just clean the URL - don't store parameters here since they're read elsewhere
                 window.history.replaceState({}, document.title, window.location.pathname);
                 console.log('URL cleaned');
             }
         }
 
-        // Call it immediately - don't wait for DOMContentLoaded
-        cleanUrl();
+        // DON'T call cleanUrl() immediately - let the page process parameters first
 
-        // Function to get URL parameters (modified to check sessionStorage first)
+        // Function to get URL parameters (back to original)
         function getURLParameter(name) {
-            // First check if we have stored parameters from URL cleanup
-            const storedParams = sessionStorage.getItem('url_params');
-            if (storedParams) {
-                try {
-                    const params = JSON.parse(storedParams);
-                    if (params[name]) {
-                        return params[name];
-                    }
-                } catch (e) {
-                    console.error('Error parsing stored URL params:', e);
-                }
-            }
-            
-            // Fallback to current URL (in case cleanup hasn't happened yet)
             return new URLSearchParams(window.location.search).get(name);
         }
 
@@ -450,6 +424,11 @@ function setupTestingBridge() {
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             initializePage();
+            
+            // Clean URL after page has processed the parameters
+            setTimeout(() => {
+                cleanUrl();
+            }, 2000); // Wait 2 seconds to let everything initialize first
         });
     </script>
 </body>
