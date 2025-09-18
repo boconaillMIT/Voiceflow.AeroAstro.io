@@ -426,7 +426,7 @@
             const userID = generateUserID(userData);
             
             window.currentUser = userData;
-            
+            checkAdminAccess(userData, validation);
             // Clean URL after successful authentication
             cleanUrlAfterProcessing();
             
@@ -440,6 +440,7 @@
     </script>
 </body>
 </html>
+
 
 
 
