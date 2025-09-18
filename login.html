@@ -1,145 +1,353 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AeroAstro Chatbot Login</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 600px;
-      margin: 100px auto;
-      padding: 20px;
-      background-color: #f8f9fa;
-      text-align: center;
-    }
-    .login-container {
-      background: white;
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-    h2 {
-      color: #333;
-      margin-bottom: 20px;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    .subtitle {
-      color: #666;
-      margin-bottom: 30px;
-      font-size: 16px;
-    }
-    .loading {
-      color: #667eea;
-      font-size: 18px;
-      margin-top: 20px;
-    }
-    .error-message {
-      color: #e74c3c;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroAstro Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .admin-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+        }
+        .admin-button:hover {
+            background: #005a87;
+        }
+        #voiceflow-chat {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .debug-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <div class="login-container">
-    <h2>AeroAstro Chatbot</h2>
-    <p class="subtitle">Secure login via MIT Touchstone</p>
-    <div class="loading" id="status">Initializing login...</div>
-  </div>
+    <div class="container">
+        <button id="adminBtn" class="admin-button" onclick="openAdminInterface()">Admin</button>
+        <h1>AeroAstro Department Chatbot</h1>
+        <div id="voiceflow-chat">
+            <!-- Voiceflow widget will be inserted here -->
+        </div>
+        <div id="debugInfo" class="debug-info"></div>
+    </div>
 
-  <script>
-    // Base64URL encoding helper
-    function base64UrlEncode(arrayBuffer) {
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
-    // Generate PKCE verifier
-    function generateVerifier() {
-      const array = new Uint8Array(56);
-      crypto.getRandomValues(array);
-      return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
-    // Generate PKCE challenge
-    async function generateChallenge(verifier) {
-      try {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(verifier);
-        const digest = await crypto.subtle.digest('SHA-256', data);
-        return base64UrlEncode(digest);
-      } catch (error) {
-        throw error;
-      }
-    }
-
-    // Start OAuth login flow
-    async function startLogin() {
-      try {
-        // Check if user already has OAuth data
-        const existingData = localStorage.getItem('user_metadata');
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        if (existingData && !urlParams.get('force_login')) {
-          document.getElementById('status').textContent = 'Already authenticated - redirecting...';
-          setTimeout(() => {
-            window.location.href = 'chatbot.html';
-          }, 2000);
-          return;
+    <script>
+        // SECURITY FIX: URL Parameter Cleanup - Must be called immediately
+        function cleanUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Check if we have authentication parameters that need cleaning
+            if (urlParams.has('kerberos') || urlParams.has('authenticated') || urlParams.has('email') || urlParams.has('name')) {
+                console.log('Cleaning sensitive URL parameters...');
+                
+                // Extract and store user data BEFORE cleaning URL
+                const userData = {
+                    name: urlParams.get('name') || 'User',
+                    firstName: urlParams.get('firstName') || '',
+                    lastName: urlParams.get('lastName') || '',
+                    kerberos: urlParams.get('kerberos') || '',
+                    email: urlParams.get('email') || '',
+                    title: urlParams.get('title') || '',
+                    department: urlParams.get('department') || '',
+                    groups: urlParams.get('groups') || '',
+                    authenticated: urlParams.get('authenticated') === 'true',
+                    loginTime: urlParams.get('loginTime') || new Date().toISOString(),
+                    urlCleaned: true,
+                    cleanupTime: new Date().toISOString()
+                };
+                
+                // Store in localStorage
+                localStorage.setItem('user_metadata', JSON.stringify(userData));
+                
+                // IMMEDIATELY clean the URL (no page reload)
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                
+                console.log('URL cleaned successfully, user data preserved in localStorage');
+                return userData;
+            }
+            
+            return null;
         }
 
-        // Generate PKCE parameters
-        const verifier = generateVerifier();
-        const challenge = await generateChallenge(verifier);
-        const state = Math.random().toString(36).substring(2);
+        // Enhanced User Data Collection - Prioritizes localStorage after cleanup
+        function collectUserData() {
+            // First check if URL was already cleaned and data is in localStorage
+            const storedData = getStoredMetadata();
+            if (storedData && storedData.urlCleaned) {
+                console.log('Using cleaned data from localStorage');
+                return storedData;
+            }
+            
+            // If no cleaned data, read from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            const urlData = {
+                name: urlParams.get('name'),
+                firstName: urlParams.get('firstName'),
+                lastName: urlParams.get('lastName'),
+                kerberos: urlParams.get('kerberos'),
+                email: urlParams.get('email'),
+                title: urlParams.get('title'),
+                department: urlParams.get('department'),
+                groups: urlParams.get('groups'),
+                authenticated: urlParams.get('authenticated') === 'true'
+            };
 
-        // Store for callback verification
-        localStorage.setItem('pkce_verifier', verifier);
-        localStorage.setItem('pkce_state', state);
-
-        // Verify storage
-        const storedVerifier = localStorage.getItem('pkce_verifier');
-        const storedState = localStorage.getItem('pkce_state');
-        
-        if (!storedVerifier || !storedState) {
-          throw new Error('Failed to store authentication data');
+            // Merge with any existing localStorage data
+            const existingData = getStoredMetadata();
+            
+            // URL params take precedence, but fill in gaps from localStorage
+            const userData = {
+                name: urlData.name || (existingData && existingData.name) || 
+                      (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
+                      (existingData && existingData.firstName && existingData.lastName ? `${existingData.firstName} ${existingData.lastName}` : '') ||
+                      'User',
+                firstName: urlData.firstName || (existingData && existingData.firstName) || '',
+                lastName: urlData.lastName || (existingData && existingData.lastName) || '',
+                kerberos: urlData.kerberos || (existingData && existingData.kerberos) || '',
+                email: urlData.email || (existingData && existingData.email) || '',
+                title: urlData.title || (existingData && existingData.title) || '',
+                department: urlData.department || (existingData && existingData.department) || '',
+                groups: urlData.groups || (existingData && existingData.groups) || '',
+                authenticated: urlData.authenticated || !!(existingData && existingData.kerberos),
+                loginTime: (existingData && existingData.loginTime) || new Date().toISOString()
+            };
+            
+            console.log('Collected user data from URL parameters');
+            return userData;
         }
 
-        // Build OAuth authorization URL
-        const params = new URLSearchParams({
-          client_id: '0oau3bha34MtNzb6U697',
-          response_type: 'code',
-          scope: 'openid profile email',
-          redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
-          state: state,
-          nonce: Math.random().toString(36).slice(2),
-          code_challenge_method: 'S256',
-          code_challenge: challenge,
+        // Helper function to get stored metadata
+        function getStoredMetadata() {
+            try {
+                const stored = localStorage.getItem('user_metadata');
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                console.error('Error reading stored user metadata:', e);
+                return null;
+            }
+        }
+
+        // Initialize the page (keeping original logic)
+        function initializePage() {
+            const userData = collectUserData();
+            
+            // Check if user has valid OAuth data
+            if (!userData.authenticated && !userData.kerberos) {
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 3000);
+                return;
+            }
+            
+            updateUserDisplay(userData);
+            const userID = generateUserID(userData);
+            
+            window.currentUser = userData;
+            
+            loadVoiceflow(userID, userData);
+        }
+
+        // Update the display with user information
+        function updateUserDisplay(userData) {
+            if (userData.authenticated || userData.kerberos) {
+                // Create user info display elements if they don't exist
+                let userInfo = document.getElementById('user-info');
+                if (!userInfo) {
+                    userInfo = document.createElement('div');
+                    userInfo.id = 'user-info';
+                    userInfo.className = 'user-info visible';
+                    userInfo.innerHTML = `
+                        <div class="info-row">
+                            <span class="info-label">Welcome:</span>
+                            <span class="info-value" id="display-name">Loading...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Kerberos:</span>
+                            <span class="info-value" id="display-kerberos">Loading...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Title:</span>
+                            <span class="info-value" id="display-title">Loading...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Department:</span>
+                            <span class="info-value" id="display-department">Loading...</span>
+                        </div>
+                    `;
+                    document.body.insertBefore(userInfo, document.querySelector('.container'));
+                }
+
+                document.getElementById('display-name').textContent = userData.name || 'Not provided';
+                document.getElementById('display-kerberos').textContent = userData.kerberos || 'Not provided';
+                document.getElementById('display-title').textContent = userData.title || 'Not provided';
+                document.getElementById('display-department').textContent = userData.department || 'Not provided';
+                
+                // Check for admin access
+                checkAdminAccess(userData);
+            }
+        }
+
+        // Check if user should see admin link
+        function checkAdminAccess(userData) {
+            const adminBtn = document.getElementById('adminBtn');
+            if (adminBtn && userData.kerberos === 'oconaill') {
+                adminBtn.style.display = 'block';
+            }
+        }
+
+        // Generate userID for Voiceflow
+        function generateUserID(userData) {
+            const kerberos = userData.kerberos;
+            
+            if (kerberos) {
+                return `mit-${kerberos}`;
+            }
+            
+            let userID = localStorage.getItem('userID');
+            if (!userID) {
+                userID = 'user-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userID', userID);
+            }
+            return userID;
+        }
+
+        // Load Voiceflow (keeping original logic)
+        function loadVoiceflow(userID, userData) {
+            (function(d, t) {
+                var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+                v.onload = function() {
+                    window.voiceflow.chat.load({
+                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
+                        url: 'https://general-runtime.voiceflow.com',
+                        versionID: 'production',
+                        userID: userID,
+                        launch: { 
+                            event: { 
+                                type: 'launch', 
+                                payload: { 
+                                    user_name: userData.name || '',
+                                    user_kerberos: userData.kerberos || '',
+                                    user_title: userData.title || '',
+                                    user_department: userData.department || '',
+                                    user_email: userData.email || '',
+                                    user_authenticated: userData.authenticated || false
+                                } 
+                            } 
+                        },
+                        assistant: {
+                            persistence: 'memory'
+                        }
+                    });
+                    
+                    setTimeout(() => {
+                        try {
+                            window.voiceflow.chat.open();
+                        } catch (openError) {
+                            console.error('Error opening chat:', openError.message);
+                        }
+                    }, 2000);
+                };
+                
+                v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
+                v.type = "text/javascript"; 
+                s.parentNode.insertBefore(v, s);
+            })(document, 'script');
+        }
+
+        // Admin interface function
+        function openAdminInterface() {
+            window.open('admin.html', '_blank');
+        }
+
+        // Main initialization - URL CLEANUP APPLIED FIRST
+        document.addEventListener('DOMContentLoaded', function() {
+            // CRITICAL: Clean URL parameters IMMEDIATELY before anything else
+            const cleanedData = cleanUrlParameters();
+            
+            // Continue with normal initialization
+            initializePage();
+            
+            // Show brief confirmation that URL was cleaned (optional - remove for production)
+            if (cleanedData) {
+                console.log('URL parameters successfully cleaned for security');
+                // Optional: Show a brief, non-intrusive notification
+                // You can remove this entire section for production
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: #28a745;
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 10000;
+                    opacity: 0.8;
+                `;
+                notification.textContent = 'URL cleaned for security';
+                document.body.appendChild(notification);
+                
+                // Remove notification after 3 seconds
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 3000);
+            }
         });
 
-        const authUrl = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
+        // Additional security: Clear sensitive data on page unload
+        window.addEventListener('beforeunload', function() {
+            // Optional: Clear localStorage on navigation away
+            // Uncomment if you want to clear user data on page leave
+            // localStorage.removeItem('user_metadata');
+        });
+    </script>
 
-        // Update status and redirect
-        document.getElementById('status').textContent = 'Redirecting to MIT authentication...';
-        
-        setTimeout(() => {
-          window.location.href = authUrl;
-        }, 2000);
-
-      } catch (error) {
-        document.getElementById('status').textContent = 'Login failed. Please refresh the page to try again.';
-        document.getElementById('status').className = 'error-message';
-        console.error('Login error:', error);
-      }
-    }
-
-    // Start the login process
-    startLogin();
-  </script>
+    <!-- Voiceflow Widget Script -->
+    <script type="text/javascript">
+        (function(d, t) {
+            var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+            v.onload = function() {
+                // Voiceflow is loaded, initialization handled in DOMContentLoaded
+            };
+            v.src = "https://cdn.voiceflow.com/widget/bundle.mjs";
+            v.type = "text/javascript";
+            s.parentNode.insertBefore(v, s);
+        })(document, 'script');
+    </script>
 </body>
 </html>
