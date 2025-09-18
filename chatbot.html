@@ -96,7 +96,13 @@
             <span class="info-value" id="display-department">Loading...</span>
         </div>
     </div>
-
+<div class="header">
+    <h1>AeroAstro Chatbot</h1>
+    <p>AI Assistant for MIT's Department of Aeronautics and Astronautics</p>
+    <div style="position: absolute; bottom: 10px; right: 15px;">
+        <a href="admin.html" id="adminLink" style="display: none; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 12px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;">Admin</a>
+    </div>
+</div>
     <div class="chat-container">
         <p><b>Welcome! Starting your personalized AeroAstro AI assistant...</b></p>
         <div id="voiceflow-chat"></div>
@@ -165,7 +171,20 @@
                 return null;
             }
         }
-
+            // Add this function to your chatbot.html
+            function checkAdminAccess(userData, validationResult) {
+                const isAdmin = validationResult.isAdmin === true || 
+                               validationResult.isAdmin === "true" || 
+                               validationResult.isAdmin === '1';
+                
+                if (isAdmin) {
+                    const adminLink = document.getElementById('adminLink');
+                    if (adminLink) {
+                        adminLink.style.display = 'inline-block';
+                    }
+                    console.log('Admin access granted for user:', userData.kerberos);
+                }
+            }
         // SECURE: Collect user data (never trust authenticated parameter)
         function collectUserData() {
             console.log('Starting secure user data collection...');
@@ -411,5 +430,6 @@
     </script>
 </body>
 </html>
+
 
 
