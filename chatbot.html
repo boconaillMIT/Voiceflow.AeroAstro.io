@@ -206,8 +206,22 @@
             
             // Check if we have required OAuth data (kerberos from certificate)
             if (!userData.kerberos) {
-                console.log('No Kerberos ID - redirecting to OAuth login');
-                window.location.href = '/auth/login';
+                console.log('No Kerberos ID found - user needs to authenticate via OAuth');
+                
+                // Show instructions to authenticate instead of auto-redirecting
+                const container = document.querySelector('.container');
+                container.innerHTML = `
+                    <h1>Authentication Required</h1>
+                    <p>You need to authenticate with your MIT credentials to access this chatbot.</p>
+                    <p><strong>To get started:</strong></p>
+                    <ol>
+                        <li>You must access this page through the official MIT OAuth system</li>
+                        <li>Your MIT certificate must be valid</li>
+                        <li>You must be affiliated with the Department of Aeronautics and Astronautics</li>
+                    </ol>
+                    <p>If you believe you should have access, please contact the administrator.</p>
+                    <p><strong>Technical:</strong> No Kerberos ID found in authentication data.</p>
+                `;
                 return;
             }
 
@@ -243,7 +257,7 @@
                     <p><strong>Reason:</strong> ${reasonMessage}</p>
                     ${validation.error ? `<p><strong>Technical Details:</strong> ${validation.error}</p>` : ''}
                     <p>If you believe this is an error, please contact the administrator.</p>
-                    <p><a href="/auth/login">Try logging in again</a></p>
+                    <p><strong>User Info:</strong> ${userData.kerberos} (${userData.department})</p>
                 `;
                 return;
             }
