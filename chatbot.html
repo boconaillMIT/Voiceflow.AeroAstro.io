@@ -110,6 +110,61 @@
     </div>
 
     <script type="text/javascript">
+
+
+// Add this function to your existing chatbot.html script, BEFORE your existing functions
+function cleanUrlAfterProcessing() {
+    // Only clean if we have OAuth parameters that need cleaning
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.has('kerberos') || urlParams.has('authenticated') || urlParams.has('email')) {
+        addDebugStep('URL contains OAuth parameters, scheduling cleanup...', 'info');
+        
+        // Clean URL after a short delay to ensure data collection is complete
+        setTimeout(() => {
+            // Verify we have user data before cleaning
+            const userData = collectUserData();
+            
+            if (userData && (userData.authenticated || userData.kerberos)) {
+                addDebugStep('User data verified, cleaning URL for security...', 'success');
+                
+                // Clean the URL
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                
+                addDebugStep('✅ URL parameters cleaned - sensitive data hidden', 'success');
+                
+                // Optional: Show brief notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: #28a745;
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 10000;
+                    opacity: 0.9;
+                `;
+                notification.textContent = 'URL secured';
+                document.body.appendChild(notification);
+                
+                // Remove notification after 3 seconds
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 3000);
+                
+            } else {
+                addDebugStep('User data not ready, keeping parameters for authentication', 'warning');
+            }
+        }, 1000); // Wait 1 second after page load to ensure data collection
+    }
+}
+        
         // Function to get URL parameters
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
@@ -390,24 +445,42 @@ function setupTestingBridge() {
         }
 
         // Initialize the page
-        function initializePage() {
-            const userData = collectUserData();
-            
-            // Check if user has valid OAuth data
-            if (!userData.authenticated && !userData.kerberos) {
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 3000);
-                return;
-            }
-            
-            updateUserDisplay(userData);
-            const userID = generateUserID(userData);
-            
-            window.currentUser = userData;
-            
-            loadVoiceflow(userID, userData);
-        }
+// Modify your existing initializePage function by adding ONE line:
+function initializePage() {
+    addDebugStep('Page initialization started', 'info');
+    
+    const allLocalStorageKeys = Object.keys(localStorage);
+    addDebugStep(`All localStorage keys: ${allLocalStorageKeys.join(', ')}`, 'warning');
+    
+    if (localStorage.getItem('user_metadata')) {
+        const existing = JSON.parse(localStorage.getItem('user_metadata'));
+        addDebugStep(`Found existing user data for: ${existing.kerberos || 'unknown'}`, 'warning');
+    }
+    
+    const userData = collectUserData();
+    
+    // Check if user has valid OAuth data
+    if (!userData.authenticated && !userData.kerberos) {
+        addDebugStep('No OAuth data found, redirecting to login...', 'warning');
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 3000);
+        return;
+    }
+    
+    addDebugStep('Valid OAuth data found, proceeding with chat initialization', 'success');
+    
+    updateUserDisplay(userData);
+    const userID = generateUserID(userData);
+    
+    window.currentUser = userData;
+    addDebugStep('Global currentUser variable set', 'info');
+    
+    // ADD THIS LINE - Clean URL after successful authentication
+    cleanUrlAfterProcessing();
+    
+    loadVoiceflow(userID, userData);
+}
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -416,3 +489,4 @@ function setupTestingBridge() {
     </script>
 </body>
 </html>
+
