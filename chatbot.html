@@ -231,9 +231,17 @@
             console.log('Collected user data (authentication pending validation):', userData);
             return userData;
         }
-
+    // Prevent duplicate validation calls
+    let validationInProgress = false;
+        
         // SECURE: Server-side validation via Make.com
         async function validateUserAccess(userData) {
+           
+                if (validationInProgress) {
+                console.log('Validation already in progress, skipping duplicate call');
+                return { authenticated: false, hasAccess: false, error: 'Duplicate call prevented' };
+            }
+            
             if (!userData.kerberos) {
                 console.error('No Kerberos ID - validation failed');
                 return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
@@ -294,6 +302,10 @@
                     hasAccess: false, 
                     error: error.message 
                 };
+            } finally {
+        validationInProgress = false;
+        console.log('Validation completed, flag reset');
+            }
             }
         }
 
@@ -440,6 +452,7 @@
     </script>
 </body>
 </html>
+
 
 
 
