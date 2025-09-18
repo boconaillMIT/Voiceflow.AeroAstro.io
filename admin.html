@@ -297,33 +297,56 @@
         };
 
         // Simple authentication
-        function authenticateUser() {
-            console.log('Starting authentication...');
-            
-            try {
-                const storedData = localStorage.getItem('user_metadata');
-                if (!storedData) {
-                    showError('No authentication data found. Please login to the chatbot first.');
-                    return false;
-                }
-                
-                const userData = JSON.parse(storedData);
-                console.log('Found user data for:', userData.kerberos);
-                
-                if (userData.kerberos === 'oconaill') {
-                    showSuccess('Admin access granted for ' + userData.kerberos);
-                    return true;
-                } else {
-                    showError('Access denied. User ' + userData.kerberos + ' is not authorized.');
-                    return false;
-                }
-                
-            } catch (error) {
-                console.error('Auth error:', error);
-                showError('Authentication error: ' + error.message);
-                return false;
-            }
+// Replace the authenticateUser function in admin.html with this:
+async function authenticateUser() {
+    console.log('Starting authentication...');
+    
+    try {
+        const storedData = localStorage.getItem('user_metadata');
+        if (!storedData) {
+            showError('No authentication data found. Please login to the chatbot first.');
+            return false;
         }
+        
+        const userData = JSON.parse(storedData);
+        console.log('Found user data for:', userData.kerberos);
+        
+        // Call the validation service to check admin status
+        const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                kerberosId: userData.kerberos,
+                department: userData.department
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Validation failed');
+        }
+        
+        const validation = await response.json();
+        console.log('Admin validation result:', validation);
+        
+        // Check if user has admin privileges
+        const isAdmin = validation.isAdmin === true || 
+                       validation.isAdmin === "true" || 
+                       validation.isAdmin === '1';
+        
+        if (isAdmin) {
+            showSuccess('Admin access granted for ' + userData.kerberos);
+            return true;
+        } else {
+            showError('Access denied. User ' + userData.kerberos + ' does not have administrator privileges in the database.');
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('Auth error:', error);
+        showError('Authentication error: ' + error.message);
+        return false;
+    }
+}
         
         function showSuccess(message) {
             document.getElementById('authLoading').style.display = 'none';
