@@ -110,19 +110,7 @@
     </div>
 
     <script type="text/javascript">
-        // URL CLEANUP FIX - Store parameters first, then clean URL after processing
-        function cleanUrl() {
-            if (window.location.search) {
-                console.log('Cleaning URL...');
-                // Just clean the URL - don't store parameters here since they're read elsewhere
-                window.history.replaceState({}, document.title, window.location.pathname);
-                console.log('URL cleaned');
-            }
-        }
-
-        // DON'T call cleanUrl() immediately - let the page process parameters first
-
-        // Function to get URL parameters (back to original)
+        // Function to get URL parameters
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
         }
@@ -424,18 +412,6 @@ function setupTestingBridge() {
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             initializePage();
-            
-            // Clean URL only after successful authentication and chatbot load
-            setTimeout(() => {
-                const userData = collectUserData();
-                if (userData.authenticated || userData.kerberos) {
-                    // Only clean URL if user is actually authenticated
-                    if (window.location.search) {
-                        console.log('User authenticated, cleaning URL for security...');
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    }
-                }
-            }, 5000); // Wait 5 seconds for everything to fully initialize
         });
     </script>
 </body>
