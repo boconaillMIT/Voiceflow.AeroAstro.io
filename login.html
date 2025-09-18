@@ -127,10 +127,11 @@
                 
                 // Now clean the URL
                 window.history.replaceState({}, document.title, window.location.pathname);
+                console.log('URL cleaned');
             }
         }
 
-        // Call it immediately when the page loads
+        // Call it immediately - don't wait for DOMContentLoaded
         cleanUrl();
 
         // Function to get URL parameters (modified to check sessionStorage first)
