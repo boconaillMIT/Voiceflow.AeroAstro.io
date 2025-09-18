@@ -240,8 +240,12 @@
                 const validationResult = await response.json();
                 console.log('Make.com validation result:', validationResult);
 
-                // Handle various response formats
-                const hasAccess = validationResult.hasAccess === true || validationResult.hasAccess === "true" || validationResult.hasAccess === 1;
+                / Handle various response formats - ADD '1' STRING CHECK
+                const hasAccess = validationResult.hasAccess === true || 
+                                  validationResult.hasAccess === "true" || 
+                                  validationResult.hasAccess === 1 ||
+                                  validationResult.hasAccess === '1';  // ADD THIS LINE
+                
                 const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
                 const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
 
@@ -407,3 +411,4 @@
     </script>
 </body>
 </html>
+
