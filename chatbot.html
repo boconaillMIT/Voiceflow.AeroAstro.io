@@ -1,167 +1,409 @@
-// Replace your collectUserData() function with this secure version:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroAstro Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .user-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .user-info.visible {
+            display: block;
+        }
+        .info-row {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 5px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+        .access-denied {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .access-denied h1 {
+            color: #e74c3c;
+        }
+        .retry-btn {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AeroAstro Chatbot</h1>
+        <p>AI Assistant for MIT's Department of Aeronautics and Astronautics</p>
+    </div>
 
-function collectUserData() {
-    addDebugStep('Starting user data collection...', 'info');
-    
-    // Get data from URL parameters first
-    const urlData = {
-        name: getURLParameter('name'),
-        firstName: getURLParameter('firstName'),
-        lastName: getURLParameter('lastName'),
-        kerberos: getURLParameter('kerberos'),
-        email: getURLParameter('email'),
-        title: getURLParameter('title'),
-        department: getURLParameter('department'),
-        groups: getURLParameter('groups'),
-        // SECURITY FIX: NEVER trust authenticated parameter from URL
-        authenticated: false  // Always start as false - will be set by server validation
-    };
+    <div class="user-info" id="user-info">
+        <div class="info-row">
+            <span class="info-label">Welcome:</span>
+            <span class="info-value" id="display-name">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Kerberos:</span>
+            <span class="info-value" id="display-kerberos">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value" id="display-title">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Department:</span>
+            <span class="info-value" id="display-department">Loading...</span>
+        </div>
+    </div>
 
-    addDebugStep(`URL Parameters: ${JSON.stringify(urlData, null, 2)}`, 'info');
+    <div class="chat-container">
+        <p><b>Welcome! Starting your personalized AeroAstro AI assistant...</b></p>
+        <div id="voiceflow-chat"></div>
+    </div>
 
-    // Get data from localStorage
-    const storedData = getStoredMetadata();
-    addDebugStep(`localStorage Data: ${JSON.stringify(storedData, null, 2)}`, 'info');
-
-    // Merge data (URL params take precedence over localStorage for user info)
-    const userData = {
-        name: urlData.name || (storedData && storedData.name) || 
-              (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
-              (storedData && storedData.firstName && storedData.lastName ? `${storedData.firstName} ${storedData.lastName}` : '') ||
-              'User',
-        firstName: urlData.firstName || (storedData && storedData.firstName) || '',
-        lastName: urlData.lastName || (storedData && storedData.lastName) || '',
-        kerberos: urlData.kerberos || (storedData && storedData.kerberos) || '',
-        email: urlData.email || (storedData && storedData.email) || '',
-        title: urlData.title || (storedData && storedData.title) || '',
-        department: urlData.department || (storedData && storedData.department) || '',
-        groups: urlData.groups || (storedData && storedData.groups) || '',
-        // CRITICAL: Authentication is NEVER trusted from URL or localStorage
-        // It must be validated server-side via Make.com
-        authenticated: false,
-        loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
-    };
-
-    addDebugStep(`Collected user data (authentication pending validation): ${JSON.stringify(userData, null, 2)}`, 'info');
-    return userData;
-}
-
-// Add this new function for secure server-side validation:
-async function validateUserAccess(userData) {
-    if (!userData.kerberos) {
-        addDebugStep('No Kerberos ID provided - validation failed', 'error');
-        return { authenticated: false, hasAccess: false, error: 'No Kerberos ID' };
-    }
-
-    if (!userData.department) {
-        addDebugStep('No department provided - validation failed', 'error');
-        return { authenticated: false, hasAccess: false, error: 'No department info' };
-    }
-
-    try {
-        addDebugStep(`Validating user access via Make.com: ${userData.kerberos} (${userData.department})`, 'info');
-        
-        // Call your Make.com webhook for server-side validation
-        const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                kerberosId: userData.kerberos,
-                department: userData.department
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Validation request failed: ${response.status}`);
+    <script type="text/javascript">
+        // URL CLEANUP FUNCTION
+        function cleanUrlAfterProcessing() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.has('kerberos') || urlParams.has('authenticated') || urlParams.has('email')) {
+                console.log('URL contains OAuth parameters, scheduling cleanup...');
+                
+                setTimeout(() => {
+                    const userData = collectUserData();
+                    
+                    if (userData && userData.kerberos) {
+                        console.log('User data verified, cleaning URL for security...');
+                        
+                        const cleanUrl = window.location.origin + window.location.pathname;
+                        window.history.replaceState({}, document.title, cleanUrl);
+                        
+                        console.log('URL parameters cleaned - sensitive data hidden');
+                        
+                        const notification = document.createElement('div');
+                        notification.style.cssText = `
+                            position: fixed;
+                            top: 10px;
+                            right: 10px;
+                            background: #28a745;
+                            color: white;
+                            padding: 8px 12px;
+                            border-radius: 4px;
+                            font-size: 12px;
+                            z-index: 10000;
+                            opacity: 0.9;
+                        `;
+                        notification.textContent = 'URL secured';
+                        document.body.appendChild(notification);
+                        
+                        setTimeout(() => {
+                            if (document.body.contains(notification)) {
+                                document.body.removeChild(notification);
+                            }
+                        }, 3000);
+                        
+                    } else {
+                        console.log('User data not ready, keeping parameters for authentication');
+                    }
+                }, 1000);
+            }
         }
 
-        const validationResult = await response.json();
-        addDebugStep(`Make.com validation result: ${JSON.stringify(validationResult, null, 2)}`, 'success');
+        // Function to get URL parameters
+        function getURLParameter(name) {
+            return new URLSearchParams(window.location.search).get(name);
+        }
 
-        // Handle different response formats from your Make.com webhook
-        const hasAccess = validationResult.hasAccess === true || validationResult.hasAccess === "true" || validationResult.hasAccess === 1;
-        const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
-        const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
+        // Function to get stored metadata
+        function getStoredMetadata() {
+            try {
+                const stored = localStorage.getItem('user_metadata');
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                console.error('Error parsing localStorage:', e.message);
+                return null;
+            }
+        }
 
-        return {
-            authenticated: hasAccess,  // Only true if server validates access
-            hasAccess: hasAccess,
-            isFirstLogin: isFirstLogin,
-            isExceptionUser: isExceptionUser,
-            accessType: validationResult.accessType,
-            error: null
-        };
+        // SECURE: Collect user data (never trust authenticated parameter)
+        function collectUserData() {
+            console.log('Starting secure user data collection...');
+            
+            const urlData = {
+                name: getURLParameter('name'),
+                firstName: getURLParameter('firstName'),
+                lastName: getURLParameter('lastName'),
+                kerberos: getURLParameter('kerberos'),
+                email: getURLParameter('email'),
+                title: getURLParameter('title'),
+                department: getURLParameter('department'),
+                groups: getURLParameter('groups'),
+                // SECURITY: Never trust authenticated parameter from URL
+                authenticated: false
+            };
 
-    } catch (error) {
-        addDebugStep(`Validation error: ${error.message}`, 'error');
-        return { 
-            authenticated: false, 
-            hasAccess: false, 
-            error: error.message 
-        };
-    }
-}
+            const storedData = getStoredMetadata();
 
-// Replace your initializePage() function with this secure version:
-async function initializePage() {
-    addDebugStep('Page initialization started with security validation', 'info');
-    
-    const userData = collectUserData();
-    
-    // SECURITY CHECK: Must have kerberos from OAuth to proceed
-    if (!userData.kerberos) {
-        addDebugStep('No Kerberos ID found - redirecting to login', 'warning');
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 3000);
-        return;
-    }
-    
-    // Show loading state while validating
-    document.getElementById('display-name').textContent = 'Validating access...';
-    document.getElementById('user-info').classList.add('visible');
-    
-    addDebugStep('Performing server-side access validation...', 'info');
-    
-    // CRITICAL: Always validate via Make.com before granting access
-    const validation = await validateUserAccess(userData);
-    
-    if (!validation.authenticated) {
-        addDebugStep('Access denied by server validation', 'error');
-        
-        // Show access denied message
-        document.body.innerHTML = `
-            <div style="max-width: 600px; margin: 100px auto; padding: 40px; background: white; border-radius: 10px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                <h1 style="color: #e74c3c;">Access Denied</h1>
-                <p>You are not authorized to access this chatbot.</p>
-                <p><strong>Reason:</strong> You must be a member of the Department of Aeronautics and Astronautics or have special access granted.</p>
-                <p><strong>Your Info:</strong> ${userData.kerberos} (${userData.department || 'Unknown Department'})</p>
-                ${validation.error ? `<p><strong>Technical Details:</strong> ${validation.error}</p>` : ''}
-                <p>If you believe this is an error, please contact the administrator.</p>
-                <p><a href="login.html" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Try Login Again</a></p>
-            </div>
-        `;
-        return;
-    }
-    
-    addDebugStep('Server validation successful - granting access', 'success');
-    
-    // Update userData with validated authentication status
-    userData.authenticated = true;
-    userData.hasAccess = validation.hasAccess;
-    userData.isFirstLogin = validation.isFirstLogin;
-    userData.isExceptionUser = validation.isExceptionUser;
-    
-    updateUserDisplay(userData);
-    const userID = generateUserID(userData);
-    
-    window.currentUser = userData;
-    addDebugStep('User authenticated and currentUser variable set', 'success');
-    
-    // Clean URL after successful authentication
-    cleanUrlAfterProcessing();
-    
-    loadVoiceflow(userID, userData);
-}
+            const userData = {
+                name: urlData.name || (storedData && storedData.name) || 
+                      (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
+                      (storedData && storedData.firstName && storedData.lastName ? `${storedData.firstName} ${storedData.lastName}` : '') ||
+                      'User',
+                firstName: urlData.firstName || (storedData && storedData.firstName) || '',
+                lastName: urlData.lastName || (storedData && storedData.lastName) || '',
+                kerberos: urlData.kerberos || (storedData && storedData.kerberos) || '',
+                email: urlData.email || (storedData && storedData.email) || '',
+                title: urlData.title || (storedData && storedData.title) || '',
+                department: urlData.department || (storedData && storedData.department) || '',
+                groups: urlData.groups || (storedData && storedData.groups) || '',
+                // CRITICAL: Authentication must be validated server-side
+                authenticated: false,
+                loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
+            };
+
+            console.log('Collected user data (authentication pending validation):', userData);
+            return userData;
+        }
+
+        // SECURE: Server-side validation via Make.com
+        async function validateUserAccess(userData) {
+            if (!userData.kerberos) {
+                console.error('No Kerberos ID - validation failed');
+                return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
+            }
+
+            if (!userData.department) {
+                console.error('No department - validation failed');
+                return { authenticated: false, hasAccess: false, error: 'No department information' };
+            }
+
+            try {
+                console.log(`Validating access: ${userData.kerberos} (${userData.department})`);
+                
+                // Call Make.com webhook for validation
+                const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        kerberosId: userData.kerberos,
+                        department: userData.department
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Validation request failed: ${response.status}`);
+                }
+
+                const validationResult = await response.json();
+                console.log('Make.com validation result:', validationResult);
+
+                // Handle various response formats
+                const hasAccess = validationResult.hasAccess === true || validationResult.hasAccess === "true" || validationResult.hasAccess === 1;
+                const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
+                const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
+
+                return {
+                    authenticated: hasAccess,
+                    hasAccess: hasAccess,
+                    isFirstLogin: isFirstLogin,
+                    isExceptionUser: isExceptionUser,
+                    accessType: validationResult.accessType,
+                    error: null
+                };
+
+            } catch (error) {
+                console.error('Validation error:', error);
+                return { 
+                    authenticated: false, 
+                    hasAccess: false, 
+                    error: error.message 
+                };
+            }
+        }
+
+        // Update user display
+        function updateUserDisplay(userData) {
+            if (userData.authenticated || userData.kerberos) {
+                document.getElementById('display-name').textContent = userData.name || 'Not provided';
+                document.getElementById('display-kerberos').textContent = userData.kerberos || 'Not provided';
+                document.getElementById('display-title').textContent = userData.title || 'Not provided';
+                document.getElementById('display-department').textContent = userData.department || 'Not provided';
+                
+                document.getElementById('user-info').classList.add('visible');
+            }
+        }
+
+        // Generate userID for Voiceflow
+        function generateUserID(userData) {
+            const kerberos = userData.kerberos;
+            
+            if (kerberos) {
+                return `mit-${kerberos}`;
+            }
+            
+            let userID = localStorage.getItem('userID');
+            if (!userID) {
+                userID = 'user-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userID', userID);
+            }
+            return userID;
+        }
+
+        // Load Voiceflow
+        function loadVoiceflow(userID, userData) {
+            (function(d, t) {
+                var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+                v.onload = function() {
+                    window.voiceflow.chat.load({
+                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
+                        url: 'https://general-runtime.voiceflow.com',
+                        versionID: 'production',
+                        userID: userID,
+                        launch: { 
+                            event: { 
+                                type: 'launch', 
+                                payload: { 
+                                    user_name: userData.name || '',
+                                    user_kerberos: userData.kerberos || '',
+                                    user_title: userData.title || '',
+                                    user_department: userData.department || '',
+                                    user_email: userData.email || '',
+                                    user_firstname: userData.firstName || '',
+                                    user_lastname: userData.lastName || '',
+                                    user_authenticated: userData.authenticated || false,
+                                    user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
+                                    user_logintime: userData.loginTime || ''
+                                } 
+                            } 
+                        },
+                        assistant: {
+                            persistence: 'memory'
+                        }
+                    });
+                    
+                    setTimeout(() => {
+                        try {
+                            window.voiceflow.chat.open();
+                        } catch (openError) {
+                            console.error('Error opening chat:', openError.message);
+                        }
+                    }, 2000);
+                };
+                
+                v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
+                v.type = "text/javascript"; 
+                s.parentNode.insertBefore(v, s);
+            })(document, 'script');
+        }
+
+        // SECURE: Initialize page with mandatory validation
+        async function initializePage() {
+            console.log('Starting secure page initialization...');
+            
+            const userData = collectUserData();
+            
+            // Must have kerberos to proceed
+            if (!userData.kerberos) {
+                console.log('No Kerberos ID found - redirecting to login');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 3000);
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('display-name').textContent = 'Validating access...';
+            document.getElementById('user-info').classList.add('visible');
+            
+            console.log('Performing server-side validation...');
+            
+            // CRITICAL: Always validate before granting access
+            const validation = await validateUserAccess(userData);
+            
+            if (!validation.authenticated) {
+                console.log('Access denied by server validation');
+                
+                // Show access denied page
+                document.body.innerHTML = `
+                    <div class="access-denied">
+                        <h1>Access Denied</h1>
+                        <p>You are not authorized to access this chatbot.</p>
+                        <p><strong>Reason:</strong> You must be a member of the Department of Aeronautics and Astronautics or have special access granted.</p>
+                        <p><strong>Your Info:</strong> ${userData.kerberos} (${userData.department || 'Unknown Department'})</p>
+                        ${validation.error ? `<p><strong>Technical Details:</strong> ${validation.error}</p>` : ''}
+                        <p>If you believe this is an error, please contact the administrator.</p>
+                        <a href="login.html" class="retry-btn">Try Login Again</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            console.log('Server validation successful - granting access');
+            
+            // Update with validated status
+            userData.authenticated = true;
+            userData.hasAccess = validation.hasAccess;
+            userData.isFirstLogin = validation.isFirstLogin;
+            userData.isExceptionUser = validation.isExceptionUser;
+            
+            updateUserDisplay(userData);
+            const userID = generateUserID(userData);
+            
+            window.currentUser = userData;
+            
+            // Clean URL after successful authentication
+            cleanUrlAfterProcessing();
+            
+            loadVoiceflow(userID, userData);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
+        });
+    </script>
+</body>
+</html>
