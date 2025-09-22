@@ -112,18 +112,17 @@
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.has('kerberos') || urlParams.has('authenticated') || urlParams.has('email')) {
-                console.log('URL contains OAuth parameters, scheduling cleanup...');
+                console.log('=== URL CLEANUP: Found parameters to clean ===');
                 
                 setTimeout(() => {
-                    const userData = collectUserData();
-                    
-                    if (userData && userData.kerberos) {
-                        console.log('User data verified, cleaning URL for security...');
+                    // DON'T call collectUserData again - just check window.currentUser
+                    if (window.currentUser && window.currentUser.kerberos) {
+                        console.log('=== URL CLEANUP: User verified, cleaning URL ===');
                         
                         const cleanUrl = window.location.origin + window.location.pathname;
                         window.history.replaceState({}, document.title, cleanUrl);
                         
-                        console.log('URL parameters cleaned - sensitive data hidden');
+                        console.log('=== URL CLEANUP: Parameters cleaned ===');
                         
                         const notification = document.createElement('div');
                         notification.style.cssText = `
@@ -148,7 +147,7 @@
                         }, 3000);
                         
                     } else {
-                        console.log('User data not ready, keeping parameters for authentication');
+                        console.log('=== URL CLEANUP: User data not ready, keeping parameters ===');
                     }
                 }, 1000);
             }
@@ -385,31 +384,30 @@ async function validateUserAccess(userData) {
         }
 
         // SECURE: Initialize page with mandatory validation
-        async function initializePage() {
-            console.log('Starting secure page initialization...');
-            
-            const userData = collectUserData();
-            
-            // Must have kerberos to proceed
-            if (!userData.kerberos) {
-                console.log('No Kerberos ID found - redirecting to login');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 3000);
-                return;
-            }
-            
-            // Show loading state
-            document.getElementById('display-name').textContent = 'Validating access...';
-            document.getElementById('user-info').classList.add('visible');
-            
-            console.log('Performing server-side validation...');
-            
-            // CRITICAL: Always validate before granting access
-            const validation = await validateUserAccess(userData);
-            
-            if (!validation.authenticated) {
-                console.log('Access denied by server validation');
+async function initializePage() {
+    console.log('=== PAGE INITIALIZATION START ===');
+    console.log('Timestamp:', new Date().toISOString());
+    
+    const userData = collectUserData();
+    console.log('User data collected:', userData.kerberos);
+    
+    if (!userData.kerberos) {
+        console.log('No Kerberos ID found - redirecting to login');
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 3000);
+        return;
+    }
+    
+    document.getElementById('display-name').textContent = 'Validating access...';
+    document.getElementById('user-info').classList.add('visible');
+    
+    console.log('=== CALLING VALIDATION (STEP 1) ===');
+    const validation = await validateUserAccess(userData);
+    console.log('=== VALIDATION COMPLETED (STEP 1) ===');
+    
+    if (!validation.authenticated) {
+        console.log('Access denied by server validation');
                 
                 // Show access denied page
                 document.body.innerHTML = `
@@ -438,20 +436,37 @@ async function validateUserAccess(userData) {
             const userID = generateUserID(userData);
             
             window.currentUser = userData;
+            
+            console.log('=== CALLING ADMIN CHECK ===');
             checkAdminAccess(userData, validation);
-            // Clean URL after successful authentication
+            
+            console.log('=== CALLING URL CLEANUP ===');
             cleanUrlAfterProcessing();
             
+            console.log('=== LOADING VOICEFLOW ===');
             loadVoiceflow(userID, userData);
+            
+            console.log('=== PAGE INITIALIZATION COMPLETE ===');
         }
 
-        // Initialize when page loads
+        
+    // Initialize when page loads - prevent duplicate initialization
+    let pageInitialized = false;
+
         document.addEventListener('DOMContentLoaded', function() {
-            initializePage();
-        });
+        if (pageInitialized) {
+            console.log('=== WARNING: DOMContentLoaded fired again, ignoring ===');
+            return;
+        }
+        
+        pageInitialized = true;
+        console.log('=== DOMContentLoaded: First time, initializing page ===');
+        initializePage();
+    });
     </script>
 </body>
 </html>
+
 
 
 
