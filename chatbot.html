@@ -235,6 +235,7 @@
 let validationInProgress = false;
 
 // More robust duplicate prevention using promise caching
+// More robust duplicate prevention using promise caching
 let validationPromise = null;
 const VALIDATION_TIMEOUT = 10000; // 10 seconds
 
@@ -316,20 +317,6 @@ async function performValidation(userData) {
         error: null
     };
 }
-
-    } catch (error) {
-        console.error('Validation error:', error);
-        return { 
-            authenticated: false, 
-            hasAccess: false, 
-            error: error.message 
-        };
-    } finally {
-        validationInProgress = false;
-        console.log('Validation completed, duplicate prevention flag reset');
-    }
-}
-
         // Update user display
         function updateUserDisplay(userData) {
             if (userData.authenticated || userData.kerberos) {
@@ -488,6 +475,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
