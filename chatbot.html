@@ -234,66 +234,88 @@
 // Prevent duplicate validation calls
 let validationInProgress = false;
 
+// More robust duplicate prevention using promise caching
+let validationPromise = null;
+const VALIDATION_TIMEOUT = 10000; // 10 seconds
+
 async function validateUserAccess(userData) {
-    if (validationInProgress) {
-        console.log('Validation already in progress, skipping duplicate call');
-        return { authenticated: false, hasAccess: false, error: 'Duplicate call prevented' };
+    const cacheKey = `${userData.kerberos}-${userData.department}`;
+    
+    if (validationPromise) {
+        console.log('Using cached validation promise to prevent duplicate');
+        return await validationPromise;
     }
     
-    validationInProgress = true;
-    console.log('Starting validation (preventing duplicates)');
+    console.log('Starting new validation for:', cacheKey);
+    
+    validationPromise = performValidation(userData);
+    
+    // Clear the cache after completion or timeout
+    setTimeout(() => {
+        validationPromise = null;
+    }, VALIDATION_TIMEOUT);
     
     try {
-        if (!userData.kerberos) {
-            console.error('No Kerberos ID - validation failed');
-            return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
-        }
+        const result = await validationPromise;
+        validationPromise = null; // Clear immediately on success
+        return result;
+    } catch (error) {
+        validationPromise = null; // Clear on error too
+        throw error;
+    }
+}
 
-        if (!userData.department) {
-            console.error('No department - validation failed');
-            return { authenticated: false, hasAccess: false, error: 'No department information' };
-        }
+async function performValidation(userData) {
+    if (!userData.kerberos) {
+        console.error('No Kerberos ID - validation failed');
+        return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
+    }
 
-        console.log(`Validating access: ${userData.kerberos} (${userData.department})`);
-        
-        // Call Make.com webhook for validation
-        const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                kerberosId: userData.kerberos,
-                department: userData.department
-            })
-        });
+    if (!userData.department) {
+        console.error('No department - validation failed');
+        return { authenticated: false, hasAccess: false, error: 'No department information' };
+    }
 
-        if (!response.ok) {
-            throw new Error(`Validation request failed: ${response.status}`);
-        }
+    console.log(`Validating access: ${userData.kerberos} (${userData.department})`);
+    
+    const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            kerberosId: userData.kerberos,
+            department: userData.department
+        })
+    });
 
-        const validationResult = await response.json();
-        console.log('Make.com validation result:', validationResult);
+    if (!response.ok) {
+        throw new Error(`Validation request failed: ${response.status}`);
+    }
 
-        // Handle various response formats
-        const hasAccess = validationResult.hasAccess === true || 
-                          validationResult.hasAccess === "true" || 
-                          validationResult.hasAccess === 1 ||
-                          validationResult.hasAccess === '1';
-        
-        const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
-        const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
-        const isAdmin = validationResult.isAdmin === true || validationResult.isAdmin === "true" || validationResult.isAdmin === 1 || validationResult.isAdmin === '1';
+    const validationResult = await response.json();
+    console.log('Make.com validation result:', validationResult);
 
-        return {
-            authenticated: hasAccess,
-            hasAccess: hasAccess,
-            isFirstLogin: isFirstLogin,
-            isExceptionUser: isExceptionUser,
-            accessType: validationResult.accessType,
-            isAdmin: isAdmin,
-            error: null
-        };
+    // Handle various response formats
+    const hasAccess = validationResult.hasAccess === true || 
+                      validationResult.hasAccess === "true" || 
+                      validationResult.hasAccess === 1 ||
+                      validationResult.hasAccess === '1';
+    
+    const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
+    const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
+    const isAdmin = validationResult.isAdmin === true || validationResult.isAdmin === "true" || validationResult.isAdmin === 1 || validationResult.isAdmin === '1';
+
+    return {
+        authenticated: hasAccess,
+        hasAccess: hasAccess,
+        isFirstLogin: isFirstLogin,
+        isExceptionUser: isExceptionUser,
+        accessType: validationResult.accessType,
+        isAdmin: isAdmin,
+        error: null
+    };
+}
 
     } catch (error) {
         console.error('Validation error:', error);
@@ -466,6 +488,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
