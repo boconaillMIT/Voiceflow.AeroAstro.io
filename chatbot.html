@@ -152,101 +152,7 @@
                 }, 1000);
             }
         }
-// Add this at the VERY TOP of your script section, before any other code
 
-// Global initialization tracker
-window.PAGE_LOAD_LOG = window.PAGE_LOAD_LOG || [];
-
-// Log every page event
-function logPageEvent(eventName, details = {}) {
-    const entry = {
-        timestamp: new Date().toISOString(),
-        event: eventName,
-        ...details
-    };
-    window.PAGE_LOAD_LOG.push(entry);
-    console.log(`🎯 PAGE EVENT: ${eventName}`, entry);
-}
-
-// Track page visibility changes
-document.addEventListener('visibilitychange', () => {
-    logPageEvent('visibilitychange', { hidden: document.hidden });
-});
-
-// Track beforeunload
-window.addEventListener('beforeunload', () => {
-    logPageEvent('beforeunload');
-});
-
-// Track page show (back/forward cache)
-window.addEventListener('pageshow', (event) => {
-    logPageEvent('pageshow', { persisted: event.persisted });
-});
-
-// Track page hide
-window.addEventListener('pagehide', () => {
-    logPageEvent('pagehide');
-});
-
-// Track focus/blur
-window.addEventListener('focus', () => {
-    logPageEvent('window-focus');
-});
-
-window.addEventListener('blur', () => {
-    logPageEvent('window-blur');
-});
-
-// Track history changes
-const originalPushState = history.pushState;
-const originalReplaceState = history.replaceState;
-
-history.pushState = function(...args) {
-    logPageEvent('history-pushState', { url: args[2] });
-    return originalPushState.apply(this, args);
-};
-
-history.replaceState = function(...args) {
-    logPageEvent('history-replaceState', { url: args[2] });
-    return originalReplaceState.apply(this, args);
-};
-
-window.addEventListener('popstate', () => {
-    logPageEvent('popstate');
-});
-
-// Override fetch to track ALL fetch calls
-const originalFetch = window.fetch;
-window.fetch = function(url, options) {
-    const callStack = new Error().stack;
-    logPageEvent('fetch-call', { 
-        url: typeof url === 'string' ? url : url.toString(),
-        method: options?.method || 'GET',
-        caller: callStack.split('\n')[2]?.trim()
-    });
-    return originalFetch.apply(this, arguments);
-};
-
-// Log initial page load
-logPageEvent('script-start');
-
-// Show comprehensive log after 10 seconds
-setTimeout(() => {
-    console.log('\n📊 COMPREHENSIVE PAGE EVENT LOG:');
-    console.table(window.PAGE_LOAD_LOG);
-    
-    // Count fetch calls to Make.com
-    const makeCalls = window.PAGE_LOAD_LOG.filter(log => 
-        log.event === 'fetch-call' && 
-        log.url?.includes('make.com')
-    );
-    
-    console.log('\n🎯 TOTAL FETCH CALLS TO MAKE.COM:', makeCalls.length);
-    if (makeCalls.length > 1) {
-        console.warn('⚠️ MULTIPLE MAKE.COM CALLS DETECTED!');
-        console.table(makeCalls);
-    }
-}, 10000);
         // Add this GLOBAL variable at the very top of your chatbot.html, before any functions
         window.VALIDATION_CALL_LOG = [];
         
@@ -388,13 +294,9 @@ async function validateUserAccess(userData) {
 async function performValidation(userData) {
     const callTimestamp = new Date().toISOString();
     
-    // Generate unique request ID (rounds to 10-second window)
-    const requestId = `${userData.kerberos}-${Math.floor(Date.now()/10000)}`;
-    
     console.log('───────────────────────────────────────────────────────');
     console.log('📡 performValidation CALLED');
     console.log('Timestamp:', callTimestamp);
-    console.log('Request ID:', requestId);
     console.log('Kerberos:', userData.kerberos);
     console.log('───────────────────────────────────────────────────────');
     
@@ -403,7 +305,6 @@ async function performValidation(userData) {
         timestamp: callTimestamp,
         function: 'performValidation',
         kerberos: userData.kerberos,
-        requestId: requestId,
         action: 'STARTING'
     });
     
@@ -422,18 +323,16 @@ async function performValidation(userData) {
     const webhookUrl = 'https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2';
     const requestBody = {
         kerberosId: userData.kerberos,
-        department: userData.department,
-        requestId: requestId  // ADD THIS LINE
+        department: userData.department
     };
     
     console.log('📤 Sending request to Make.com:', requestBody);
     
-    // Rest of your function stays the same...
+    // Log the fetch call
     window.VALIDATION_CALL_LOG.push({
         timestamp: new Date().toISOString(),
         function: 'performValidation',
         kerberos: userData.kerberos,
-        requestId: requestId,
         action: 'FETCH_STARTED',
         url: webhookUrl
     });
@@ -664,9 +563,6 @@ async function initializePage() {
     </script>
 </body>
 </html>
-
-
-
 
 
 
