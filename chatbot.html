@@ -153,6 +153,9 @@
             }
         }
 
+        // Add this GLOBAL variable at the very top of your chatbot.html, before any functions
+        window.VALIDATION_CALL_LOG = [];
+        
         // Function to get URL parameters
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
@@ -230,72 +233,134 @@
             console.log('Collected user data (authentication pending validation):', userData);
             return userData;
         }
-    // Prevent duplicate validation calls
+
 // Prevent duplicate validation calls
 let validationInProgress = false;
 
 // More robust duplicate prevention using promise caching
-// More robust duplicate prevention using promise caching
 let validationPromise = null;
 const VALIDATION_TIMEOUT = 10000; // 10 seconds
-
 async function validateUserAccess(userData) {
+    const callTimestamp = new Date().toISOString();
+    const callStack = new Error().stack;
+    
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔍 validateUserAccess CALLED');
+    console.log('Timestamp:', callTimestamp);
+    console.log('Kerberos:', userData.kerberos);
+    console.log('Called from:', callStack.split('\n')[2]?.trim());
+    console.log('═══════════════════════════════════════════════════════');
+    
+    // Log this call
+    window.VALIDATION_CALL_LOG.push({
+        timestamp: callTimestamp,
+        function: 'validateUserAccess',
+        kerberos: userData.kerberos,
+        hasPromise: !!validationPromise,
+        callStack: callStack.split('\n')[2]?.trim()
+    });
+    
     const cacheKey = `${userData.kerberos}-${userData.department}`;
     
     if (validationPromise) {
-        console.log('Using cached validation promise to prevent duplicate');
+        console.log('✅ Using cached validation promise to prevent duplicate');
         return await validationPromise;
     }
     
-    console.log('Starting new validation for:', cacheKey);
+    console.log('🆕 Starting NEW validation for:', cacheKey);
     
     validationPromise = performValidation(userData);
     
     // Clear the cache after completion or timeout
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+        console.log('⏱️ Validation timeout - clearing promise cache');
         validationPromise = null;
     }, VALIDATION_TIMEOUT);
     
     try {
         const result = await validationPromise;
+        clearTimeout(timeoutId);
         validationPromise = null; // Clear immediately on success
+        console.log('✅ Validation completed successfully');
         return result;
     } catch (error) {
+        clearTimeout(timeoutId);
         validationPromise = null; // Clear on error too
+        console.error('❌ Validation failed:', error);
         throw error;
     }
 }
 
 async function performValidation(userData) {
+    const callTimestamp = new Date().toISOString();
+    
+    console.log('───────────────────────────────────────────────────────');
+    console.log('📡 performValidation CALLED');
+    console.log('Timestamp:', callTimestamp);
+    console.log('Kerberos:', userData.kerberos);
+    console.log('───────────────────────────────────────────────────────');
+    
+    // Log this call
+    window.VALIDATION_CALL_LOG.push({
+        timestamp: callTimestamp,
+        function: 'performValidation',
+        kerberos: userData.kerberos,
+        action: 'STARTING'
+    });
+    
     if (!userData.kerberos) {
-        console.error('No Kerberos ID - validation failed');
+        console.error('❌ No Kerberos ID - validation failed');
         return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
     }
 
     if (!userData.department) {
-        console.error('No department - validation failed');
+        console.error('❌ No department - validation failed');
         return { authenticated: false, hasAccess: false, error: 'No department information' };
     }
 
-    console.log(`Validating access: ${userData.kerberos} (${userData.department})`);
+    console.log(`🔐 Validating access: ${userData.kerberos} (${userData.department})`);
     
-    const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+    const webhookUrl = 'https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2';
+    const requestBody = {
+        kerberosId: userData.kerberos,
+        department: userData.department
+    };
+    
+    console.log('📤 Sending request to Make.com:', requestBody);
+    
+    // Log the fetch call
+    window.VALIDATION_CALL_LOG.push({
+        timestamp: new Date().toISOString(),
+        function: 'performValidation',
+        kerberos: userData.kerberos,
+        action: 'FETCH_STARTED',
+        url: webhookUrl
+    });
+    
+    const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            kerberosId: userData.kerberos,
-            department: userData.department
-        })
+        body: JSON.stringify(requestBody)
+    });
+
+    // Log the response
+    window.VALIDATION_CALL_LOG.push({
+        timestamp: new Date().toISOString(),
+        function: 'performValidation',
+        kerberos: userData.kerberos,
+        action: 'FETCH_COMPLETED',
+        status: response.status
     });
 
     if (!response.ok) {
+        console.error('❌ Validation request failed:', response.status);
         throw new Error(`Validation request failed: ${response.status}`);
     }
 
     const validationResult = await response.json();
-    console.log('Make.com validation result:', validationResult);
+    console.log('📥 Make.com validation result:', validationResult);
 
     // Handle various response formats
     const hasAccess = validationResult.hasAccess === true || 
@@ -307,6 +372,8 @@ async function performValidation(userData) {
     const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
     const isAdmin = validationResult.isAdmin === true || validationResult.isAdmin === "true" || validationResult.isAdmin === 1 || validationResult.isAdmin === '1';
 
+    console.log('✅ Validation processing complete');
+    
     return {
         authenticated: hasAccess,
         hasAccess: hasAccess,
@@ -317,6 +384,27 @@ async function performValidation(userData) {
         error: null
     };
 }
+        // Add helper function to view the log
+function showValidationLog() {
+    console.log('\n📊 VALIDATION CALL LOG:');
+    console.log('Total calls:', window.VALIDATION_CALL_LOG.length);
+    console.table(window.VALIDATION_CALL_LOG);
+    
+    // Count fetch calls
+    const fetchCalls = window.VALIDATION_CALL_LOG.filter(log => log.action === 'FETCH_STARTED');
+    console.log('\n🎯 ACTUAL FETCH CALLS TO MAKE.COM:', fetchCalls.length);
+    if (fetchCalls.length > 1) {
+        console.warn('⚠️ MULTIPLE FETCH CALLS DETECTED!');
+        console.table(fetchCalls);
+    }
+}
+
+// Auto-show log after 5 seconds
+setTimeout(() => {
+    if (window.VALIDATION_CALL_LOG.length > 0) {
+        showValidationLog();
+    }
+}, 5000);
         // Update user display
         function updateUserDisplay(userData) {
             if (userData.authenticated || userData.kerberos) {
@@ -475,6 +563,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
