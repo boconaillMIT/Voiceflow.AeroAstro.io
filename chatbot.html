@@ -388,9 +388,13 @@ async function validateUserAccess(userData) {
 async function performValidation(userData) {
     const callTimestamp = new Date().toISOString();
     
+    // Generate unique request ID (rounds to 10-second window)
+    const requestId = `${userData.kerberos}-${Math.floor(Date.now()/10000)}`;
+    
     console.log('───────────────────────────────────────────────────────');
     console.log('📡 performValidation CALLED');
     console.log('Timestamp:', callTimestamp);
+    console.log('Request ID:', requestId);
     console.log('Kerberos:', userData.kerberos);
     console.log('───────────────────────────────────────────────────────');
     
@@ -399,6 +403,7 @@ async function performValidation(userData) {
         timestamp: callTimestamp,
         function: 'performValidation',
         kerberos: userData.kerberos,
+        requestId: requestId,
         action: 'STARTING'
     });
     
@@ -417,16 +422,18 @@ async function performValidation(userData) {
     const webhookUrl = 'https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2';
     const requestBody = {
         kerberosId: userData.kerberos,
-        department: userData.department
+        department: userData.department,
+        requestId: requestId  // ADD THIS LINE
     };
     
     console.log('📤 Sending request to Make.com:', requestBody);
     
-    // Log the fetch call
+    // Rest of your function stays the same...
     window.VALIDATION_CALL_LOG.push({
         timestamp: new Date().toISOString(),
         function: 'performValidation',
         kerberos: userData.kerberos,
+        requestId: requestId,
         action: 'FETCH_STARTED',
         url: webhookUrl
     });
@@ -657,6 +664,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
