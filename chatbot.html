@@ -289,6 +289,22 @@ async function validateUserAccess(userData) {
 }
 
 async function performValidation(userData) {
+    const callTimestamp = new Date().toISOString();
+    
+    console.log('───────────────────────────────────────────────────────');
+    console.log('📡 performValidation CALLED');
+    console.log('Timestamp:', callTimestamp);
+    console.log('Kerberos:', userData.kerberos);
+    console.log('───────────────────────────────────────────────────────');
+    
+    // Log this call
+    window.VALIDATION_CALL_LOG.push({
+        timestamp: callTimestamp,
+        function: 'performValidation',
+        kerberos: userData.kerberos,
+        action: 'STARTING'
+    });
+    
     if (!userData.kerberos) {
         console.error('❌ No Kerberos ID - validation failed');
         return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
@@ -309,12 +325,33 @@ async function performValidation(userData) {
     
     console.log('📤 Sending request to Make.com:', requestBody);
     
+    // Log the fetch call
+    window.VALIDATION_CALL_LOG.push({
+        timestamp: new Date().toISOString(),
+        function: 'performValidation',
+        kerberos: userData.kerberos,
+        action: 'FETCH_STARTED',
+        url: webhookUrl
+    });
+    
     const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        cache: 'no-store',
+        mode: 'cors',
+        credentials: 'omit'
+    });
+
+    // Log the response
+    window.VALIDATION_CALL_LOG.push({
+        timestamp: new Date().toISOString(),
+        function: 'performValidation',
+        kerberos: userData.kerberos,
+        action: 'FETCH_COMPLETED',
+        status: response.status
     });
 
     if (!response.ok) {
@@ -325,27 +362,14 @@ async function performValidation(userData) {
     const validationResult = await response.json();
     console.log('📥 Make.com validation result:', validationResult);
 
+    // Handle various response formats
     const hasAccess = validationResult.hasAccess === true || 
                       validationResult.hasAccess === "true" || 
                       validationResult.hasAccess === 1 ||
                       validationResult.hasAccess === '1';
     
     const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
-    const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
-    const isAdmin = validationResult.isAdmin === true || validationResult.isAdmin === "true" || validationResult.isAdmin === 1 || validationResult.isAdmin === '1';
-
-    console.log('✅ Validation processing complete');
-    
-    return {
-        authenticated: hasAccess,
-        hasAccess: hasAccess,
-        isFirstLogin: isFirstLogin,
-        isExceptionUser: isExceptionUser,
-        accessType: validationResult.accessType,
-        isAdmin: isAdmin,
-        error: null
-    };
-}
+    const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "tr
         // Add helper function to view the log
 function showValidationLog() {
     console.log('\n📊 VALIDATION CALL LOG:');
@@ -525,6 +549,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
