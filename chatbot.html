@@ -543,7 +543,7 @@ async function initializePage() {
             cleanUrlAfterProcessing();
             
             console.log('=== LOADING VOICEFLOW ===');
-            loadVoiceflow(userID, userData);
+            loadVoiceflow(userID, userData, validation);  // Add validation as 3rd parameter
             
             console.log('=== PAGE INITIALIZATION COMPLETE ===');
         }
@@ -565,6 +565,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
