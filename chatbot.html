@@ -466,20 +466,21 @@ function loadVoiceflow(userID, userData, validationResult) {  // Add validationR
                 launch: { 
                     event: { 
                         type: 'launch', 
-                        payload: { 
-                            user_name: userData.name || '',
-                            user_kerberos: userData.kerberos || '',
-                            user_title: userData.title || '',
-                            user_department: userData.department || '',
-                            user_email: userData.email || '',
-                            user_firstname: userData.firstName || '',
-                            user_lastname: userData.lastName || '',
-                            user_authenticated: userData.authenticated || false,
-                            user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
-                            user_logintime: userData.loginTime || '',
-                            is_first_login: validationResult ? validationResult.isFirstLogin : false,  // ADD THIS LINE
-                            is_admin: validationResult ? validationResult.isAdmin : false  // ADD THIS LINE TOO
-                        } 
+                            payload: { 
+                                user_name: userData.name || '',
+                                user_kerberos: userData.kerberos || '',
+                                user_title: userData.title || '',
+                                user_department: userData.department || '',
+                                user_email: userData.email || '',
+                                user_firstname: userData.firstName || '',
+                                user_lastname: userData.lastName || '',
+                                user_authenticated: userData.authenticated || false,
+                                user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
+                                user_logintime: userData.loginTime || '',
+                                is_first_login: validationResult ? validationResult.isFirstLogin : false,
+                                is_admin: validationResult ? validationResult.isAdmin : false,
+                                is_exception_user: validationResult ? validationResult.isExceptionUser : false  // ADD THIS
+                            }
                     } 
                 },
                 assistant: {
@@ -585,6 +586,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
