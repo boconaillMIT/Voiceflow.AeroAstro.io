@@ -369,7 +369,21 @@ async function performValidation(userData) {
                       validationResult.hasAccess === '1';
     
     const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
-    const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "tr
+    const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
+    const isAdmin = validationResult.isAdmin === true || validationResult.isAdmin === "true" || validationResult.isAdmin === 1 || validationResult.isAdmin === '1';
+
+    console.log('✅ Validation processing complete');
+    
+    return {
+        authenticated: hasAccess,
+        hasAccess: hasAccess,
+        isFirstLogin: isFirstLogin,
+        isExceptionUser: isExceptionUser,
+        accessType: validationResult.accessType,
+        isAdmin: isAdmin,
+        error: null
+    };
+}
         // Add helper function to view the log
 function showValidationLog() {
     console.log('\n📊 VALIDATION CALL LOG:');
@@ -549,6 +563,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
