@@ -434,51 +434,53 @@ setTimeout(() => {
         }
 
         // Load Voiceflow
-        function loadVoiceflow(userID, userData) {
-            (function(d, t) {
-                var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
-                v.onload = function() {
-                    window.voiceflow.chat.load({
-                        verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
-                        url: 'https://general-runtime.voiceflow.com',
-                        versionID: 'production',
-                        userID: userID,
-                        launch: { 
-                            event: { 
-                                type: 'launch', 
-                                payload: { 
-                                    user_name: userData.name || '',
-                                    user_kerberos: userData.kerberos || '',
-                                    user_title: userData.title || '',
-                                    user_department: userData.department || '',
-                                    user_email: userData.email || '',
-                                    user_firstname: userData.firstName || '',
-                                    user_lastname: userData.lastName || '',
-                                    user_authenticated: userData.authenticated || false,
-                                    user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
-                                    user_logintime: userData.loginTime || ''
-                                } 
-                            } 
-                        },
-                        assistant: {
-                            persistence: 'memory'
-                        }
-                    });
-                    
-                    setTimeout(() => {
-                        try {
-                            window.voiceflow.chat.open();
-                        } catch (openError) {
-                            console.error('Error opening chat:', openError.message);
-                        }
-                    }, 2000);
-                };
-                
-                v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
-                v.type = "text/javascript"; 
-                s.parentNode.insertBefore(v, s);
-            })(document, 'script');
-        }
+function loadVoiceflow(userID, userData, validationResult) {  // Add validationResult parameter
+    (function(d, t) {
+        var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+        v.onload = function() {
+            window.voiceflow.chat.load({
+                verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
+                url: 'https://general-runtime.voiceflow.com',
+                versionID: 'production',
+                userID: userID,
+                launch: { 
+                    event: { 
+                        type: 'launch', 
+                        payload: { 
+                            user_name: userData.name || '',
+                            user_kerberos: userData.kerberos || '',
+                            user_title: userData.title || '',
+                            user_department: userData.department || '',
+                            user_email: userData.email || '',
+                            user_firstname: userData.firstName || '',
+                            user_lastname: userData.lastName || '',
+                            user_authenticated: userData.authenticated || false,
+                            user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
+                            user_logintime: userData.loginTime || '',
+                            is_first_login: validationResult ? validationResult.isFirstLogin : false,  // ADD THIS LINE
+                            is_admin: validationResult ? validationResult.isAdmin : false  // ADD THIS LINE TOO
+                        } 
+                    } 
+                },
+                assistant: {
+                    persistence: 'memory'
+                }
+            });
+            
+            setTimeout(() => {
+                try {
+                    window.voiceflow.chat.open();
+                } catch (openError) {
+                    console.error('Error opening chat:', openError.message);
+                }
+            }, 2000);
+        };
+        
+        v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
+        v.type = "text/javascript"; 
+        s.parentNode.insertBefore(v, s);
+    })(document, 'script');
+}
 
         // SECURE: Initialize page with mandatory validation
 async function initializePage() {
@@ -563,6 +565,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
