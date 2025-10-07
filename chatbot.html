@@ -155,7 +155,12 @@
 
         // Add this GLOBAL variable at the very top of your chatbot.html, before any functions
         window.VALIDATION_CALL_LOG = [];
-        
+
+        window.VALIDATION_LOCK = {
+            active: false,
+            result: null,
+            timestamp: null
+        };
         // Function to get URL parameters
         function getURLParameter(name) {
             return new URLSearchParams(window.location.search).get(name);
@@ -241,73 +246,49 @@ let validationInProgress = false;
 let validationPromise = null;
 const VALIDATION_TIMEOUT = 10000; // 10 seconds
 async function validateUserAccess(userData) {
-    const callTimestamp = new Date().toISOString();
-    const callStack = new Error().stack;
-    
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🔍 validateUserAccess CALLED');
-    console.log('Timestamp:', callTimestamp);
-    console.log('Kerberos:', userData.kerberos);
-    console.log('Called from:', callStack.split('\n')[2]?.trim());
-    console.log('═══════════════════════════════════════════════════════');
-    
-    // Log this call
-    window.VALIDATION_CALL_LOG.push({
-        timestamp: callTimestamp,
-        function: 'validateUserAccess',
-        kerberos: userData.kerberos,
-        hasPromise: !!validationPromise,
-        callStack: callStack.split('\n')[2]?.trim()
-    });
-    
     const cacheKey = `${userData.kerberos}-${userData.department}`;
+    const now = Date.now();
     
-    if (validationPromise) {
-        console.log('✅ Using cached validation promise to prevent duplicate');
-        return await validationPromise;
+    // Check if there's an active validation
+    if (window.VALIDATION_LOCK.active) {
+        console.log('⚠️ BLOCKED: Validation already in progress');
+        // Wait for the active validation to complete
+        let attempts = 0;
+        while (window.VALIDATION_LOCK.active && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        if (window.VALIDATION_LOCK.result) {
+            console.log('✅ Returning cached result from active validation');
+            return window.VALIDATION_LOCK.result;
+        }
     }
     
-    console.log('🆕 Starting NEW validation for:', cacheKey);
+    // Check if we have a recent cached result (within 30 seconds)
+    if (window.VALIDATION_LOCK.result && 
+        window.VALIDATION_LOCK.timestamp && 
+        (now - window.VALIDATION_LOCK.timestamp) < 30000) {
+        console.log('✅ Returning cached validation result (age: ' + 
+            (now - window.VALIDATION_LOCK.timestamp) + 'ms)');
+        return window.VALIDATION_LOCK.result;
+    }
     
-    validationPromise = performValidation(userData);
-    
-    // Clear the cache after completion or timeout
-    const timeoutId = setTimeout(() => {
-        console.log('⏱️ Validation timeout - clearing promise cache');
-        validationPromise = null;
-    }, VALIDATION_TIMEOUT);
+    console.log('🆕 Starting NEW validation');
+    window.VALIDATION_LOCK.active = true;
+    window.VALIDATION_LOCK.timestamp = now;
     
     try {
-        const result = await validationPromise;
-        clearTimeout(timeoutId);
-        validationPromise = null; // Clear immediately on success
-        console.log('✅ Validation completed successfully');
+        const result = await performValidation(userData);
+        window.VALIDATION_LOCK.result = result;
+        window.VALIDATION_LOCK.active = false;
         return result;
     } catch (error) {
-        clearTimeout(timeoutId);
-        validationPromise = null; // Clear on error too
-        console.error('❌ Validation failed:', error);
+        window.VALIDATION_LOCK.active = false;
         throw error;
     }
 }
 
 async function performValidation(userData) {
-    const callTimestamp = new Date().toISOString();
-    
-    console.log('───────────────────────────────────────────────────────');
-    console.log('📡 performValidation CALLED');
-    console.log('Timestamp:', callTimestamp);
-    console.log('Kerberos:', userData.kerberos);
-    console.log('───────────────────────────────────────────────────────');
-    
-    // Log this call
-    window.VALIDATION_CALL_LOG.push({
-        timestamp: callTimestamp,
-        function: 'performValidation',
-        kerberos: userData.kerberos,
-        action: 'STARTING'
-    });
-    
     if (!userData.kerberos) {
         console.error('❌ No Kerberos ID - validation failed');
         return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
@@ -328,30 +309,12 @@ async function performValidation(userData) {
     
     console.log('📤 Sending request to Make.com:', requestBody);
     
-    // Log the fetch call
-    window.VALIDATION_CALL_LOG.push({
-        timestamp: new Date().toISOString(),
-        function: 'performValidation',
-        kerberos: userData.kerberos,
-        action: 'FETCH_STARTED',
-        url: webhookUrl
-    });
-    
     const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody)
-    });
-
-    // Log the response
-    window.VALIDATION_CALL_LOG.push({
-        timestamp: new Date().toISOString(),
-        function: 'performValidation',
-        kerberos: userData.kerberos,
-        action: 'FETCH_COMPLETED',
-        status: response.status
     });
 
     if (!response.ok) {
@@ -362,7 +325,6 @@ async function performValidation(userData) {
     const validationResult = await response.json();
     console.log('📥 Make.com validation result:', validationResult);
 
-    // Handle various response formats
     const hasAccess = validationResult.hasAccess === true || 
                       validationResult.hasAccess === "true" || 
                       validationResult.hasAccess === 1 ||
@@ -563,6 +525,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
