@@ -29,8 +29,9 @@ async function handleValidation(event) {
     console.log('🔐 Validating user:', kerberosId);
     
     // Call Make.com from server-side (no duplication)
-    const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
-      method: 'POST',
+//    const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+  const response = await fetch('https://hook.us2.make.com/9c74dhseqfvnj6488gtx8mg4ho8hek3y', {
+    method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
