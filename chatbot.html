@@ -435,6 +435,26 @@ setTimeout(() => {
 
         // Load Voiceflow
 function loadVoiceflow(userID, userData, validationResult) {  // Add validationResult parameter
+    console.log('🎬 === LOADVOICEFLOW CALLED ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('UserID:', userID);
+    console.log('UserData:', userData);
+    console.log('ValidationResult:', validationResult);
+    console.log('Payload being sent to Voiceflow:', {
+        user_name: userData.name || '',
+        user_kerberos: userData.kerberos || '',
+        user_title: userData.title || '',
+        user_department: userData.department || '',
+        user_email: userData.email || '',
+        user_firstname: userData.firstName || '',
+        user_lastname: userData.lastName || '',
+        user_authenticated: userData.authenticated || false,
+        user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
+        user_logintime: userData.loginTime || '',
+        is_first_login: validationResult ? validationResult.isFirstLogin : false,
+        is_admin: validationResult ? validationResult.isAdmin : false
+    });
+    console.log('=== END LOADVOICEFLOW DIAGNOSTIC ===');
     (function(d, t) {
         var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
         v.onload = function() {
@@ -565,6 +585,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
