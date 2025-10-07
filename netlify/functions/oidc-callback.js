@@ -1,17 +1,86 @@
-// netlify/functions/oidc-callback.js - Diagnostic Version
+// netlify/functions/oidc-callback.js - With validation support
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 exports.handler = async (event) => {
+  // Check if this is a validation request (from chatbot) or OAuth callback
+  if (event.path?.includes('validate-user') || 
+      (event.body && JSON.parse(event.body || '{}').kerberosId)) {
+    return handleValidation(event);
+  }
+  
+  // Otherwise, handle OAuth callback
+  return handleOAuthCallback(event);
+};
+
+// NEW: Handle validation requests from chatbot
+async function handleValidation(event) {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  try {
+    const { kerberosId, department } = JSON.parse(event.body);
+    
+    console.log('🔐 Validating user:', kerberosId);
+    
+    // Call Make.com from server-side (no duplication)
+    const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        kerberosId,
+        department
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Make.com returned ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    console.log('✅ Validation successful:', result);
+    
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify(result)
+    };
+
+  } catch (error) {
+    console.error('❌ Validation error:', error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ 
+        error: 'Validation failed',
+        message: error.message 
+      })
+    };
+  }
+}
+
+// EXISTING: Handle OAuth callback
+async function handleOAuthCallback(event) {
   let code, verifier;
   
   try {
     console.log('🚀 === OIDC CALLBACK DIAGNOSTIC START ===');
     console.log('⏰ Timestamp:', new Date().toISOString());
     console.log('🌐 HTTP Method:', event.httpMethod);
-    console.log('🔗 Headers:', JSON.stringify(event.headers, null, 2));
-    console.log('📍 Source IP:', event.headers['x-forwarded-for'] || 'unknown');
-    console.log('🏢 User Agent:', event.headers['user-agent'] || 'unknown');
     
     // Handle both POST and GET requests
     if (event.httpMethod === 'POST') {
@@ -22,12 +91,6 @@ exports.handler = async (event) => {
         console.log('📋 Body keys:', Object.keys(body));
         code = body.code;
         verifier = body.verifier;
-        console.log('✅ Extracted from POST:', {
-          codeLength: code ? code.length : 0,
-          verifierLength: verifier ? verifier.length : 0,
-          codePreview: code ? code.substring(0, 20) + '...' : 'MISSING',
-          verifierPreview: verifier ? verifier.substring(0, 20) + '...' : 'MISSING'
-        });
       } catch (e) {
         console.error('❌ Error parsing POST body:', e.message);
         return {
@@ -45,13 +108,8 @@ exports.handler = async (event) => {
     } else if (event.httpMethod === 'GET') {
       console.log('📨 Processing GET request');
       const params = event.queryStringParameters || {};
-      console.log('📋 Query parameters:', JSON.stringify(params, null, 2));
       code = params.code;
       verifier = params.verifier || event.headers['x-pkce-verifier'];
-      console.log('✅ Extracted from GET:', {
-        codeLength: code ? code.length : 0,
-        verifierLength: verifier ? verifier.length : 0
-      });
     } else {
       console.log('❌ Unsupported HTTP method:', event.httpMethod);
       return {
@@ -62,15 +120,6 @@ exports.handler = async (event) => {
     }
 
     // Validate required parameters
-    console.log('🔍 Validating parameters...');
-    const validation = {
-      hasCode: !!code,
-      hasVerifier: !!verifier,
-      codeType: typeof code,
-      verifierType: typeof verifier
-    };
-    console.log('📊 Validation results:', validation);
-    
     if (!code) {
       console.error('❌ Missing authorization code');
       return {
@@ -98,25 +147,12 @@ exports.handler = async (event) => {
     console.log('✅ Parameter validation passed');
 
     // Get environment variables
-    console.log('🔧 Loading environment variables...');
     const clientId = process.env.OKTA_CLIENT_ID;
     const clientSecret = process.env.OKTA_CLIENT_SECRET;
     const issuer = process.env.OKTA_ISSUER;
     const redirectUri = process.env.OKTA_REDIRECT_URI;
 
-    const envCheck = {
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      hasIssuer: !!issuer,
-      hasRedirectUri: !!redirectUri,
-      clientIdLength: clientId ? clientId.length : 0,
-      issuer: issuer,
-      redirectUri: redirectUri
-    };
-    console.log('🔧 Environment variables check:', envCheck);
-
     // Prepare token exchange request
-    console.log('🔄 Preparing token exchange...');
     const bodyParams = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
@@ -126,97 +162,57 @@ exports.handler = async (event) => {
 
     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
 
-    // Handle client authentication (confidential vs public client)
     if (clientSecret) {
-      console.log('🔐 Using confidential client authentication');
       const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
       headers.Authorization = `Basic ${basic}`;
     } else {
-      console.log('🔓 Using public client authentication');
       bodyParams.append('client_id', clientId);
     }
 
     const tokenUrl = `${issuer}/v1/token`;
-    console.log('🎯 Token endpoint:', tokenUrl);
-    console.log('📤 Request headers:', Object.keys(headers));
 
     // Exchange authorization code for tokens
-    console.log('🚀 Starting token exchange request...');
-    const requestStart = Date.now();
-    
     const tokenRes = await fetch(tokenUrl, {
       method: 'POST',
       headers,
       body: bodyParams.toString(),
     });
 
-    const requestEnd = Date.now();
-    const requestDuration = requestEnd - requestStart;
-    
-    console.log('📥 Token exchange response received');
-    console.log('⏱️  Request duration:', requestDuration + 'ms');
-    console.log('📊 Response status:', tokenRes.status, tokenRes.statusText);
-    console.log('📋 Response headers:', Object.fromEntries(tokenRes.headers.entries()));
-
     if (!tokenRes.ok) {
       const errorText = await tokenRes.text();
-      console.error('❌ Token exchange failed');
-      console.error('📄 Error response:', errorText);
-      console.error('📊 Error status:', tokenRes.status);
-      
+      console.error('❌ Token exchange failed:', errorText);
       return {
         statusCode: 502,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          error: `Token exchange failed: ${errorText}`,
-          diagnostic: {
-            status: tokenRes.status,
-            duration: requestDuration,
-            endpoint: tokenUrl
-          }
+          error: `Token exchange failed: ${errorText}`
         })
       };
     }
 
     const tokens = await tokenRes.json();
-    console.log('🎟️  Token response parsed');
-    console.log('🔑 Token keys:', Object.keys(tokens));
-    console.log('📏 Token sizes:', Object.fromEntries(
-      Object.entries(tokens).map(([key, value]) => [
-        key, 
-        typeof value === 'string' ? value.length + ' chars' : typeof value
-      ])
-    ));
-
     const idToken = tokens.id_token;
 
     if (!idToken) {
       console.error('❌ No id_token in response');
-      console.error('📄 Available tokens:', Object.keys(tokens));
       return {
         statusCode: 502,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          error: 'No id_token returned from Okta',
-          diagnostic: 'Token response missing id_token field'
+          error: 'No id_token returned from Okta'
         })
       };
     }
 
-    console.log('🆔 ID token found, decoding...');
-
-    // Decode the ID token to get user info
+    // Decode the ID token
     const tokenParts = idToken.split('.');
-    console.log('🧩 Token parts:', tokenParts.length);
-    
     if (tokenParts.length !== 3) {
       console.error('❌ Invalid JWT format');
       return {
         statusCode: 502,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          error: 'Invalid JWT format',
-          diagnostic: `Expected 3 parts, got ${tokenParts.length}`
+          error: 'Invalid JWT format'
         })
       };
     }
@@ -226,21 +222,7 @@ exports.handler = async (event) => {
       Buffer.from(payloadPart, 'base64').toString('utf8')
     );
 
-    console.log('🔓 Token payload decoded');
-    console.log('👤 Payload keys:', Object.keys(idTokenPayload));
-    console.log('📋 Payload preview:', JSON.stringify({
-      sub: idTokenPayload.sub,
-      name: idTokenPayload.name,
-      email: idTokenPayload.email,
-      preferred_username: idTokenPayload.preferred_username,
-      title: idTokenPayload.title,
-      department: idTokenPayload.department,
-      mit_id: idTokenPayload.mit_id
-    }, null, 2));
-
     // Extract and format user metadata
-    console.log('🔄 Processing user metadata...');
-    
     const userMetadata = {
       name: idTokenPayload.name || (idTokenPayload.given_name && idTokenPayload.family_name ? 
         idTokenPayload.given_name + ' ' + idTokenPayload.family_name : ''),
@@ -256,13 +238,9 @@ exports.handler = async (event) => {
     };
 
     console.log('✅ User metadata processed');
-    console.log('👤 Final user data:', JSON.stringify({
-      ...userMetadata,
-      raw: '[HIDDEN - See above for full payload]'
-    }, null, 2));
+    console.log('🎉 === OIDC CALLBACK DIAGNOSTIC END ===');
 
-    // Prepare final response
-    const response = {
+    return {
       statusCode: 200,
       headers: { 
         'Content-Type': 'application/json',
@@ -273,24 +251,10 @@ exports.handler = async (event) => {
       body: JSON.stringify(userMetadata)
     };
 
-    console.log('📤 Sending successful response');
-    console.log('📊 Response size:', response.body.length + ' chars');
-    console.log('⏰ Total processing time:', (Date.now() - requestStart) + 'ms');
-    console.log('🎉 === OIDC CALLBACK DIAGNOSTIC END ===');
-
-    return response;
-
   } catch (err) {
     console.error('💥 === FATAL ERROR IN OIDC CALLBACK ===');
     console.error('❌ Error message:', err.message);
     console.error('📚 Error stack:', err.stack);
-    console.error('🔍 Error details:', {
-      name: err.name,
-      code: err.code,
-      type: typeof err,
-      hasCode: !!code,
-      hasVerifier: !!verifier
-    });
     
     return {
       statusCode: 500,
@@ -300,9 +264,8 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({ 
         error: 'Internal server error',
-        message: err.message,
-        diagnostic: 'Check function logs for detailed error information'
+        message: err.message
       })
     };
   }
-};
+}
