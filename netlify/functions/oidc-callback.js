@@ -10,6 +10,27 @@ console.log('OKTA_ISSUER:', process.env.OKTA_ISSUER);
 console.log('OKTA_REDIRECT_URI:', process.env.OKTA_REDIRECT_URI);
 console.log('=============================');
 
+// === ENVIRONMENT CHECK & FAIL-FAST ===
+const requiredEnv = ['OKTA_CLIENT_ID', 'OKTA_CLIENT_SECRET', 'OKTA_ISSUER', 'OKTA_REDIRECT_URI'];
+const missingEnv = requiredEnv.filter(key => !process.env[key]);
+
+console.log('🔑 Netlify Env Check Start');
+requiredEnv.forEach(key => {
+  console.log(`${key}:`, process.env[key] || '(MISSING)');
+});
+console.log('🔑 Netlify Env Check End');
+
+if (missingEnv.length > 0) {
+  console.error('❌ Missing required environment variables:', missingEnv.join(', '));
+  return {
+    statusCode: 500,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      error: 'Server misconfiguration',
+      missingVariables: missingEnv
+    })
+  };
+}
 
 exports.handler = async (event) => {
   // Check if this is a validation request (from chatbot) or OAuth callback
