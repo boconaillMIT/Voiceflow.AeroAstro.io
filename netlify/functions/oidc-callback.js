@@ -1,44 +1,34 @@
-// netlify/functions/oidc-callback.js - With validation support
+// netlify/functions/oidc-callback.js - Fixed routing logic
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
-// === ENVIRONMENT DIAGNOSTIC ===
-console.log('🔑 Netlify Env Check:');
-console.log('OKTA_CLIENT_ID:', process.env.OKTA_CLIENT_ID);
-console.log('OKTA_CLIENT_SECRET:', process.env.OKTA_CLIENT_SECRET);
-console.log('OKTA_ISSUER:', process.env.OKTA_ISSUER);
-console.log('OKTA_REDIRECT_URI:', process.env.OKTA_REDIRECT_URI);
-console.log('=============================');
-
-// === ENVIRONMENT CHECK & FAIL-FAST ===
-const requiredEnv = ['OKTA_CLIENT_ID', 'OKTA_CLIENT_SECRET', 'OKTA_ISSUER', 'OKTA_REDIRECT_URI'];
-const missingEnv = requiredEnv.filter(key => !process.env[key]);
-
-console.log('🔑 Netlify Env Check Start');
-requiredEnv.forEach(key => {
-  console.log(`${key}:`, process.env[key] || '(MISSING)');
-});
-console.log('🔑 Netlify Env Check End');
-
-if (missingEnv.length > 0) {
-  console.error('❌ Missing required environment variables:', missingEnv.join(', '));
-  return {
-    statusCode: 500,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      error: 'Server misconfiguration',
-      missingVariables: missingEnv
-    })
-  };
-}
-
 exports.handler = async (event) => {
-  // Check if this is a validation request (from chatbot) or OAuth callback
-  if (event.path?.includes('validate-user') || 
-      (event.body && JSON.parse(event.body || '{}').kerberosId)) {
+  console.log('🔍 Request received:', event.httpMethod, event.path);
+  
+  // FIXED: More specific check for validation vs OAuth callback
+  // Check the actual request body content, not just existence
+  let isValidationRequest = false;
+  
+  if (event.httpMethod === 'POST' && event.body) {
+    try {
+      const body = JSON.parse(event.body);
+      console.log('📦 Request body keys:', Object.keys(body));
+      // Validation requests have kerberosId, OAuth callbacks have code/verifier
+      isValidationRequest = body.kerberosId !== undefined;
+      console.log('✅ Is validation request?', isValidationRequest);
+    } catch (e) {
+      // If body parsing fails, it's not a valid request of either type
+      console.error('Failed to parse request body:', e);
+    }
+  }
+  
+  // Also check if the path explicitly includes validate-user
+  if (event.path?.includes('validate-user') || isValidationRequest) {
+    console.log('📍 Routing to validation handler');
     return handleValidation(event);
   }
   
+  console.log('📍 Routing to OAuth callback handler');
   // Otherwise, handle OAuth callback
   return handleOAuthCallback(event);
 };
@@ -59,9 +49,8 @@ async function handleValidation(event) {
     console.log('🔐 Validating user:', kerberosId);
     
     // Call Make.com from server-side (no duplication)
-//    const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
-  const response = await fetch('https://hook.us2.make.com/9c74dhseqfvnj6488gtx8mg4ho8hek3y', {
-    method: 'POST',
+    const response = await fetch('https://hook.us2.make.com/9c74dhseqfvnj6488gtx8mg4ho8hek3y', {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -183,8 +172,6 @@ async function handleOAuthCallback(event) {
     const issuer = process.env.OKTA_ISSUER;
     const redirectUri = process.env.OKTA_REDIRECT_URI;
 
-console.log('🔑 clientId:', clientId); // Should print 0oau0gmdr7C5GxVcqG97
-    
     // Prepare token exchange request
     const bodyParams = new URLSearchParams({
       grant_type: 'authorization_code',
