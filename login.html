@@ -77,7 +77,7 @@
         throw error;
       }
     }
-
+    OKTA_ISSUER=https://mitprod.okta.com/oauth2
     // Start OAuth login flow
     async function startLogin() {
       try {
@@ -122,8 +122,8 @@
           code_challenge: challenge,
         });
 
-        const authUrl = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;
 
+      const authUrl = `https://mitprod.okta.com/oauth2/v1/authorize?${params.toString()}`;
         // Update status and redirect
         document.getElementById('status').textContent = 'Redirecting to MIT authentication...';
         
