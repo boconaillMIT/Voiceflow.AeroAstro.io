@@ -2,6 +2,15 @@
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
+// === ENVIRONMENT DIAGNOSTIC ===
+console.log('🔑 Netlify Env Check:');
+console.log('OKTA_CLIENT_ID:', process.env.OKTA_CLIENT_ID);
+console.log('OKTA_CLIENT_SECRET:', process.env.OKTA_CLIENT_SECRET);
+console.log('OKTA_ISSUER:', process.env.OKTA_ISSUER);
+console.log('OKTA_REDIRECT_URI:', process.env.OKTA_REDIRECT_URI);
+console.log('=============================');
+
+
 exports.handler = async (event) => {
   // Check if this is a validation request (from chatbot) or OAuth callback
   if (event.path?.includes('validate-user') || 
