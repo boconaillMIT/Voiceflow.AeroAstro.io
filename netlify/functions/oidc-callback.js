@@ -1,25 +1,11 @@
-// netlify/functions/oidc-callback.js - Fixed routing logic
+// netlify/functions/oidc-callback.js - With validation support
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 exports.handler = async (event) => {
-  // FIXED: More specific check for validation vs OAuth callback
-  // Check the actual request body content, not just existence
-  let isValidationRequest = false;
-  
-  if (event.httpMethod === 'POST' && event.body) {
-    try {
-      const body = JSON.parse(event.body);
-      // Validation requests have kerberosId, OAuth callbacks have code/verifier
-      isValidationRequest = body.kerberosId !== undefined;
-    } catch (e) {
-      // If body parsing fails, it's not a valid request of either type
-      console.error('Failed to parse request body');
-    }
-  }
-  
-  // Also check if the path explicitly includes validate-user
-  if (event.path?.includes('validate-user') || isValidationRequest) {
+  // Check if this is a validation request (from chatbot) or OAuth callback
+  if (event.path?.includes('validate-user') || 
+      (event.body && JSON.parse(event.body || '{}').kerberosId)) {
     return handleValidation(event);
   }
   
@@ -43,8 +29,9 @@ async function handleValidation(event) {
     console.log('🔐 Validating user:', kerberosId);
     
     // Call Make.com from server-side (no duplication)
-    const response = await fetch('https://hook.us2.make.com/9c74dhseqfvnj6488gtx8mg4ho8hek3y', {
-      method: 'POST',
+//    const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+  const response = await fetch('https://hook.us2.make.com/9c74dhseqfvnj6488gtx8mg4ho8hek3y', {
+    method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
