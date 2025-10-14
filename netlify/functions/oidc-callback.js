@@ -153,6 +153,8 @@ async function handleOAuthCallback(event) {
     const issuer = process.env.OKTA_ISSUER;
     const redirectUri = process.env.OKTA_REDIRECT_URI;
 
+console.log('🔑 clientId:', clientId); // Should print 0oau0gmdr7C5GxVcqG97
+    
     // Prepare token exchange request
     const bodyParams = new URLSearchParams({
       grant_type: 'authorization_code',
