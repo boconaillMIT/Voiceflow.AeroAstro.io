@@ -560,7 +560,7 @@
             if (!confirm('Are you sure you want to approve this submission and upload it to the Knowledge Base?')) {
                 return;
             }
-
+        
             showLoading(true);
             try {
                 // Call Make.com webhook to handle approval
@@ -574,11 +574,14 @@
                         reviewNotes: ''
                     })
                 });
-
+        
                 if (!response.ok) {
-                    throw new Error('Approval webhook failed');
+                    throw new Error('Approval webhook failed: ' + response.status);
                 }
-
+        
+                // Don't try to parse response as JSON - Make.com returns "Accepted"
+                console.log('Approval webhook called successfully');
+                
                 showMessage('Submission approved! Content is being uploaded to the Knowledge Base.', 'success');
                 closeModal();
                 setTimeout(() => loadSubmissions(), 1000);
@@ -601,13 +604,13 @@
         }
 
         // Confirm rejection
-        async function confirmReject() {
+       async function confirmReject() {
             const notes = document.getElementById('rejectNotes').value.trim();
             
             if (!confirm('Are you sure you want to reject this submission?')) {
                 return;
             }
-
+        
             showLoading(true);
             try {
                 // Call Make.com webhook to handle rejection
@@ -621,11 +624,14 @@
                         reviewNotes: notes
                     })
                 });
-
+        
                 if (!response.ok) {
-                    throw new Error('Rejection webhook failed');
+                    throw new Error('Rejection webhook failed: ' + response.status);
                 }
-
+        
+                // Don't try to parse response as JSON - Make.com returns "Accepted"
+                console.log('Rejection webhook called successfully');
+                
                 showMessage('Submission rejected. Sender has been notified.', 'success');
                 closeModal();
                 setTimeout(() => loadSubmissions(), 1000);
