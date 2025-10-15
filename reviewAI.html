@@ -616,44 +616,6 @@ function displaySubmissionDetails(sub) {
         </div>
     `;
 }
-// Display submissions in table
-            function displaySubmissions(submissions) {
-                const tbody = document.getElementById('submissionsTableBody');
-                tbody.innerHTML = '';
-            
-                if (submissions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No submissions found</td></tr>';
-                    return;
-                }
-            
-                submissions.forEach(sub => {
-                    const row = tbody.insertRow();
-                    const date = new Date(sub[10]?.value);
-                    
-                    let preview = 'No content';
-                    try {
-                        if (sub[9]?.value) {
-                            preview = atob(sub[9].value).substring(0, 100) + '...';
-                        }
-                    } catch (e) {
-                        preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';
-                    }
-                    
-                    const status = sub[11]?.value || 'Pending';
-                    
-                    row.innerHTML = `
-                        <td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td>
-                        <td>${sub[6]?.value || 'Unknown'}</td>
-                        <td>${sub[8]?.value || 'No Subject'}</td>
-                        <td class="preview">${preview}</td>
-                        <td>${sub[12]?.value ? `${sub[13]?.value || 0} file(s)` : 'None'}</td>
-                        <td><span class="badge badge-${status.toLowerCase()}">${status}</span></td>
-                        <td>
-                            <button class="btn btn-small" onclick="viewSubmission(${sub[3].value})">Review</button>
-                        </td>
-                    `;
-                });
-            }
 
         // View submission details
         async function viewSubmission(recordId) {
