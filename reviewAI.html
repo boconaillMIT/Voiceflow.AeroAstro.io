@@ -477,7 +477,15 @@ async function checkAuth() {
             submissions.forEach(sub => {
                 const row = tbody.insertRow();
                 const date = new Date(sub[10]?.value);
-                const preview = sub[9]?.value ? atob(sub[9].value).substring(0, 100) + '...' : 'No content';
+                let preview = 'No content';
+                try {
+                    if (sub[9]?.value) {
+                        preview = atob(sub[9].value).substring(0, 100) + '...';
+                    }
+                } catch (e) {
+                    // If base64 decode fails, show first 100 chars of raw value
+                    preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';
+                }
                 const status = sub[11]?.value || 'Pending';
                 
                 row.innerHTML = `
@@ -521,7 +529,16 @@ async function checkAuth() {
 
         // Display submission details in modal
         function displaySubmissionDetails(sub) {
-            const emailBody = sub[9]?.value ? atob(sub[9].value) : 'No email body';
+            let emailBody = 'No email body';
+            try {
+                if (sub[9]?.value) {
+                    emailBody = atob(sub[9].value);
+                }
+            } catch (e) {
+                // If base64 decode fails, show the raw value
+                emailBody = sub[9]?.value || 'No email body';
+                console.warn('Failed to decode base64 email body:', e);
+            }
             const date = new Date(sub[10]?.value);
             const attachmentInfo = sub[14]?.value ? JSON.parse(sub[14].value) : [];
 
