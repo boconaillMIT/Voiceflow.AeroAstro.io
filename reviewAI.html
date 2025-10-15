@@ -617,18 +617,18 @@ function displaySubmissionDetails(sub) {
     }
 
     document.getElementById('modalBody').innerHTML = `
-        <div class="detail-grid">
+        <div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
             <div class="detail-item">
                 <label>From:</label>
-                <div class="value">${sub[6]?.value || 'Unknown'}</div>
+                <div class="value" style="font-size: 13px;">${sub[6]?.value || 'Unknown'}</div>
             </div>
             <div class="detail-item">
-                <label>Sender Kerberos:</label>
-                <div class="value">${sub[7]?.value || 'N/A'}</div>
+                <label>Kerberos:</label>
+                <div class="value" style="font-size: 13px;">${sub[7]?.value || 'N/A'}</div>
             </div>
             <div class="detail-item">
-                <label>Date Received:</label>
-                <div class="value">${date.toLocaleString()}</div>
+                <label>Date:</label>
+                <div class="value" style="font-size: 13px;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
             </div>
             <div class="detail-item">
                 <label>Status:</label>
@@ -636,23 +636,23 @@ function displaySubmissionDetails(sub) {
             </div>
         </div>
         
-        <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px; margin-bottom: 15px;">
-            <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label>
-            <div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div>
-        </div>
-        
-        <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px; margin-bottom: 15px;">
-            <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label>
-            <div style="color: #34495e; font-size: 14px;">${attachmentsHtml}</div>
+        <div class="detail-grid" style="grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;">
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+                <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label>
+                <div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div>
+            </div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+                <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label>
+                <div style="color: #34495e; font-size: 13px;">${attachmentsHtml}</div>
+            </div>
         </div>
         
         <div class="email-body-container">
-            <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 10px; font-size: 14px;">Email Body:</label>
-            <div class="email-body">${emailBody}</div>
+            <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 8px; font-size: 13px;">Email Body:</label>
+            <div class="email-body" style="max-height: 200px;">${emailBody}</div>
         </div>
     `;
 }
-
         // View submission details
         async function viewSubmission(recordId) {
             showLoading(true);
