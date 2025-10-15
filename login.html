@@ -1,169 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AeroAstro Bot - Login</title>
+  <meta charset="UTF-8" />
+  <title>AeroAstro Chatbot Login</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .container {
-      background: white;
-      padding: 40px;
-      border-radius: 10px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      max-width: 400px;
-      width: 90%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 600px;
+      margin: 100px auto;
+      padding: 20px;
+      background-color: #f8f9fa;
       text-align: center;
     }
-    h1 {
+    .login-container {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h2 {
       color: #333;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
+      font-size: 28px;
+      font-weight: 600;
     }
-    .warning {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      padding: 15px;
-      border-radius: 5px;
-      margin: 20px 0;
-      color: #856404;
-    }
-    .warning strong {
-      display: block;
-      margin-bottom: 5px;
-    }
-    .form-group {
-      margin: 20px 0;
-      text-align: left;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-      color: #555;
-      font-weight: bold;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #ddd;
-      border-radius: 5px;
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
       font-size: 16px;
-      box-sizing: border-box;
     }
-    input:focus {
-      outline: none;
-      border-color: #667eea;
+    .loading {
+      color: #667eea;
+      font-size: 18px;
+      margin-top: 20px;
     }
-    button {
-      width: 100%;
-      padding: 15px;
-      background: #667eea;
-      color: white;
-      border: none;
-      border-radius: 5px;
+    .error-message {
+      color: #e74c3c;
       font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover {
-      background: #5568d3;
-    }
-    .status {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 5px;
-      display: none;
-    }
-    .status.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🚀 AeroAstro Bot</h1>
-    <p>MIT AeroAstro Department Chatbot</p>
-    
-    <div class="warning">
-      <strong>⚠️ Temporary Login</strong>
-      MIT authentication is temporarily unavailable. Please enter your information to continue with guest access.
-    </div>
-
-    <form id="loginForm">
-      <div class="form-group">
-        <label for="kerberos">MIT Kerberos ID:</label>
-        <input type="text" id="kerberos" placeholder="your_kerberos" required>
-      </div>
-      
-      <div class="form-group">
-        <label for="name">Full Name:</label>
-        <input type="text" id="name" placeholder="Your Name" required>
-      </div>
-      
-      <div class="form-group">
-        <label for="email">MIT Email:</label>
-        <input type="email" id="email" placeholder="you@mit.edu" required>
-      </div>
-
-      <button type="submit">Continue to Chatbot</button>
-    </form>
-
-    <div id="status" class="status"></div>
+  <div class="login-container">
+    <h2>AeroAstro Chatbot</h2>
+    <p class="subtitle">Secure login via MIT Touchstone</p>
+    <div class="loading" id="status">Initializing login...</div>
   </div>
 
   <script>
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const kerberos = document.getElementById('kerberos').value.trim();
-      const name = document.getElementById('name').value.trim();
-      const email = document.getElementById('email').value.trim();
-      
-      // Create temporary user data
-      const userData = {
-        kerberos: kerberos,
-        name: name,
-        email: email,
-        firstName: name.split(' ')[0] || name,
-        lastName: name.split(' ').slice(1).join(' ') || '',
-        department: 'AeroAstro',
-        loginTime: new Date().toISOString(),
-        authenticated: true,
-        temporaryAuth: true  // Flag to indicate this is temporary
-      };
-      
-      // Store in localStorage
-      localStorage.setItem('user_metadata', JSON.stringify(userData));
-      
-      // Show success message
-      const statusDiv = document.getElementById('status');
-      statusDiv.textContent = '✓ Redirecting to chatbot...';
-      statusDiv.className = 'status success';
-      statusDiv.style.display = 'block';
-      
-      // Redirect to chatbot after brief delay
-      setTimeout(() => {
-        window.location.href = 'chatbot.html';
-      }, 1000);
-    });
-
-    // Auto-fill email if kerberos is entered
-    document.getElementById('kerberos').addEventListener('input', function(e) {
-      const kerberos = e.target.value.trim();
-      if (kerberos && !document.getElementById('email').value) {
-        document.getElementById('email').value = kerberos + '@mit.edu';
+    // Base64URL encoding helper
+    function base64UrlEncode(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
       }
-    });
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    // Generate PKCE verifier
+    function generateVerifier() {
+      const array = new Uint8Array(56);
+      crypto.getRandomValues(array);
+      return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    // Generate PKCE challenge
+    async function generateChallenge(verifier) {
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(verifier);
+        const digest = await crypto.subtle.digest('SHA-256', data);
+        return base64UrlEncode(digest);
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // Start OAuth login flow
+    async function startLogin() {
+      try {
+        // Check if user already has OAuth data
+        const existingData = localStorage.getItem('user_metadata');
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (existingData && !urlParams.get('force_login')) {
+          document.getElementById('status').textContent = 'Already authenticated - redirecting...';
+          setTimeout(() => {
+            window.location.href = 'chatbot.html';
+          }, 2000);
+          return;
+        }
+
+        // Generate PKCE parameters
+        const verifier = generateVerifier();
+        const challenge = await generateChallenge(verifier);
+        const state = Math.random().toString(36).substring(2);
+
+        // Store for callback verification
+        localStorage.setItem('pkce_verifier', verifier);
+        localStorage.setItem('pkce_state', state);
+
+        // Verify storage
+        const storedVerifier = localStorage.getItem('pkce_verifier');
+        const storedState = localStorage.getItem('pkce_state');
+        
+        if (!storedVerifier || !storedState) {
+          throw new Error('Failed to store authentication data');
+        }
+
+        // Build OAuth authorization URL
+        const params = new URLSearchParams({
+          client_id: '0oau0gmdr7C5GxVcq697',
+          response_type: 'code',
+          scope: 'openid profile email',
+          redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',
+          state: state,
+          nonce: Math.random().toString(36).slice(2),
+          code_challenge_method: 'S256',
+          code_challenge: challenge,
+        });
+
+
+      const authUrl = `https://mitprod.okta.com/oauth2/v1/authorize?${params.toString()}`;
+        // Update status and redirect
+        document.getElementById('status').textContent = 'Redirecting to MIT authentication...';
+        
+        setTimeout(() => {
+          window.location.href = authUrl;
+        }, 2000);
+
+      } catch (error) {
+        document.getElementById('status').textContent = 'Login failed. Please refresh the page to try again.';
+        document.getElementById('status').className = 'error-message';
+        console.error('Login error:', error);
+      }
+    }
+
+    // Start the login process
+    startLogin();
   </script>
 </body>
 </html>
