@@ -162,14 +162,16 @@
         }
         .modal-content {
             background-color: #fefefe;
-            margin: 5% auto;
+            margin: 2% auto;
             padding: 20px;
             border: 1px solid #888;
             border-radius: 8px;
-            width: 80%;
-            max-width: 800px;
-            max-height: 80vh;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
         .modal-header {
             border-bottom: 2px solid #3498db;
@@ -206,6 +208,94 @@
         .detail-row .value {
             color: #34495e;
         }
+        .detail-row {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+/* ADD THESE NEW STYLES: */
+
+.detail-row-inline {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.detail-row-inline > div {
+    flex: 1;
+}
+
+.detail-row-inline label {
+    font-weight: bold;
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 3px;
+    font-size: 12px;
+}
+
+.detail-row-inline .value {
+    color: #34495e;
+    font-size: 14px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.detail-grid .detail-item {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.detail-grid .detail-item label {
+    font-weight: bold;
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.detail-grid .detail-item .value {
+    color: #34495e;
+    font-size: 14px;
+}
+
+.email-body-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.email-body {
+    background-color: white;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 4px;
+    flex: 1;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 12px;
+    max-height: 300px;
+}
+
+.actions-section {
+    border-top: 2px solid #ddd;
+    padding-top: 15px;
+    margin-top: 15px;
+    text-align: center;
+    flex-shrink: 0;
+}
         .email-body {
             background-color: white;
             border: 1px solid #ddd;
@@ -465,42 +555,67 @@ async function checkAuth() {
         }
 
         // Display submissions in table
-        function displaySubmissions(submissions) {
-            const tbody = document.getElementById('submissionsTableBody');
-            tbody.innerHTML = '';
-
-            if (submissions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No submissions found</td></tr>';
-                return;
-            }
-
-            submissions.forEach(sub => {
-                const row = tbody.insertRow();
-                const date = new Date(sub[10]?.value);
-                let preview = 'No content';
-                try {
-                    if (sub[9]?.value) {
-                        preview = atob(sub[9].value).substring(0, 100) + '...';
-                    }
-                } catch (e) {
-                    // If base64 decode fails, show first 100 chars of raw value
-                    preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';
-                }
-                const status = sub[11]?.value || 'Pending';
-                
-                row.innerHTML = `
-                    <td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td>
-                    <td>${sub[6]?.value || 'Unknown'}</td>
-                    <td>${sub[8]?.value || 'No Subject'}</td>
-                    <td class="preview">${preview}</td>
-                    <td>${sub[12]?.value ? `${sub[13]?.value || 0} file(s)` : 'None'}</td>
-                    <td><span class="badge badge-${status.toLowerCase()}">${status}</span></td>
-                    <td>
-                        <button class="btn btn-small" onclick="viewSubmission(${sub[3].value})">Review</button>
-                    </td>
-                `;
-            });
+// Display submission details in modal
+function displaySubmissionDetails(sub) {
+    let emailBody = 'No email body';
+    try {
+        if (sub[9]?.value) {
+            emailBody = atob(sub[9].value);
         }
+    } catch (e) {
+        emailBody = sub[9]?.value || 'No email body';
+        console.warn('Failed to decode base64 email body:', e);
+    }
+    
+    const date = new Date(sub[10]?.value);
+    const attachmentInfo = sub[14]?.value ? JSON.parse(sub[14].value) : [];
+
+    let attachmentsHtml = '<span style="color: #7f8c8d;">None</span>';
+    if (sub[12]?.value && attachmentInfo.length > 0) {
+        attachmentsHtml = '<ul class="attachment-list">';
+        attachmentInfo.forEach(att => {
+            attachmentsHtml += `<li>📎 <a href="${att.driveUrl}" target="_blank">${att.fileName}</a></li>`;
+        });
+        attachmentsHtml += '</ul>';
+    }
+
+    document.getElementById('modalBody').innerHTML = `
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label>From:</label>
+                <div class="value">${sub[6]?.value || 'Unknown'}</div>
+            </div>
+            <div class="detail-item">
+                <label>Sender Kerberos:</label>
+                <div class="value">${sub[7]?.value || 'N/A'}</div>
+            </div>
+            <div class="detail-item">
+                <label>Date Received:</label>
+                <div class="value">${date.toLocaleString()}</div>
+            </div>
+            <div class="detail-item">
+                <label>Status:</label>
+                <div class="value"><span class="badge badge-${(sub[11]?.value || 'Pending').toLowerCase()}">${sub[11]?.value || 'Pending'}</span></div>
+            </div>
+        </div>
+        
+        <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px; margin-bottom: 15px;">
+            <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label>
+            <div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div>
+        </div>
+        
+        <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px; margin-bottom: 15px;">
+            <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label>
+            <div style="color: #34495e; font-size: 14px;">${attachmentsHtml}</div>
+        </div>
+        
+        <div class="email-body-container">
+            <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 10px; font-size: 14px;">Email Body:</label>
+            <div class="email-body">${emailBody}</div>
+        </div>
+    `;
+}
+
 
         // View submission details
         async function viewSubmission(recordId) {
