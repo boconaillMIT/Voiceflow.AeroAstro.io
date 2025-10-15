@@ -361,44 +361,55 @@
         let currentSubmission = null;
         let currentUser = null;
 
-        // Authentication
-        async function checkAuth() {
-            try {
-                const storedData = localStorage.getItem('user_metadata');
-                if (!storedData) {
-                    window.location.href = 'admin.html';
-                    return false;
-                }
-                
-                const userData = JSON.parse(storedData);
-                currentUser = userData.kerberos;
-                
-                // Verify admin status
-                const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        kerberosId: userData.kerberos,
-                        department: userData.department
-                    })
-                });
-                
-                const validation = await response.json();
-                const isAdmin = validation.isAdmin === true || validation.isAdmin === "true";
-                
-                if (!isAdmin) {
-                    showMessage('Access denied. Administrator privileges required.', 'error');
-                    setTimeout(() => window.location.href = 'admin.html', 2000);
-                    return false;
-                }
-                
-                return true;
-            } catch (error) {
-                console.error('Auth error:', error);
-                window.location.href = 'admin.html';
-                return false;
-            }
+
+// Authentication **TEMP**
+async function checkAuth() {
+    try {
+        const storedData = localStorage.getItem('user_metadata');
+        if (!storedData) {
+            console.log('No user data found');
+            // For testing, set a default user
+            currentUser = 'oconaill';
+            return true;
         }
+        
+        const userData = JSON.parse(storedData);
+        currentUser = userData.kerberos || 'oconaill';
+        
+        console.log('User authenticated:', currentUser);
+        
+        // TEMPORARILY SKIP ADMIN VALIDATION FOR TESTING
+        return true;
+        
+        /* Original validation code - commented out for testing
+        // Verify admin status
+        const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                kerberosId: userData.kerberos,
+                department: userData.department
+            })
+        });
+        
+        const validation = await response.json();
+        const isAdmin = validation.isAdmin === true || validation.isAdmin === "true";
+        
+        if (!isAdmin) {
+            showMessage('Access denied. Administrator privileges required.', 'error');
+            setTimeout(() => window.location.href = 'admin.html', 2000);
+            return false;
+        }
+        
+        return true;
+        */
+    } catch (error) {
+        console.error('Auth error:', error);
+        // For testing, allow access anyway
+        currentUser = 'oconaill';
+        return true;
+    }
+}
 
         // QuickBase API
         async function makeQuickBaseRequest(method, endpoint, body) {
