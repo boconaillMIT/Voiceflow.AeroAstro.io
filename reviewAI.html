@@ -678,61 +678,8 @@ function displaySubmissionDetails(sub) {
             }
         }
 
-        // Display submission details in modal
-        function displaySubmissionDetails(sub) {
-            let emailBody = 'No email body';
-            try {
-                if (sub[9]?.value) {
-                    emailBody = atob(sub[9].value);
-                }
-            } catch (e) {
-                // If base64 decode fails, show the raw value
-                emailBody = sub[9]?.value || 'No email body';
-                console.warn('Failed to decode base64 email body:', e);
-            }
-            const date = new Date(sub[10]?.value);
-            const attachmentInfo = sub[14]?.value ? JSON.parse(sub[14].value) : [];
 
-            let attachmentsHtml = 'None';
-            if (sub[12]?.value && attachmentInfo.length > 0) {
-                attachmentsHtml = '<ul class="attachment-list">';
-                attachmentInfo.forEach(att => {
-                    attachmentsHtml += `<li>📎 <a href="${att.driveUrl}" target="_blank">${att.fileName}</a></li>`;
-                });
-                attachmentsHtml += '</ul>';
-            }
 
-            document.getElementById('modalBody').innerHTML = `
-                <div class="detail-row">
-                    <label>From:</label>
-                    <div class="value">${sub[6]?.value || 'Unknown'}</div>
-                </div>
-                <div class="detail-row">
-                    <label>Sender Kerberos:</label>
-                    <div class="value">${sub[7]?.value || 'N/A'}</div>
-                </div>
-                <div class="detail-row">
-                    <label>Subject:</label>
-                    <div class="value">${sub[8]?.value || 'No Subject'}</div>
-                </div>
-                <div class="detail-row">
-                    <label>Date Received:</label>
-                    <div class="value">${date.toLocaleString()}</div>
-                </div>
-                <div class="detail-row">
-                    <label>Status:</label>
-                    <div class="value"><span class="badge badge-${(sub[11]?.value || 'Pending').toLowerCase()}">${sub[11]?.value || 'Pending'}</span></div>
-                </div>
-                <div class="detail-row">
-                    <label>Attachments:</label>
-                    <div class="value">${attachmentsHtml}</div>
-                </div>
-                <div class="detail-row">
-                    <label>Email Body:</label>
-                    <div class="email-body">${emailBody}</div>
-                </div>
-            `;
-        }
 
         // Approve submission
         async function approveSubmission() {
