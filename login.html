@@ -116,7 +116,7 @@
         client_id: '0oau0gmdr7C5GxVcq697',
         response_type: 'code',
         scope: 'openid profile email',
-        redirect_uri: 'https://aeroastrovfbot.netlify.app/.netlify/functions/oidc-callback', 
+        redirect_uri: 'https://aeroastrovfbot.netlify.app/callback.html',  
         state: state,
         nonce: Math.random().toString(36).slice(2),
         code_challenge_method: 'S256',
@@ -124,7 +124,7 @@
       });
 
 
-      const authUrl = `https://mitprod.okta.com/oauth2/v1/authorize?${params.toString()}`;
+const authUrl = `https://mitprod.okta.com/oauth2/default/v1/authorize?${params.toString()}`;  
         // Update status and redirect
         document.getElementById('status').textContent = 'Redirecting to MIT authentication...';
         
