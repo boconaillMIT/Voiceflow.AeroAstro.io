@@ -1,424 +1,150 @@
-<script>
-    const QUICKBASE_CONFIG = {
-        realm: 'mit.quickbase.com',
-        userToken: 'b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h',
-        appId: 'buuhxhtmv',
-        pendingTableId: 'bvhhfa58i',
-        userTableId: 'bve87f9um'
-    };
-
-    const MAKECOM_WEBHOOK = 'https://hook.us2.make.com/1hp1aj8tqsxkveen4l5ig8b3117r35sw';
-    let currentSubmission = null;
-    let currentUser = null;
-
-    async function checkAuth() {
-        try {
-            const storedData = localStorage.getItem('user_metadata');
-            if (!storedData) {
-                console.log('No user data found');
-                currentUser = 'oconaill';
-                return true;
-            }
-            const userData = JSON.parse(storedData);
-            currentUser = userData.kerberos || 'oconaill';
-            console.log('User authenticated:', currentUser);
-            return true;
-        } catch (error) {
-            console.error('Auth error:', error);
-            currentUser = 'oconaill';
-            return true;
-        }
-    }
-
-    async function makeQuickBaseRequest(method, endpoint, body) {
-        const url = `https://api.quickbase.com/v1/${endpoint}`;
-        const headers = {
-            'QB-Realm-Hostname': QUICKBASE_CONFIG.realm,
-            'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`,
-            'Content-Type': 'application/json'
-        };
-        const response = await fetch(url, {
-            method: method,
-            headers: headers,
-            body: body ? JSON.stringify(body) : null
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`QuickBase error: ${response.status} - ${errorText}`);
-        }
-        return await response.json();
-    }
-
-    async function loadSubmissions() {
-        showLoading(true);
-        try {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const queryBody = {
-                from: QUICKBASE_CONFIG.pendingTableId,
-                select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                options: {
-                    orderBy: [{ fieldId: 10, order: 'DESC' }]
-                }
-            };
-            if (statusFilter !== 'All') {
-                queryBody.where = `{11.EX.'${statusFilter}'}`;
-            }
-            const response = await makeQuickBaseRequest('POST', 'records/query', queryBody);
-            displaySubmissions(response.data);
-            showMessage(`Loaded ${response.data.length} submission(s)`, 'success');
-        } catch (error) {
-            console.error('Load error:', error);
-            showMessage('Error loading submissions: ' + error.message, 'error');
-        } finally {
-            showLoading(false);
-        }
-    }
-
-    function displaySubmissions(submissions) {
-        const tbody = document.getElementById('submissionsTableBody');
-        tbody.innerHTML = '';
-        if (submissions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No submissions found</td></tr>';
-            return;
-        }
-        submissions.forEach(sub => {
-            const row = tbody.insertRow();
-            const date = new Date(sub[10]?.value);
-            let preview = 'No content';
-            try {
-                if (sub[9]?.value) {
-                    preview = atob(sub[9].value).substring(0, 100) + '...';
-                }
-            } catch (e) {
-                preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';
-            }
-            const status = sub[11]?.value || 'Pending';
-            const recordId = sub[3].value;
-            const isDisabled = status !== 'Pending' ? 'disabled' : '';
-            row.innerHTML = `
-                <td class="checkbox-col"><input type="checkbox" class="submission-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}></td>
-                <td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td>
-                <td>${sub[6]?.value || 'Unknown'}</td>
-                <td>${sub[8]?.value || 'No Subject'}</td>
-                <td class="preview">${preview}</td>
-                <td>${sub[12]?.value ? `${sub[13]?.value || 0} file(s)` : 'None'}</td>
-                <td><span class="badge badge-${status.toLowerCase()}">${status}</span></td>
-                <td><button class="btn btn-small" onclick="viewSubmission(${recordId})">Review</button></td>
-            `;
-        });
-    }
-
-    async function viewSubmission(recordId) {
-        showLoading(true);
-        try {
-            const response = await makeQuickBaseRequest('POST', 'records/query', {
-                from: QUICKBASE_CONFIG.pendingTableId,
-                select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                where: `{3.EX.${recordId}}`
-            });
-            if (response.data.length === 0) {
-                throw new Error('Submission not found');
-            }
-            currentSubmission = response.data[0];
-            displaySubmissionDetails(currentSubmission);
-            document.getElementById('reviewModal').style.display = 'block';
-        } catch (error) {
-            console.error('View error:', error);
-            showMessage('Error loading submission: ' + error.message, 'error');
-        } finally {
-            showLoading(false);
-        }
-    }
-
-    function displaySubmissionDetails(sub) {
-        let emailBody = 'No email body';
-        try {
-            if (sub[9]?.value) {
-                emailBody = atob(sub[9].value);
-            }
-        } catch (e) {
-            emailBody = sub[9]?.value || 'No email body';
-            console.warn('Failed to decode base64 email body:', e);
-        }
-        
-        const date = new Date(sub[10]?.value);
-        
-        // Handle attachment info with error handling
-        let attachmentInfo = [];
-        let attachmentsHtml = '<span style="color: #7f8c8d;">None</span>';
-        
-        if (sub[14]?.value && sub[14].value !== "27" && sub[14].value !== "[]") {
-            try {
-                attachmentInfo = JSON.parse(sub[14].value);
-                if (attachmentInfo.length > 0) {
-                    attachmentsHtml = '<ul class="attachment-list">';
-                    attachmentInfo.forEach(att => {
-                        attachmentsHtml += `<li>📎 <a href="${att.driveUrl}" target="_blank">${att.fileName}</a></li>`;
-                    });
-                    attachmentsHtml += '</ul>';
-                }
-            } catch (e) {
-                console.warn('Could not parse attachment info:', e);
-                if (sub[12]?.value && sub[13]?.value > 0) {
-                    attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;
-                }
-            }
-        } else if (sub[12]?.value && sub[13]?.value > 0) {
-            attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;
-        }
-        
-        document.getElementById('modalBody').innerHTML = `
-            <div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                <div class="detail-item">
-                    <label>From:</label>
-                    <div class="value" style="font-size: 13px;">${sub[6]?.value || 'Unknown'}</div>
-                </div>
-                <div class="detail-item">
-                    <label>Kerberos:</label>
-                    <div class="value" style="font-size: 13px;">${sub[7]?.value || 'N/A'}</div>
-                </div>
-                <div class="detail-item">
-                    <label>Date:</label>
-                    <div class="value" style="font-size: 13px;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                </div>
-                <div class="detail-item">
-                    <label>Status:</label>
-                    <div class="value"><span class="badge badge-${(sub[11]?.value || 'Pending').toLowerCase()}">${sub[11]?.value || 'Pending'}</span></div>
-                </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review AI KB Submissions - AeroAstro Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { border-bottom: 2px solid #e74c3c; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h1 { color: #c0392b; margin: 0; }
+        .back-link { display: inline-block; margin-bottom: 10px; color: #3498db; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .status-message { padding: 10px; border-radius: 4px; margin: 10px 0; display: none; }
+        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { display: none; text-align: center; padding: 20px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .submissions-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .submissions-table th, .submissions-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .submissions-table th { background-color: #3498db; color: white; position: sticky; top: 0; }
+        .submissions-table tr:nth-child(even) { background-color: #f2f2f2; }
+        .submissions-table tr:hover { background-color: #e8f4f8; }
+        .btn { background-color: #3498db; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 2px; text-decoration: none; display: inline-block; }
+        .btn:hover { background-color: #2980b9; }
+        .btn-success { background-color: #27ae60; }
+        .btn-success:hover { background-color: #229954; }
+        .btn-danger { background-color: #e74c3c; }
+        .btn-danger:hover { background-color: #c0392b; }
+        .btn-small { padding: 4px 8px; font-size: 12px; }
+        .preview { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+        .badge-pending { background-color: #f39c12; color: white; }
+        .badge-approved { background-color: #27ae60; color: white; }
+        .badge-rejected { background-color: #e74c3c; color: white; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 2% auto; padding: 20px; border: 1px solid #888; border-radius: 8px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .modal-header { border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; color: #2c3e50; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover, .close:focus { color: black; }
+        .detail-row { margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; }
+        .detail-row label { font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; }
+        .detail-row .value { color: #34495e; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .detail-grid .detail-item { padding: 10px; background-color: #f8f9fa; border-radius: 4px; }
+        .detail-grid .detail-item label { font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px; }
+        .detail-grid .detail-item .value { color: #34495e; font-size: 14px; }
+        .email-body-container { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .email-body { background-color: white; border: 1px solid #ddd; padding: 15px; border-radius: 4px; flex: 1; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 200px; }
+        .actions-section { border-top: 2px solid #ddd; padding-top: 15px; margin-top: 15px; text-align: center; flex-shrink: 0; }
+        .reject-notes { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; min-height: 80px; }
+        .filter-section { background-color: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .filter-group { display: inline-block; margin-right: 20px; }
+        .filter-group label { font-weight: bold; margin-right: 5px; }
+        .attachment-list { list-style: none; padding: 0; }
+        .attachment-list li { padding: 5px; margin: 5px 0; background-color: #e8f4f8; border-radius: 3px; }
+        .attachment-list a { color: #3498db; text-decoration: none; }
+        .attachment-list a:hover { text-decoration: underline; }
+        .bulk-actions { background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; display: none; align-items: center; gap: 15px; }
+        .bulk-actions.active { display: flex; }
+        .bulk-actions-text { font-weight: bold; color: #856404; }
+        .checkbox-col { width: 40px; text-align: center; }
+        .submission-checkbox { cursor: pointer; width: 18px; height: 18px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← Back to Admin Panel</a>
+        <div class="header">
+            <h1>Review AI Knowledge Base Submissions</h1>
+            <p>Review and approve/reject pending submissions to the AeroAstro AI Knowledge Base</p>
+        </div>
+        <div id="statusMessage" class="status-message"></div>
+        <div id="loading" class="loading"><div class="spinner"></div><p>Loading submissions...</p></div>
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>Status Filter:</label>
+                <select id="statusFilter" onchange="loadSubmissions()">
+                    <option value="Pending">Pending Only</option>
+                    <option value="All">All Submissions</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
             </div>
-            <div class="detail-grid" style="grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;">
-                <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
-                    <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label>
-                    <div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div>
-                </div>
-                <div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
-                    <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label>
-                    <div style="color: #34495e; font-size: 13px;">${attachmentsHtml}</div>
-                </div>
+            <button class="btn" onclick="loadSubmissions()">🔄 Refresh</button>
+        </div>
+        <div id="bulkActionsBar" class="bulk-actions">
+            <span class="bulk-actions-text"><span id="selectedCount">0</span> selected</span>
+            <button class="btn btn-success" onclick="bulkApprove()">✓ Approve Selected</button>
+            <button class="btn btn-danger" onclick="bulkReject()">✗ Reject Selected</button>
+            <button class="btn" onclick="clearSelection()">Clear Selection</button>
+        </div>
+        <table class="submissions-table">
+            <thead>
+                <tr>
+                    <th class="checkbox-col"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" title="Select All"></th>
+                    <th>Date</th><th>From</th><th>Subject</th><th>Preview</th><th>Attachments</th><th>Status</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="submissionsTableBody"></tbody>
+        </table>
+    </div>
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span class="close" onclick="closeModal()">&times;</span><h2>Review Submission</h2></div>
+            <div id="modalBody"></div>
+            <div class="actions-section">
+                <button class="btn btn-success" onclick="approveSubmission()" style="font-size: 16px; padding: 12px 24px;">✓ Approve & Upload to KB</button>
+                <button class="btn btn-danger" onclick="showRejectForm()" style="font-size: 16px; padding: 12px 24px;">✗ Reject</button>
+                <button class="btn" onclick="closeModal()" style="font-size: 16px; padding: 12px 24px;">Cancel</button>
             </div>
-            <div class="email-body-container">
-                <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 8px; font-size: 13px;">Email Body:</label>
-                <div class="email-body" style="max-height: 200px;">${emailBody}</div>
+            <div id="rejectForm" style="display:none; margin-top: 20px;">
+                <h3>Rejection Notes</h3>
+                <textarea id="rejectNotes" class="reject-notes" placeholder="Enter reason for rejection (optional)..."></textarea>
+                <button class="btn btn-danger" onclick="confirmReject()">Confirm Rejection</button>
+                <button class="btn" onclick="hideRejectForm()">Cancel</button>
             </div>
-        `;
-    }
-
-    async function approveSubmission() {
-        if (!confirm('Are you sure you want to approve this submission and upload it to the Knowledge Base?')) {
-            return;
-        }
-        showLoading(true);
-        try {
-            const response = await fetch(MAKECOM_WEBHOOK, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    submissionId: currentSubmission[3].value,
-                    action: 'approve',
-                    reviewerKerberos: currentUser,
-                    reviewNotes: ''
-                })
-            });
-            if (!response.ok) {
-                throw new Error('Approval webhook failed: ' + response.status);
-            }
-            console.log('Approval webhook called successfully');
-            showMessage('Submission approved! Content is being uploaded to the Knowledge Base.', 'success');
-            closeModal();
-            setTimeout(() => loadSubmissions(), 1000);
-        } catch (error) {
-            console.error('Approve error:', error);
-            showMessage('Error approving submission: ' + error.message, 'error');
-        } finally {
-            showLoading(false);
-        }
-    }
-
-    function showRejectForm() {
-        document.getElementById('rejectForm').style.display = 'block';
-    }
-
-    function hideRejectForm() {
-        document.getElementById('rejectForm').style.display = 'none';
-        document.getElementById('rejectNotes').value = '';
-    }
-
-    async function confirmReject() {
-        const notes = document.getElementById('rejectNotes').value.trim();
-        showLoading(true);
-        try {
-            const response = await fetch(MAKECOM_WEBHOOK, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    submissionId: currentSubmission[3].value,
-                    action: 'reject',
-                    reviewerKerberos: currentUser,
-                    reviewNotes: notes
-                })
-            });
-            if (!response.ok) {
-                throw new Error('Rejection webhook failed: ' + response.status);
-            }
-            console.log('Rejection webhook called successfully');
-            showMessage('Submission rejected. Sender has been notified.', 'success');
-            closeModal();
-            setTimeout(() => loadSubmissions(), 1000);
-        } catch (error) {
-            console.error('Reject error:', error);
-            showMessage('Error rejecting submission: ' + error.message, 'error');
-        } finally {
-            showLoading(false);
-        }
-    }
-
-    function toggleSelectAll() {
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.submission-checkbox:not([disabled])');
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        updateBulkActions();
-    }
-
-    function updateBulkActions() {
-        const checkboxes = document.querySelectorAll('.submission-checkbox:checked');
-        const count = checkboxes.length;
-        const bulkBar = document.getElementById('bulkActionsBar');
-        const selectAll = document.getElementById('selectAll');
-        document.getElementById('selectedCount').textContent = count;
-        if (count > 0) {
-            bulkBar.classList.add('active');
-        } else {
-            bulkBar.classList.remove('active');
-            selectAll.checked = false;
-        }
-    }
-
-    function clearSelection() {
-        const checkboxes = document.querySelectorAll('.submission-checkbox');
-        checkboxes.forEach(cb => cb.checked = false);
-        document.getElementById('selectAll').checked = false;
-        updateBulkActions();
-    }
-
-    function getSelectedRecordIds() {
-        const checkboxes = document.querySelectorAll('.submission-checkbox:checked');
-        return Array.from(checkboxes).map(cb => cb.getAttribute('data-record-id'));
-    }
-
-    async function bulkApprove() {
-        const recordIds = getSelectedRecordIds();
-        if (recordIds.length === 0) {
-            showMessage('No submissions selected', 'error');
-            return;
-        }
-        if (!confirm(`Are you sure you want to approve ${recordIds.length} submission(s)?`)) {
-            return;
-        }
-        showLoading(true);
-        let successCount = 0;
-        let errorCount = 0;
-        for (const recordId of recordIds) {
-            try {
-                const response = await fetch(MAKECOM_WEBHOOK, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        submissionId: recordId,
-                        action: 'approve',
-                        reviewerKerberos: currentUser,
-                        reviewNotes: 'Bulk approved'
-                    })
-                });
-                if (response.ok) {
-                    successCount++;
-                } else {
-                    errorCount++;
-                }
-                await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (error) {
-                console.error(`Error approving ${recordId}:`, error);
-                errorCount++;
-            }
-        }
-        showLoading(false);
-        showMessage(`Approved: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error');
-        clearSelection();
-        setTimeout(() => loadSubmissions(), 1000);
-    }
-
-    async function bulkReject() {
-        const recordIds = getSelectedRecordIds();
-        if (recordIds.length === 0) {
-            showMessage('No submissions selected', 'error');
-            return;
-        }
-        const notes = prompt(`Enter rejection notes for ${recordIds.length} submission(s) (optional):`);
-        if (notes === null) return;
-        if (!confirm(`Are you sure you want to reject ${recordIds.length} submission(s)?`)) {
-            return;
-        }
-        showLoading(true);
-        let successCount = 0;
-        let errorCount = 0;
-        for (const recordId of recordIds) {
-            try {
-                const response = await fetch(MAKECOM_WEBHOOK, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        submissionId: recordId,
-                        action: 'reject',
-                        reviewerKerberos: currentUser,
-                        reviewNotes: notes || 'Bulk rejected'
-                    })
-                });
-                if (response.ok) {
-                    successCount++;
-                } else {
-                    errorCount++;
-                }
-                await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (error) {
-                console.error(`Error rejecting ${recordId}:`, error);
-                errorCount++;
-            }
-        }
-        showLoading(false);
-        showMessage(`Rejected: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error');
-        clearSelection();
-        setTimeout(() => loadSubmissions(), 1000);
-    }
-
-    function closeModal() {
-        document.getElementById('reviewModal').style.display = 'none';
-        hideRejectForm();
-        currentSubmission = null;
-    }
-
-    function showMessage(message, type) {
-        const statusMessage = document.getElementById('statusMessage');
-        statusMessage.textContent = message;
-        statusMessage.className = `status-message status-${type}`;
-        statusMessage.style.display = 'block';
-        setTimeout(() => {
-            statusMessage.style.display = 'none';
-        }, 5000);
-    }
-
-    function showLoading(show) {
-        document.getElementById('loading').style.display = show ? 'block' : 'none';
-    }
-
-    window.onclick = function(event) {
-        const modal = document.getElementById('reviewModal');
-        if (event.target == modal) {
-            closeModal();
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', async function() {
-        if (await checkAuth()) {
-            loadSubmissions();
-        }
-    });
-</script>
+        </div>
+    </div>
+    <script>
+        const QUICKBASE_CONFIG = {realm: 'mit.quickbase.com', userToken: 'b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h', appId: 'buuhxhtmv', pendingTableId: 'bvhhfa58i', userTableId: 'bve87f9um'};
+        const MAKECOM_WEBHOOK = 'https://hook.us2.make.com/1hp1aj8tqsxkveen4l5ig8b3117r35sw';
+        let currentSubmission = null;
+        let currentUser = null;
+        async function checkAuth() {try {const storedData = localStorage.getItem('user_metadata'); if (!storedData) {console.log('No user data found'); currentUser = 'oconaill'; return true;} const userData = JSON.parse(storedData); currentUser = userData.kerberos || 'oconaill'; console.log('User authenticated:', currentUser); return true;} catch (error) {console.error('Auth error:', error); currentUser = 'oconaill'; return true;}}
+        async function makeQuickBaseRequest(method, endpoint, body) {const url = `https://api.quickbase.com/v1/${endpoint}`; const headers = {'QB-Realm-Hostname': QUICKBASE_CONFIG.realm, 'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`, 'Content-Type': 'application/json'}; const response = await fetch(url, {method: method, headers: headers, body: body ? JSON.stringify(body) : null}); if (!response.ok) {const errorText = await response.text(); throw new Error(`QuickBase error: ${response.status} - ${errorText}`);} return await response.json();}
+        async function loadSubmissions() {showLoading(true); try {const statusFilter = document.getElementById('statusFilter').value; const queryBody = {from: QUICKBASE_CONFIG.pendingTableId, select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14], options: {orderBy: [{ fieldId: 10, order: 'DESC' }]}}; if (statusFilter !== 'All') {queryBody.where = `{11.EX.'${statusFilter}'}`;} const response = await makeQuickBaseRequest('POST', 'records/query', queryBody); displaySubmissions(response.data); showMessage(`Loaded ${response.data.length} submission(s)`, 'success');} catch (error) {console.error('Load error:', error); showMessage('Error loading submissions: ' + error.message, 'error');} finally {showLoading(false);}}
+        function displaySubmissions(submissions) {const tbody = document.getElementById('submissionsTableBody'); tbody.innerHTML = ''; if (submissions.length === 0) {tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No submissions found</td></tr>'; return;} submissions.forEach(sub => {const row = tbody.insertRow(); const date = new Date(sub[10]?.value); let preview = 'No content'; try {if (sub[9]?.value) {preview = atob(sub[9].value).substring(0, 100) + '...';}} catch (e) {preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';} const status = sub[11]?.value || 'Pending'; const recordId = sub[3].value; const isDisabled = status !== 'Pending' ? 'disabled' : ''; row.innerHTML = `<td class="checkbox-col"><input type="checkbox" class="submission-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}></td><td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td><td>${sub[6]?.value || 'Unknown'}</td><td>${sub[8]?.value || 'No Subject'}</td><td class="preview">${preview}</td><td>${sub[12]?.value ? `${sub[13]?.value || 0} file(s)` : 'None'}</td><td><span class="badge badge-${status.toLowerCase()}">${status}</span></td><td><button class="btn btn-small" onclick="viewSubmission(${recordId})">Review</button></td>`;});}
+        async function viewSubmission(recordId) {showLoading(true); try {const response = await makeQuickBaseRequest('POST', 'records/query', {from: QUICKBASE_CONFIG.pendingTableId, select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14], where: `{3.EX.${recordId}}`}); if (response.data.length === 0) {throw new Error('Submission not found');} currentSubmission = response.data[0]; displaySubmissionDetails(currentSubmission); document.getElementById('reviewModal').style.display = 'block';} catch (error) {console.error('View error:', error); showMessage('Error loading submission: ' + error.message, 'error');} finally {showLoading(false);}}
+        function displaySubmissionDetails(sub) {let emailBody = 'No email body'; try {if (sub[9]?.value) {emailBody = atob(sub[9].value);}} catch (e) {emailBody = sub[9]?.value || 'No email body'; console.warn('Failed to decode base64 email body:', e);} const date = new Date(sub[10]?.value); let attachmentInfo = []; let attachmentsHtml = '<span style="color: #7f8c8d;">None</span>'; if (sub[14]?.value && sub[14].value !== "27" && sub[14].value !== "[]") {try {attachmentInfo = JSON.parse(sub[14].value); if (attachmentInfo.length > 0) {attachmentsHtml = '<ul class="attachment-list">'; attachmentInfo.forEach(att => {attachmentsHtml += `<li>📎 <a href="${att.driveUrl}" target="_blank">${att.fileName}</a></li>`;}); attachmentsHtml += '</ul>';}} catch (e) {console.warn('Could not parse attachment info:', e); if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;}}} else if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;} document.getElementById('modalBody').innerHTML = `<div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;"><div class="detail-item"><label>From:</label><div class="value" style="font-size: 13px;">${sub[6]?.value || 'Unknown'}</div></div><div class="detail-item"><label>Kerberos:</label><div class="value" style="font-size: 13px;">${sub[7]?.value || 'N/A'}</div></div><div class="detail-item"><label>Date:</label><div class="value" style="font-size: 13px;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div><div class="detail-item"><label>Status:</label><div class="value"><span class="badge badge-${(sub[11]?.value || 'Pending').toLowerCase()}">${sub[11]?.value || 'Pending'}</span></div></div></div><div class="detail-grid" style="grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;"><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label><div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div></div><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label><div style="color: #34495e; font-size: 13px;">${attachmentsHtml}</div></div></div><div class="email-body-container"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 8px; font-size: 13px;">Email Body:</label><div class="email-body" style="max-height: 200px;">${emailBody}</div></div>`;} 
+        async function approveSubmission() {if (!confirm('Are you sure you want to approve this submission and upload it to the Knowledge Base?')) {return;} showLoading(true); try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: currentSubmission[3].value, action: 'approve', reviewerKerberos: currentUser, reviewNotes: ''})}); if (!response.ok) {throw new Error('Approval webhook failed: ' + response.status);} console.log('Approval webhook called successfully'); showMessage('Submission approved! Content is being uploaded to the Knowledge Base.', 'success'); closeModal(); setTimeout(() => loadSubmissions(), 1000);} catch (error) {console.error('Approve error:', error); showMessage('Error approving submission: ' + error.message, 'error');} finally {showLoading(false);}}
+        function showRejectForm() {document.getElementById('rejectForm').style.display = 'block';}
+        function hideRejectForm() {document.getElementById('rejectForm').style.display = 'none'; document.getElementById('rejectNotes').value = '';}
+        async function confirmReject() {const notes = document.getElementById('rejectNotes').value.trim(); showLoading(true); try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: currentSubmission[3].value, action: 'reject', reviewerKerberos: currentUser, reviewNotes: notes})}); if (!response.ok) {throw new Error('Rejection webhook failed: ' + response.status);} console.log('Rejection webhook called successfully'); showMessage('Submission rejected. Sender has been notified.', 'success'); closeModal(); setTimeout(() => loadSubmissions(), 1000);} catch (error) {console.error('Reject error:', error); showMessage('Error rejecting submission: ' + error.message, 'error');} finally {showLoading(false);}}
+        function toggleSelectAll() {const selectAll = document.getElementById('selectAll'); const checkboxes = document.querySelectorAll('.submission-checkbox:not([disabled])'); checkboxes.forEach(cb => cb.checked = selectAll.checked); updateBulkActions();}
+        function updateBulkActions() {const checkboxes = document.querySelectorAll('.submission-checkbox:checked'); const count = checkboxes.length; const bulkBar = document.getElementById('bulkActionsBar'); const selectAll = document.getElementById('selectAll'); document.getElementById('selectedCount').textContent = count; if (count > 0) {bulkBar.classList.add('active');} else {bulkBar.classList.remove('active'); selectAll.checked = false;}}
+        function clearSelection() {const checkboxes = document.querySelectorAll('.submission-checkbox'); checkboxes.forEach(cb => cb.checked = false); document.getElementById('selectAll').checked = false; updateBulkActions();}
+        function getSelectedRecordIds() {const checkboxes = document.querySelectorAll('.submission-checkbox:checked'); return Array.from(checkboxes).map(cb => cb.getAttribute('data-record-id'));}
+        async function bulkApprove() {const recordIds = getSelectedRecordIds(); if (recordIds.length === 0) {showMessage('No submissions selected', 'error'); return;} if (!confirm(`Are you sure you want to approve ${recordIds.length} submission(s)?`)) {return;} showLoading(true); let successCount = 0; let errorCount = 0; for (const recordId of recordIds) {try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: recordId, action: 'approve', reviewerKerberos: currentUser, reviewNotes: 'Bulk approved'})}); if (response.ok) {successCount++;} else {errorCount++;} await new Promise(resolve => setTimeout(resolve, 500));} catch (error) {console.error(`Error approving ${recordId}:`, error); errorCount++;}} showLoading(false); showMessage(`Approved: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error'); clearSelection(); setTimeout(() => loadSubmissions(), 1000);}
+        async function bulkReject() {const recordIds = getSelectedRecordIds(); if (recordIds.length === 0) {showMessage('No submissions selected', 'error'); return;} const notes = prompt(`Enter rejection notes for ${recordIds.length} submission(s) (optional):`); if (notes === null) return; if (!confirm(`Are you sure you want to reject ${recordIds.length} submission(s)?`)) {return;} showLoading(true); let successCount = 0; let errorCount = 0; for (const recordId of recordIds) {try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: recordId, action: 'reject', reviewerKerberos: currentUser, reviewNotes: notes || 'Bulk rejected'})}); if (response.ok) {successCount++;} else {errorCount++;} await new Promise(resolve => setTimeout(resolve, 500));} catch (error) {console.error(`Error rejecting ${recordId}:`, error); errorCount++;}} showLoading(false); showMessage(`Rejected: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error'); clearSelection(); setTimeout(() => loadSubmissions(), 1000);}
+        function closeModal() {document.getElementById('reviewModal').style.display = 'none'; hideRejectForm(); currentSubmission = null;}
+        function showMessage(message, type) {const statusMessage = document.getElementById('statusMessage'); statusMessage.textContent = message; statusMessage.className = `status-message status-${type}`; statusMessage.style.display = 'block'; setTimeout(() => {statusMessage.style.display = 'none';}, 5000);}
+        function showLoading(show) {document.getElementById('loading').style.display = show ? 'block' : 'none';}
+        window.onclick = function(event) {const modal = document.getElementById('reviewModal'); if (event.target == modal) {closeModal();}}
+        document.addEventListener('DOMContentLoaded', async function() {if (await checkAuth()) {loadSubmissions();}});
+    </script>
+</body>
+</html>
