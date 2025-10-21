@@ -101,6 +101,8 @@ async function handleOAuthCallback(event) {
     console.log('🚀 === OIDC CALLBACK DIAGNOSTIC START ===');
     console.log('⏰ Timestamp:', new Date().toISOString());
     console.log('🌐 HTTP Method:', event.httpMethod);
+    console.log('🧩 Incoming query params:', event.queryStringParameters);
+    console.log('🧠 Headers keys:', Object.keys(event.headers || {}));
     
     // Handle both POST and GET requests
     if (event.httpMethod === 'POST') {
@@ -190,7 +192,13 @@ async function handleOAuthCallback(event) {
     }
 
     const tokenUrl = `${issuer}/v1/token`;
-
+    console.log('🔑 Token exchange request details:', {
+      tokenUrl,
+      clientId,
+      redirectUri,
+      hasVerifier: !!verifier,
+      hasCode: !!code
+    });
     // Exchange authorization code for tokens
     const tokenRes = await fetch(tokenUrl, {
       method: 'POST',
@@ -257,7 +265,8 @@ async function handleOAuthCallback(event) {
       raw: idTokenPayload
     };
 
-    console.log('✅ User metadata processed');
+    console.log('✅ User metadata processed:', userMetadata);
+
     console.log('🎉 === OIDC CALLBACK DIAGNOSTIC END ===');
 
     return {
