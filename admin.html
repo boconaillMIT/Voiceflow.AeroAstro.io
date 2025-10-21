@@ -303,6 +303,7 @@
 
         // Simple authentication
 // Replace the authenticateUser function in admin.html with this:
+// Use the exact same validation that works in chatbot.html
 async function authenticateUser() {
     console.log('Starting authentication...');
     
@@ -316,18 +317,23 @@ async function authenticateUser() {
         const userData = JSON.parse(storedData);
         console.log('Found user data for:', userData.kerberos);
         
-        // Call the validation service to check admin status
+        // Add a small delay to ensure Make.com is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Call the validation service exactly as chatbot.html does
         const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
                 kerberosId: userData.kerberos,
-                department: userData.department
+                department: userData.department || 'Department of Aeronautics and Astronautics'
             })
         });
         
         if (!response.ok) {
-            throw new Error('Validation failed');
+            throw new Error(`Validation request failed: ${response.status}`);
         }
         
         const validation = await response.json();
