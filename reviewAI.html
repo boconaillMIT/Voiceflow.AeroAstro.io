@@ -126,95 +126,107 @@
         let currentSubmission = null;
         let currentUser = null;
        // checks to see if user has administrator access in quickbase
-        async function checkAuth() {
-            try {
-                const storedData = localStorage.getItem('user_metadata');
-                if (!storedData) {
-                    showMessage('No authentication data found. Please login to the chatbot first.', 'error');
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 3000);
-                    return false;
-                }
-                
-                const userData = JSON.parse(storedData);
-                currentUser = userData.kerberos;
-                console.log('Checking admin access for:', currentUser);
-                
-                // Show loading while checking admin status
-                showMessage('Verifying administrator access...', 'info');
-                
-                // Call Make.com webhook to validate admin status
-                const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        kerberosId: userData.kerberos,
-                        department: userData.department || ''
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Validation failed');
-                }
-                
-                const validation = await response.json();
-                console.log('Admin validation result:', validation);
-                
-                // Check if user has admin privileges
-                const isAdmin = validation.isAdmin === true || 
-                               validation.isAdmin === "true" || 
-                               validation.isAdmin === '1';
-                
-                // Also check if user has general access
-                const hasAccess = validation.hasAccess === true || 
-                                 validation.hasAccess === "true" || 
-                                 validation.hasAccess === 1 ||
-                                 validation.hasAccess === '1';
-                
-                if (!hasAccess) {
-                    showMessage('Access denied. You are not authorized to use this system.', 'error');
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 3000);
-                    return false;
-                }
-                
-                if (!isAdmin) {
-                    showMessage('Access denied. Administrator privileges required.', 'error');
-                    // Show a more detailed error page
-                    document.body.innerHTML = `
-                        <div class="container">
-                            <div class="header" style="border-color: #e74c3c;">
-                                <h1 style="color: #e74c3c;">Access Denied</h1>
-                            </div>
-                            <div style="text-align: center; padding: 40px;">
-                                <h2>Administrator Access Required</h2>
-                                <p>This page is restricted to administrators only.</p>
-                                <p>User: <strong>${currentUser}</strong></p>
-                                <p style="margin-top: 30px;">
-                                    <a href="chatbot.html" class="btn">Return to Chatbot</a>
-                                    <a href="login.html" class="btn">Login as Different User</a>
-                                </p>
-                            </div>
-                        </div>
-                    `;
-                    return false;
-                }
-                
-                console.log('Admin access granted for:', currentUser);
-                showMessage('Administrator access verified', 'success');
-                return true;
-                
-            } catch (error) {
-                console.error('Auth error:', error);
-                showMessage('Authentication error: ' + error.message, 'error');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 3000);
-                return false;
-            }
+      async function checkAuth() {
+    try {
+        const storedData = localStorage.getItem('user_metadata');
+        if (!storedData) {
+            showMessage('No authentication data found. Please login to the chatbot first.', 'error');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 3000);
+            return false;
         }
+        
+        const userData = JSON.parse(storedData);
+        currentUser = userData.kerberos;
+        console.log('Checking admin access for:', currentUser);
+        
+        // Show loading while checking admin status
+        showMessage('Verifying administrator access...', 'info');
+        
+        // Call Make.com webhook to validate admin status
+        const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                kerberosId: userData.kerberos,
+                department: userData.department || ''
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Validation failed');
+        }
+        
+        // Check what we're actually getting back
+        const responseText = await response.text();
+        console.log('Raw response from Make.com:', responseText);
+        
+        let validation;
+        try {
+            validation = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse response:', responseText);
+            if (responseText === 'Accepted') {
+                throw new Error('Make.com webhook returned "Accepted" instead of user data - check webhook configuration');
+            }
+            throw new Error('Invalid response format from validation service');
+        }
+        
+        console.log('Admin validation result:', validation);
+        
+        // Rest of your validation logic continues here...
+        const isAdmin = validation.isAdmin === true || 
+                       validation.isAdmin === "true" || 
+                       validation.isAdmin === '1';
+        
+        const hasAccess = validation.hasAccess === true || 
+                         validation.hasAccess === "true" || 
+                         validation.hasAccess === 1 ||
+                         validation.hasAccess === '1';
+        
+        if (!hasAccess) {
+            showMessage('Access denied. You are not authorized to use this system.', 'error');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 3000);
+            return false;
+        }
+        
+        if (!isAdmin) {
+            showMessage('Access denied. Administrator privileges required.', 'error');
+            document.body.innerHTML = `
+                <div class="container">
+                    <div class="header" style="border-color: #e74c3c;">
+                        <h1 style="color: #e74c3c;">Access Denied</h1>
+                    </div>
+                    <div style="text-align: center; padding: 40px;">
+                        <h2>Administrator Access Required</h2>
+                        <p>This page is restricted to administrators only.</p>
+                        <p>User: <strong>${currentUser}</strong></p>
+                        <p style="margin-top: 30px;">
+                            <a href="chatbot.html" class="btn">Return to Chatbot</a>
+                            <a href="login.html" class="btn">Login as Different User</a>
+                        </p>
+                    </div>
+                </div>
+            `;
+            return false;
+        }
+        
+        console.log('Admin access granted for:', currentUser);
+        showMessage('Administrator access verified', 'success');
+        return true;
+        
+    } catch (error) {
+        console.error('Auth error:', error);
+        showMessage('Authentication error: ' + error.message, 'error');
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 3000);
+        return false;
+    }
+}
         
         // Update the page initialization to properly handle auth failure
         document.addEventListener('DOMContentLoaded', async function() {
@@ -243,7 +255,7 @@
         function showMessage(message, type) {const statusMessage = document.getElementById('statusMessage'); statusMessage.textContent = message; statusMessage.className = `status-message status-${type}`; statusMessage.style.display = 'block'; setTimeout(() => {statusMessage.style.display = 'none';}, 5000);}
         function showLoading(show) {document.getElementById('loading').style.display = show ? 'block' : 'none';}
         window.onclick = function(event) {const modal = document.getElementById('reviewModal'); if (event.target == modal) {closeModal();}}
-        document.addEventListener('DOMContentLoaded', async function() {if (await checkAuth()) {loadSubmissions();}});
+
     </script>
 </body>
 </html>
