@@ -14,6 +14,7 @@
         .status-message { padding: 10px; border-radius: 4px; margin: 10px 0; display: none; }
         .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .loading { display: none; text-align: center; padding: 20px; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -124,7 +125,105 @@
         const MAKECOM_WEBHOOK = 'https://hook.us2.make.com/1hp1aj8tqsxkveen4l5ig8b3117r35sw';
         let currentSubmission = null;
         let currentUser = null;
-        async function checkAuth() {try {const storedData = localStorage.getItem('user_metadata'); if (!storedData) {console.log('No user data found'); currentUser = 'oconaill'; return true;} const userData = JSON.parse(storedData); currentUser = userData.kerberos || 'oconaill'; console.log('User authenticated:', currentUser); return true;} catch (error) {console.error('Auth error:', error); currentUser = 'oconaill'; return true;}}
+       // checks to see if user has administrator access in quickbase
+        async function checkAuth() {
+            try {
+                const storedData = localStorage.getItem('user_metadata');
+                if (!storedData) {
+                    showMessage('No authentication data found. Please login to the chatbot first.', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                    return false;
+                }
+                
+                const userData = JSON.parse(storedData);
+                currentUser = userData.kerberos;
+                console.log('Checking admin access for:', currentUser);
+                
+                // Show loading while checking admin status
+                showMessage('Verifying administrator access...', 'info');
+                
+                // Call Make.com webhook to validate admin status
+                const response = await fetch('https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        kerberosId: userData.kerberos,
+                        department: userData.department || ''
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Validation failed');
+                }
+                
+                const validation = await response.json();
+                console.log('Admin validation result:', validation);
+                
+                // Check if user has admin privileges
+                const isAdmin = validation.isAdmin === true || 
+                               validation.isAdmin === "true" || 
+                               validation.isAdmin === '1';
+                
+                // Also check if user has general access
+                const hasAccess = validation.hasAccess === true || 
+                                 validation.hasAccess === "true" || 
+                                 validation.hasAccess === 1 ||
+                                 validation.hasAccess === '1';
+                
+                if (!hasAccess) {
+                    showMessage('Access denied. You are not authorized to use this system.', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                    return false;
+                }
+                
+                if (!isAdmin) {
+                    showMessage('Access denied. Administrator privileges required.', 'error');
+                    // Show a more detailed error page
+                    document.body.innerHTML = `
+                        <div class="container">
+                            <div class="header" style="border-color: #e74c3c;">
+                                <h1 style="color: #e74c3c;">Access Denied</h1>
+                            </div>
+                            <div style="text-align: center; padding: 40px;">
+                                <h2>Administrator Access Required</h2>
+                                <p>This page is restricted to administrators only.</p>
+                                <p>User: <strong>${currentUser}</strong></p>
+                                <p style="margin-top: 30px;">
+                                    <a href="chatbot.html" class="btn">Return to Chatbot</a>
+                                    <a href="login.html" class="btn">Login as Different User</a>
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                }
+                
+                console.log('Admin access granted for:', currentUser);
+                showMessage('Administrator access verified', 'success');
+                return true;
+                
+            } catch (error) {
+                console.error('Auth error:', error);
+                showMessage('Authentication error: ' + error.message, 'error');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 3000);
+                return false;
+            }
+        }
+        
+        // Update the page initialization to properly handle auth failure
+        document.addEventListener('DOMContentLoaded', async function() {
+            const isAuthenticated = await checkAuth();
+            if (isAuthenticated) {
+                loadSubmissions();
+            }
+            // If not authenticated, the checkAuth function will handle the redirect
+        });
         async function makeQuickBaseRequest(method, endpoint, body) {const url = `https://api.quickbase.com/v1/${endpoint}`; const headers = {'QB-Realm-Hostname': QUICKBASE_CONFIG.realm, 'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`, 'Content-Type': 'application/json'}; const response = await fetch(url, {method: method, headers: headers, body: body ? JSON.stringify(body) : null}); if (!response.ok) {const errorText = await response.text(); throw new Error(`QuickBase error: ${response.status} - ${errorText}`);} return await response.json();}
         async function loadSubmissions() {showLoading(true); try {const statusFilter = document.getElementById('statusFilter').value; const queryBody = {from: QUICKBASE_CONFIG.pendingTableId, select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14], options: {orderBy: [{ fieldId: 10, order: 'DESC' }]}}; if (statusFilter !== 'All') {queryBody.where = `{11.EX.'${statusFilter}'}`;} const response = await makeQuickBaseRequest('POST', 'records/query', queryBody); displaySubmissions(response.data); showMessage(`Loaded ${response.data.length} submission(s)`, 'success');} catch (error) {console.error('Load error:', error); showMessage('Error loading submissions: ' + error.message, 'error');} finally {showLoading(false);}}
         function displaySubmissions(submissions) {const tbody = document.getElementById('submissionsTableBody'); tbody.innerHTML = ''; if (submissions.length === 0) {tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No submissions found</td></tr>'; return;} submissions.forEach(sub => {const row = tbody.insertRow(); const date = new Date(sub[10]?.value); let preview = 'No content'; try {if (sub[9]?.value) {preview = atob(sub[9].value).substring(0, 100) + '...';}} catch (e) {preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';} const status = sub[11]?.value || 'Pending'; const recordId = sub[3].value; const isDisabled = status !== 'Pending' ? 'disabled' : ''; row.innerHTML = `<td class="checkbox-col"><input type="checkbox" class="submission-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}></td><td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td><td>${sub[6]?.value || 'Unknown'}</td><td>${sub[8]?.value || 'No Subject'}</td><td class="preview">${preview}</td><td>${sub[12]?.value ? `${sub[13]?.value || 0} file(s)` : 'None'}</td><td><span class="badge badge-${status.toLowerCase()}">${status}</span></td><td><button class="btn btn-small" onclick="viewSubmission(${recordId})">Review</button></td>`;});}
