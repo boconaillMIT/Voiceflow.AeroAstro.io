@@ -66,6 +66,42 @@
         .submission-checkbox { cursor: pointer; width: 18px; height: 18px; }
     </style>
 </head>
+    .attachment-list {
+    margin: 10px 0;
+}
+
+.attachment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin: 5px 0;
+    border-radius: 4px;
+}
+
+.attachment-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-view { background: #4CAF50; }
+.btn-approve { background: #2196F3; }
+.btn-reject { background: #f44336; }
+
+.attachment-item button {
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.attachment-item button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 <body>
     <div class="container">
         <a href="admin.html" class="back-link">← Back to Admin Panel</a>
@@ -372,7 +408,11 @@ async function updateAttachmentStatus(recordId, status) {
         body: JSON.stringify(update)
     });
 }
+        // Add this after displaying the main record details
+        detailsHtml += `<div id="attachments-${recordId}" class="attachments-section"></div>`;
         
+        // Then call the load attachments function
+        loadAttachments(recordId);
         async function makeQuickBaseRequest(method, endpoint, body) {const url = `https://api.quickbase.com/v1/${endpoint}`; const headers = {'QB-Realm-Hostname': QUICKBASE_CONFIG.realm, 'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`, 'Content-Type': 'application/json'}; const response = await fetch(url, {method: method, headers: headers, body: body ? JSON.stringify(body) : null}); if (!response.ok) {const errorText = await response.text(); throw new Error(`QuickBase error: ${response.status} - ${errorText}`);} return await response.json();}
         async function loadSubmissions() {showLoading(true); try {const statusFilter = document.getElementById('statusFilter').value; const queryBody = {from: QUICKBASE_CONFIG.pendingTableId, select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14], options: {orderBy: [{ fieldId: 10, order: 'DESC' }]}}; if (statusFilter !== 'All') {queryBody.where = `{11.EX.'${statusFilter}'}`;} const response = await makeQuickBaseRequest('POST', 'records/query', queryBody); displaySubmissions(response.data); showMessage(`Loaded ${response.data.length} submission(s)`, 'success');} catch (error) {console.error('Load error:', error); showMessage('Error loading submissions: ' + error.message, 'error');} finally {showLoading(false);}}
         function displaySubmissions(submissions) {const tbody = document.getElementById('submissionsTableBody'); tbody.innerHTML = ''; if (submissions.length === 0) {tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No submissions found</td></tr>'; return;} submissions.forEach(sub => {const row = tbody.insertRow(); const date = new Date(sub[10]?.value); let preview = 'No content'; try {if (sub[9]?.value) {preview = atob(sub[9].value).substring(0, 100) + '...';}} catch (e) {preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';} const status = sub[11]?.value || 'Pending'; const recordId = sub[3].value; const isDisabled = status !== 'Pending' ? 'disabled' : ''; row.innerHTML = `<td class="checkbox-col"><input type="checkbox" class="submission-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}></td><td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td><td>${sub[6]?.value || 'Unknown'}</td><td>${sub[8]?.value || 'No Subject'}</td><td class="preview">${preview}</td><td>${sub[12]?.value ? `${sub[13]?.value || 0} file(s)` : 'None'}</td><td><span class="badge badge-${status.toLowerCase()}">${status}</span></td><td><button class="btn btn-small" onclick="viewSubmission(${recordId})">Review</button></td>`;});}
