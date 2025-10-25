@@ -99,7 +99,12 @@
        .attachment-list {
     margin: 10px 0;
 }
-    
+  .btn-primary {
+    background-color: #007bff;
+}
+.btn-primary:hover {
+    background-color: #0056b3;
+}  
     </style>
 </head>
 
@@ -515,8 +520,12 @@ async function viewSubmission(recordId) {
             detailsHtml += '</div></div></div>';
         }
 
-        detailsHtml += '<div class="button-group"><button class="btn btn-success" onclick="approveSubmission(' + recordId + ', ' + isAttachment + ', \'' + filename.replace(/'/g, "\\'") + '\')">✓ Approve & Upload to KB</button><button class="btn btn-danger" onclick="rejectSubmission(' + recordId + ')">✗ Reject</button><button class="btn btn-secondary" onclick="closeModal()">Cancel</button></div></div>';
-
+       if (isAttachment) {
+            detailsHtml += '<div class="button-group"><button class="btn btn-primary" onclick="viewAttachmentFile(\'' + filename.replace(/'/g, "\\'") + '\')">👁️ View File</button><button class="btn btn-success" onclick="approveSubmission(' + recordId + ', ' + isAttachment + ', \'' + filename.replace(/'/g, "\\'") + '\')">✓ Approve & Upload to KB</button><button class="btn btn-danger" onclick="rejectSubmission(' + recordId + ')">✗ Reject</button><button class="btn btn-secondary" onclick="closeModal()">Cancel</button></div></div>';
+        } else {
+            detailsHtml += '<div class="button-group"><button class="btn btn-success" onclick="approveSubmission(' + recordId + ', ' + isAttachment + ', \'' + filename.replace(/'/g, "\\'") + '\')">✓ Approve & Upload to KB</button><button class="btn btn-danger" onclick="rejectSubmission(' + recordId + ')">✗ Reject</button><button class="btn btn-secondary" onclick="closeModal()">Cancel</button></div></div>';
+        }
+        
         document.getElementById('submissionDetails').innerHTML = detailsHtml;
         document.getElementById('detailModal').style.display = 'block';
     } catch (error) {
@@ -526,6 +535,27 @@ async function viewSubmission(recordId) {
         showLoading(false);
     }
 }   
+async function viewAttachmentFile(filename) {
+    try {
+        showLoading(true);
+        const viewUrl = `https://hook.us2.make.com/1hp1aj8tqsxkveen4l5ig8b3117r35sw?filename=${encodeURIComponent(filename)}`;
+        
+        const response = await fetch(viewUrl);
+        const data = await response.json();
+        
+        if (data.url) {
+            window.open(data.url, '_blank');
+        } else {
+            showMessage('Could not get file URL', 'error');
+        }
+    } catch (error) {
+        console.error('Error viewing file:', error);
+        showMessage('Error opening file: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+        
         function displaySubmissionDetails(sub) {let emailBody = 'No email body'; try {if (sub[9]?.value) {emailBody = atob(sub[9].value);}} catch (e) {emailBody = sub[9]?.value || 'No email body'; console.warn('Failed to decode base64 email body:', e);} const date = new Date(sub[10]?.value); let attachmentInfo = []; let attachmentsHtml = '<span style="color: #7f8c8d;">None</span>'; if (sub[14]?.value && sub[14].value !== "27" && sub[14].value !== "[]") {try {attachmentInfo = JSON.parse(sub[14].value); if (attachmentInfo.length > 0) {attachmentsHtml = '<ul class="attachment-list">'; attachmentInfo.forEach(att => {attachmentsHtml += `<li>📎 <a href="${att.driveUrl}" target="_blank">${att.fileName}</a></li>`;}); attachmentsHtml += '</ul>';}} catch (e) {console.warn('Could not parse attachment info:', e); if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;}}} else if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;} document.getElementById('modalBody').innerHTML = `<div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;"><div class="detail-item"><label>From:</label><div class="value" style="font-size: 13px;">${sub[6]?.value || 'Unknown'}</div></div><div class="detail-item"><label>Kerberos:</label><div class="value" style="font-size: 13px;">${sub[7]?.value || 'N/A'}</div></div><div class="detail-item"><label>Date:</label><div class="value" style="font-size: 13px;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div><div class="detail-item"><label>Status:</label><div class="value"><span class="badge badge-${(sub[11]?.value || 'Pending').toLowerCase()}">${sub[11]?.value || 'Pending'}</span></div></div></div><div class="detail-grid" style="grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;"><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label><div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div></div><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label><div style="color: #34495e; font-size: 13px;">${attachmentsHtml}</div></div></div><div class="email-body-container"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 8px; font-size: 13px;">Email Body:</label><div class="email-body" style="max-height: 200px;">${emailBody}</div></div>`;} 
 async function approveSubmission(recordId, isAttachment, filename) {
     console.log('=== APPROVE DEBUG ===');
