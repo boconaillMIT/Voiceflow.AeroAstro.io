@@ -454,20 +454,29 @@ async function updateAttachmentStatus(recordId, status) {
         const row = tbody.insertRow();
         const date = new Date(sub[10]?.value);
         
-        // Check if this is an attachment or email body
         const filename = sub[18]?.value || '';
         const isAttachment = filename !== '';
         
-        // Determine what to show in Subject column
-        const subjectDisplay = isAttachment 
-            ? `📎 Attachment: ${filename}` 
-            : sub[8]?.value || 'No Subject';
+        const subjectDisplay = isAttachment ? '📎 Attachment: ' + filename : (sub[8]?.value || 'No Subject');
         
-        // Determine attachment count (only for email bodies, not attachments)
-        const attachmentCount = isAttachment 
-            ? 'N/A' 
-            : (sub[108]?.value ? `${sub[108].value} file(s)` : '0 file(s)');
+        const attachmentCount = isAttachment ? 'N/A' : (sub[12]?.value ? (sub[13]?.value || 0) + ' file(s)' : '0 file(s)');
         
+        let preview = 'No content';
+        try {
+            if (sub[9]?.value) {
+                preview = atob(sub[9].value).substring(0, 100) + '...';
+            }
+        } catch (e) {
+            preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';
+        }
+        
+        const status = sub[11]?.value || 'Pending';
+        const recordId = sub[3].value;
+        const isDisabled = status !== 'Pending' ? 'disabled' : '';
+        
+        row.innerHTML = '<td class="checkbox-col"><input type="checkbox" class="submission-checkbox" data-record-id="' + recordId + '" onchange="updateBulkActions()" ' + isDisabled + '></td><td>' + date.toLocaleDateString() + ' ' + date.toLocaleTimeString() + '</td><td>' + (sub[6]?.value || 'Unknown') + '</td><td>' + subjectDisplay + '</td><td class="preview">' + preview + '</td><td>' + attachmentCount + '</td><td><span class="badge badge-' + status.toLowerCase() + '">' + status + '</span></td><td><button class="btn btn-small" onclick="viewSubmission(' + recordId + ')">Review</button></td>';
+    });
+}
         let preview = 'No content';
         try {
             if (sub[9]?.value) {
