@@ -96,11 +96,13 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
-    </style>
-</head>
-    .attachment-list {
+       .attachment-list {
     margin: 10px 0;
 }
+    
+    </style>
+</head>
+
 
 
 <body>
@@ -410,11 +412,7 @@ async function updateAttachmentStatus(recordId, status) {
         body: JSON.stringify(update)
     });
 }
-        // Add this after displaying the main record details
-        detailsHtml += `<div id="attachments-${recordId}" class="attachments-section"></div>`;
-        
-        // Then call the load attachments function
-        loadAttachments(recordId);
+
         async function makeQuickBaseRequest(method, endpoint, body) {const url = `https://api.quickbase.com/v1/${endpoint}`; const headers = {'QB-Realm-Hostname': QUICKBASE_CONFIG.realm, 'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`, 'Content-Type': 'application/json'}; const response = await fetch(url, {method: method, headers: headers, body: body ? JSON.stringify(body) : null}); if (!response.ok) {const errorText = await response.text(); throw new Error(`QuickBase error: ${response.status} - ${errorText}`);} return await response.json();}
       async function loadSubmissions() {
     showLoading(true);
@@ -597,7 +595,16 @@ async function approveSubmission(recordId, isAttachment, filename) {
         function getSelectedRecordIds() {const checkboxes = document.querySelectorAll('.submission-checkbox:checked'); return Array.from(checkboxes).map(cb => cb.getAttribute('data-record-id'));}
         async function bulkApprove() {const recordIds = getSelectedRecordIds(); if (recordIds.length === 0) {showMessage('No submissions selected', 'error'); return;} if (!confirm(`Are you sure you want to approve ${recordIds.length} submission(s)?`)) {return;} showLoading(true); let successCount = 0; let errorCount = 0; for (const recordId of recordIds) {try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: recordId, action: 'approve', reviewerKerberos: currentUser, reviewNotes: 'Bulk approved'})}); if (response.ok) {successCount++;} else {errorCount++;} await new Promise(resolve => setTimeout(resolve, 500));} catch (error) {console.error(`Error approving ${recordId}:`, error); errorCount++;}} showLoading(false); showMessage(`Approved: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error'); clearSelection(); setTimeout(() => loadSubmissions(), 1000);}
         async function bulkReject() {const recordIds = getSelectedRecordIds(); if (recordIds.length === 0) {showMessage('No submissions selected', 'error'); return;} const notes = prompt(`Enter rejection notes for ${recordIds.length} submission(s) (optional):`); if (notes === null) return; if (!confirm(`Are you sure you want to reject ${recordIds.length} submission(s)?`)) {return;} showLoading(true); let successCount = 0; let errorCount = 0; for (const recordId of recordIds) {try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: recordId, action: 'reject', reviewerKerberos: currentUser, reviewNotes: notes || 'Bulk rejected'})}); if (response.ok) {successCount++;} else {errorCount++;} await new Promise(resolve => setTimeout(resolve, 500));} catch (error) {console.error(`Error rejecting ${recordId}:`, error); errorCount++;}} showLoading(false); showMessage(`Rejected: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error'); clearSelection(); setTimeout(() => loadSubmissions(), 1000);}
-        function closeModal() {document.getElementById('reviewModal').style.display = 'none'; hideRejectForm(); currentSubmission = null;}
+       function closeModal() {
+            const reviewModal = document.getElementById('reviewModal');
+            const detailModal = document.getElementById('detailModal');
+            
+            if (reviewModal) reviewModal.style.display = 'none';
+            if (detailModal) detailModal.style.display = 'none';
+            
+            hideRejectForm();
+            currentSubmission = null;
+        }
         function showMessage(message, type) {const statusMessage = document.getElementById('statusMessage'); statusMessage.textContent = message; statusMessage.className = `status-message status-${type}`; statusMessage.style.display = 'block'; setTimeout(() => {statusMessage.style.display = 'none';}, 5000);}
         function showLoading(show) {document.getElementById('loading').style.display = show ? 'block' : 'none';}
         window.onclick = function(event) {const modal = document.getElementById('reviewModal'); if (event.target == modal) {closeModal();}}
