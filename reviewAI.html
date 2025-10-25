@@ -459,8 +459,7 @@ async function updateAttachmentStatus(recordId, status) {
         
         const subjectDisplay = isAttachment ? '📎 Attachment: ' + filename : (sub[8]?.value || 'No Subject');
         
-        const attachmentCount = isAttachment ? 'N/A' : (sub[12]?.value ? (sub[13]?.value || 0) + ' file(s)' : '0 file(s)');
-        
+        const attachmentCount = isAttachment ? 'N/A' : (sub[12]?.value ? ((sub[13]?.value || 0) + ' file(s)') : '0 file(s)');
         let preview = 'No content';
         try {
             if (sub[9]?.value) {
