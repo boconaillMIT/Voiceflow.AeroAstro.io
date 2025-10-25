@@ -440,8 +440,38 @@ async function updateAttachmentStatus(recordId, status) {
     } finally {
         showLoading(false);
     }
-}   function displaySubmissions(submissions) {const tbody = document.getElementById('submissionsTableBody'); tbody.innerHTML = ''; if (submissions.length === 0) {tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No submissions found</td></tr>'; return;} submissions.forEach(sub => {const row = tbody.insertRow(); const date = new Date(sub[10]?.value); let preview = 'No content'; try {if (sub[9]?.value) {preview = atob(sub[9].value).substring(0, 100) + '...';}} catch (e) {preview = sub[9]?.value ? sub[9].value.substring(0, 100) + '...' : 'No content';} const status = sub[11]?.value || 'Pending'; const recordId = sub[3].value; const isDisabled = status !== 'Pending' ? 'disabled' : ''; row.innerHTML = `<td class="checkbox-col"><input type="checkbox" class="submission-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}></td><td>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</td><td>${sub[6]?.value || 'Unknown'}</td><td>${sub[8]?.value || 'No Subject'}</td><td class="preview">${preview}</td><td>${sub[12]?.value ? `${sub[13]?.value || 0} file(s)` : 'None'}</td><td><span class="badge badge-${status.toLowerCase()}">${status}</span></td><td><button class="btn btn-small" onclick="viewSubmission(${recordId})">Review</button></td>`;});}
-        async function viewSubmission(recordId) {showLoading(true); try {const response = await makeQuickBaseRequest('POST', 'records/query', {from: QUICKBASE_CONFIG.pendingTableId, select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14], where: `{3.EX.${recordId}}`}); if (response.data.length === 0) {throw new Error('Submission not found');} currentSubmission = response.data[0]; displaySubmissionDetails(currentSubmission); document.getElementById('reviewModal').style.display = 'block';} catch (error) {console.error('View error:', error); showMessage('Error loading submission: ' + error.message, 'error');} finally {showLoading(false);}}
+}   
+    function displaySubmissions(submissions) {
+    const tbody = document.getElementById('submissionsTableBody');
+    tbody.innerHTML = '';
+    
+    if (submissions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No submissions found</td></tr>';
+        return;
+    }
+    
+    submissions.forEach(sub => {
+        const row = tbody.insertRow();
+        const date = new Date(sub[10]?.value);
+        
+        // Check if this is an attachment or email body
+        const filename = sub[18]?.value || '';
+        const isAttachment = filename !== '';
+        
+        // Determine what to show in Subject column
+        const subjectDisplay = isAttachment 
+            ? `📎 Attachment: ${filename}` 
+            : sub[8]?.value || 'No Subject';
+        
+        // Determine attachment count (only for email bodies, not attachments)
+        const attachmentCount = isAttachment 
+            ? 'N/A' 
+            : (sub[108]?.value ? `${sub[108].value} file(s)` : '0 file(s)');
+        
+        let preview = 'No content';
+        try {
+            if (sub[9]?.value) {
+                preview = atob(     async function viewSubmission(recordId) {showLoading(true); try {const response = await makeQuickBaseRequest('POST', 'records/query', {from: QUICKBASE_CONFIG.pendingTableId, select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14], where: `{3.EX.${recordId}}`}); if (response.data.length === 0) {throw new Error('Submission not found');} currentSubmission = response.data[0]; displaySubmissionDetails(currentSubmission); document.getElementById('reviewModal').style.display = 'block';} catch (error) {console.error('View error:', error); showMessage('Error loading submission: ' + error.message, 'error');} finally {showLoading(false);}}
         function displaySubmissionDetails(sub) {let emailBody = 'No email body'; try {if (sub[9]?.value) {emailBody = atob(sub[9].value);}} catch (e) {emailBody = sub[9]?.value || 'No email body'; console.warn('Failed to decode base64 email body:', e);} const date = new Date(sub[10]?.value); let attachmentInfo = []; let attachmentsHtml = '<span style="color: #7f8c8d;">None</span>'; if (sub[14]?.value && sub[14].value !== "27" && sub[14].value !== "[]") {try {attachmentInfo = JSON.parse(sub[14].value); if (attachmentInfo.length > 0) {attachmentsHtml = '<ul class="attachment-list">'; attachmentInfo.forEach(att => {attachmentsHtml += `<li>📎 <a href="${att.driveUrl}" target="_blank">${att.fileName}</a></li>`;}); attachmentsHtml += '</ul>';}} catch (e) {console.warn('Could not parse attachment info:', e); if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;}}} else if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;} document.getElementById('modalBody').innerHTML = `<div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;"><div class="detail-item"><label>From:</label><div class="value" style="font-size: 13px;">${sub[6]?.value || 'Unknown'}</div></div><div class="detail-item"><label>Kerberos:</label><div class="value" style="font-size: 13px;">${sub[7]?.value || 'N/A'}</div></div><div class="detail-item"><label>Date:</label><div class="value" style="font-size: 13px;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div><div class="detail-item"><label>Status:</label><div class="value"><span class="badge badge-${(sub[11]?.value || 'Pending').toLowerCase()}">${sub[11]?.value || 'Pending'}</span></div></div></div><div class="detail-grid" style="grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;"><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label><div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div></div><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label><div style="color: #34495e; font-size: 13px;">${attachmentsHtml}</div></div></div><div class="email-body-container"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 8px; font-size: 13px;">Email Body:</label><div class="email-body" style="max-height: 200px;">${emailBody}</div></div>`;} 
         async function approveSubmission() {if (!confirm('Are you sure you want to approve this submission and upload it to the Knowledge Base?')) {return;} showLoading(true); try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: currentSubmission[3].value, action: 'approve', reviewerKerberos: currentUser, reviewNotes: ''})}); if (!response.ok) {throw new Error('Approval webhook failed: ' + response.status);} console.log('Approval webhook called successfully'); showMessage('Submission approved! Content is being uploaded to the Knowledge Base.', 'success'); closeModal(); setTimeout(() => loadSubmissions(), 1000);} catch (error) {console.error('Approve error:', error); showMessage('Error approving submission: ' + error.message, 'error');} finally {showLoading(false);}}
         function showRejectForm() {document.getElementById('rejectForm').style.display = 'block';}
