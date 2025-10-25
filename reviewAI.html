@@ -346,10 +346,11 @@ function displayAttachments(recordId, attachments) {
 function viewAttachmentFile(filename) {
     try {
         showLoading(true);
-        // Build Google Drive search URL
-        const searchUrl = `https://drive.google.com/drive/u/0/search?q=${encodeURIComponent(filename)}`;
+        const folderId = '1nL4AR-coXFK698REvboJYeWwdDbprR03';
+        // Search within the specific shared drive folder
+        const searchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(filename)}&parent=${folderId}`;
         window.open(searchUrl, '_blank');
-        showMessage('Opening Google Drive search for file...', 'success');
+        showMessage('Searching for file in attachments folder...', 'success');
     } catch (error) {
         console.error('Error viewing file:', error);
         showMessage('Error opening file: ' + error.message, 'error');
