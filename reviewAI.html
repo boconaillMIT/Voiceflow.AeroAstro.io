@@ -343,16 +343,19 @@ function displayAttachments(recordId, attachments) {
 }
 
 // Function to view attachment in Google Drive
-function viewAttachment(filename) {
-    // Call Make.com webhook to get Drive link
-    fetch('https://hook.us2.make.com/ku8z97wsy6yrti8iwjapb8d17ef99kfe', {
-        method: 'POST',
-        body: JSON.stringify({ filename: filename })
-    })
-    .then(response => response.json())
-    .then(data => {
-        window.open(data.driveUrl, '_blank');
-    });
+function viewAttachmentFile(filename) {
+    try {
+        showLoading(true);
+        // Build Google Drive search URL
+        const searchUrl = `https://drive.google.com/drive/u/0/search?q=${encodeURIComponent(filename)}`;
+        window.open(searchUrl, '_blank');
+        showMessage('Opening Google Drive search for file...', 'success');
+    } catch (error) {
+        console.error('Error viewing file:', error);
+        showMessage('Error opening file: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
 }
 
 // Function to approve attachment
