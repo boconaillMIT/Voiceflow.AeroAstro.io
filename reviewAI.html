@@ -478,7 +478,7 @@ async function updateAttachmentStatus(recordId, status) {
     });
 }   
                     
-                    async function viewSubmission(recordId) {
+async function viewSubmission(recordId) {
     try {
         showLoading(true);
         const response = await makeQuickBaseRequest('POST', 'records/query', {
@@ -496,58 +496,12 @@ async function updateAttachmentStatus(recordId, status) {
         const filename = submission[18]?.value || '';
         const isAttachment = filename !== '';
         
-        let detailsHtml = `
-            <div class="submission-details">
-                <div class="detail-row">
-                    <div class="detail-col">
-                        <strong>From:</strong><br>${submission[6]?.value || 'Unknown'}
-                    </div>
-                    <div class="detail-col">
-                        <strong>Kerberos:</strong><br>${submission[7]?.value || 'Unknown'}
-                    </div>
-                    <div class="detail-col">
-                        <strong>Date:</strong><br>${new Date(submission[10]?.value).toLocaleString()}
-                    </div>
-                    <div class="detail-col">
-                        <strong>Status:</strong><br><span class="badge badge-${(submission[11]?.value || 'pending').toLowerCase()}">${submission[11]?.value || 'Pending'}</span>
-                    </div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-col-full">
-                        <strong>Subject:</strong><br>${submission[8]?.value || 'No Subject'}
-                    </div>
-                </div>`;
+        let detailsHtml = '<div class="submission-details"><div class="detail-row"><div class="detail-col"><strong>From:</strong><br>' + (submission[6]?.value || 'Unknown') + '</div><div class="detail-col"><strong>Kerberos:</strong><br>' + (submission[7]?.value || 'Unknown') + '</div><div class="detail-col"><strong>Date:</strong><br>' + new Date(submission[10]?.value).toLocaleString() + '</div><div class="detail-col"><strong>Status:</strong><br><span class="badge badge-' + (submission[11]?.value || 'pending').toLowerCase() + '">' + (submission[11]?.value || 'Pending') + '</span></div></div><div class="detail-row"><div class="detail-col-full"><strong>Subject:</strong><br>' + (submission[8]?.value || 'No Subject') + '</div></div>';
 
         if (isAttachment) {
-            // This is an attachment record
-            detailsHtml += `
-                <div class="detail-row">
-                    <div class="detail-col-full">
-                        <strong>Attachment Type:</strong><br>📎 PDF Document
-                    </div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-col-full">
-                        <strong>Filename:</strong><br>${filename}
-                    </div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-col-full">
-                        <em>This is an attachment file. Click "Approve & Upload to KB" to upload the PDF to Voiceflow.</em>
-                    </div>
-                </div>`;
+            detailsHtml += '<div class="detail-row"><div class="detail-col-full"><strong>Attachment Type:</strong><br>📎 PDF Document</div></div><div class="detail-row"><div class="detail-col-full"><strong>Filename:</strong><br>' + filename + '</div></div><div class="detail-row"><div class="detail-col-full"><em>This is an attachment file. Click "Approve & Upload to KB" to upload the PDF to Voiceflow.</em></div></div>';
         } else {
-            // This is an email body record
-            detailsHtml += `
-                <div class="detail-row">
-                    <div class="detail-col-full">
-                        <strong>Attachments:</strong><br>${submission[12]?.value ? `${submission[13]?.value || 0} file(s)` : 'None'}
-                    </div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-col-full">
-                        <strong>Email Body:</strong>
-                        <div class="email-body">`;
+            detailsHtml += '<div class="detail-row"><div class="detail-col-full"><strong>Attachments:</strong><br>' + (submission[12]?.value ? String(submission[13]?.value || 0) + ' file(s)' : 'None') + '</div></div><div class="detail-row"><div class="detail-col-full"><strong>Email Body:</strong><div class="email-body">';
             
             try {
                 if (submission[9]?.value) {
@@ -559,18 +513,10 @@ async function updateAttachmentStatus(recordId, status) {
                 detailsHtml += submission[9]?.value || 'No content';
             }
             
-            detailsHtml += `</div>
-                    </div>
-                </div>`;
+            detailsHtml += '</div></div></div>';
         }
 
-        detailsHtml += `
-                <div class="button-group">
-                    <button class="btn btn-success" onclick="approveSubmission(${recordId}, ${isAttachment}, '${filename.replace(/'/g, "\\'")}')">✓ Approve & Upload to KB</button>
-                    <button class="btn btn-danger" onclick="rejectSubmission(${recordId})">✗ Reject</button>
-                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                </div>
-            </div>`;
+        detailsHtml += '<div class="button-group"><button class="btn btn-success" onclick="approveSubmission(' + recordId + ', ' + isAttachment + ', \'' + filename.replace(/'/g, "\\'") + '\')">✓ Approve & Upload to KB</button><button class="btn btn-danger" onclick="rejectSubmission(' + recordId + ')">✗ Reject</button><button class="btn btn-secondary" onclick="closeModal()">Cancel</button></div></div>';
 
         document.getElementById('submissionDetails').innerHTML = detailsHtml;
         document.getElementById('detailModal').style.display = 'block';
@@ -580,7 +526,7 @@ async function updateAttachmentStatus(recordId, status) {
     } finally {
         showLoading(false);
     }
-}       
+}   
         function displaySubmissionDetails(sub) {let emailBody = 'No email body'; try {if (sub[9]?.value) {emailBody = atob(sub[9].value);}} catch (e) {emailBody = sub[9]?.value || 'No email body'; console.warn('Failed to decode base64 email body:', e);} const date = new Date(sub[10]?.value); let attachmentInfo = []; let attachmentsHtml = '<span style="color: #7f8c8d;">None</span>'; if (sub[14]?.value && sub[14].value !== "27" && sub[14].value !== "[]") {try {attachmentInfo = JSON.parse(sub[14].value); if (attachmentInfo.length > 0) {attachmentsHtml = '<ul class="attachment-list">'; attachmentInfo.forEach(att => {attachmentsHtml += `<li>📎 <a href="${att.driveUrl}" target="_blank">${att.fileName}</a></li>`;}); attachmentsHtml += '</ul>';}} catch (e) {console.warn('Could not parse attachment info:', e); if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;}}} else if (sub[12]?.value && sub[13]?.value > 0) {attachmentsHtml = `<span style="color: #f39c12;">📎 ${sub[13].value} attachment(s) - Will be uploaded when approved</span>`;} document.getElementById('modalBody').innerHTML = `<div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;"><div class="detail-item"><label>From:</label><div class="value" style="font-size: 13px;">${sub[6]?.value || 'Unknown'}</div></div><div class="detail-item"><label>Kerberos:</label><div class="value" style="font-size: 13px;">${sub[7]?.value || 'N/A'}</div></div><div class="detail-item"><label>Date:</label><div class="value" style="font-size: 13px;">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div><div class="detail-item"><label>Status:</label><div class="value"><span class="badge badge-${(sub[11]?.value || 'Pending').toLowerCase()}">${sub[11]?.value || 'Pending'}</span></div></div></div><div class="detail-grid" style="grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;"><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Subject:</label><div style="color: #34495e; font-size: 14px;">${sub[8]?.value || 'No Subject'}</div></div><div style="padding: 10px; background-color: #f8f9fa; border-radius: 4px;"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px; font-size: 12px;">Attachments:</label><div style="color: #34495e; font-size: 13px;">${attachmentsHtml}</div></div></div><div class="email-body-container"><label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 8px; font-size: 13px;">Email Body:</label><div class="email-body" style="max-height: 200px;">${emailBody}</div></div>`;} 
         async function approveSubmission(recordId, isAttachment, filename) {
     if (!confirm('Are you sure you want to approve and upload this to the Knowledge Base?')) {
