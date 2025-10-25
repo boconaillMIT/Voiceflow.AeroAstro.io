@@ -343,15 +343,18 @@ function displayAttachments(recordId, attachments) {
 }
 
 // Function to view attachment in Google Drive
-function viewAttachmentFile(filename) {
+async function viewAttachmentFile(filename) {
     try {
         showLoading(true);
-        // Your specific folder ID from the Google Drive URL
-        const folderId = '1nL4AR-coXFK698REvboJYeWwdDbprR03';
-        // Direct link to open the folder - user can then find the file
-        const folderUrl = `https://drive.google.com/drive/folders/${folderId}`;
-        window.open(folderUrl, '_blank');
-        showMessage('Opening attachments folder - look for: ' + filename, 'success');
+        const response = await fetch(`https://hook.us2.make.com/fcc8ag4lhtfvlegf87o13y64ruqkr7w8?filename=${encodeURIComponent(filename)}`);
+        const data = await response.json();
+        
+        if (data.url) {
+            window.open(data.url, '_blank');
+            showMessage('Opening file in Google Drive...', 'success');
+        } else {
+            showMessage('Could not get file URL', 'error');
+        }
     } catch (error) {
         console.error('Error viewing file:', error);
         showMessage('Error opening file: ' + error.message, 'error');
