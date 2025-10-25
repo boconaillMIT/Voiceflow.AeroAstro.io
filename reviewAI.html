@@ -178,9 +178,9 @@
     </div>
     <script>
         const QUICKBASE_CONFIG = {realm: 'mit.quickbase.com', userToken: 'b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h', appId: 'buuhxhtmv', pendingTableId: 'bvhhfa58i', userTableId: 'bve87f9um'};
-        const MAKECOM_WEBHOOK = 'https://hook.us2.make.com/1hp1aj8tqsxkveen4l5ig8b3117r35sw';
-        let currentSubmission = null;
-        let currentUser = null;
+    const MAKECOM_WEBHOOK = 'https://hook.us2.make.com/1hp1aj8tqsxkveen4l5ig8b3117r35sw';
+    let currentUser = '';
+    let currentSubmission = null;
        // checks to see if user has administrator access in quickbase
       async function checkAuth() {
     try {
@@ -599,8 +599,26 @@ async function approveSubmission(recordId, isAttachment, filename) {
                 throw new Error('Failed to upload attachment to Voiceflow: ' + responseText);
             }
         } else {
-            console.log('This is an email body, not handling upload yet');
-            // Upload email body to Voiceflow - add your logic here if needed
+            console.log('Uploading email body text to Voiceflow...');
+            
+            // Upload edited text via the webhook
+            const webhookResponse = await fetch(MAKECOM_WEBHOOK, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    submissionId: recordId,
+                    action: 'approve',
+                    reviewerKerberos: currentUser,
+                    emailBodyText: editedBodyText,
+                    reviewNotes: ''
+                })
+            });
+            
+            console.log('Webhook response status:', webhookResponse.status);
+            
+            if (!webhookResponse.ok) {
+                throw new Error('Failed to upload email body via webhook');
+            }
         }
 
         // Update QuickBase status to Approved
