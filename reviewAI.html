@@ -604,6 +604,41 @@ async function approveSubmission(recordId, isAttachment, filename) {
         showLoading(false);
     }
 }
+        async function rejectSubmission(recordId) {
+    const notes = prompt('Enter rejection reason (optional):');
+    
+    // If user clicks cancel on the prompt, don't proceed
+    if (notes === null) {
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to reject this submission?')) {
+        return;
+    }
+
+    try {
+        showLoading(true);
+
+        // Update QuickBase status to Rejected
+        await makeQuickBaseRequest('POST', 'records', {
+            to: QUICKBASE_CONFIG.pendingTableId,
+            data: [{
+                3: {value: recordId},
+                11: {value: 'Rejected'},
+                14: {value: notes || 'No reason provided'}  // Assuming field 14 is for rejection notes
+            }]
+        });
+
+        showMessage('Submission rejected successfully!', 'success');
+        closeModal();
+        loadSubmissions();
+    } catch (error) {
+        console.error('Rejection error:', error);
+        showMessage('Error rejecting submission: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
         function showRejectForm() {document.getElementById('rejectForm').style.display = 'block';}
         function hideRejectForm() {document.getElementById('rejectForm').style.display = 'none'; document.getElementById('rejectNotes').value = '';}
         async function confirmReject() {const notes = document.getElementById('rejectNotes').value.trim(); showLoading(true); try {const response = await fetch(MAKECOM_WEBHOOK, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({submissionId: currentSubmission[3].value, action: 'reject', reviewerKerberos: currentUser, reviewNotes: notes})}); if (!response.ok) {throw new Error('Rejection webhook failed: ' + response.status);} console.log('Rejection webhook called successfully'); showMessage('Submission rejected. Sender has been notified.', 'success'); closeModal(); setTimeout(() => loadSubmissions(), 1000);} catch (error) {console.error('Reject error:', error); showMessage('Error rejecting submission: ' + error.message, 'error');} finally {showLoading(false);}}
