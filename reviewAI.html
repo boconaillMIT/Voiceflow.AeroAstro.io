@@ -598,28 +598,39 @@ async function approveSubmission(recordId, isAttachment, filename) {
             if (!response.ok) {
                 throw new Error('Failed to upload attachment to Voiceflow: ' + responseText);
             }
-        } else {
-            console.log('Uploading email body text to Voiceflow...');
-            
-            // Upload edited text via the webhook
-            const webhookResponse = await fetch(MAKECOM_WEBHOOK, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    submissionId: recordId,
-                    action: 'approve',
-                    reviewerKerberos: currentUser,
-                    emailBodyText: editedBodyText,
-                    reviewNotes: ''
-                })
-            });
-            
-            console.log('Webhook response status:', webhookResponse.status);
-            
-            if (!webhookResponse.ok) {
-                throw new Error('Failed to upload email body via webhook');
-            }
-        }
+} else {
+    console.log('Uploading email body text to Voiceflow...');
+    
+    // First, update QuickBase with edited text
+    console.log('Updating QuickBase with edited text...');
+    await makeQuickBaseRequest('POST', 'records', {
+        to: QUICKBASE_CONFIG.pendingTableId,
+        data: [{
+            3: {value: recordId},
+            9: {value: btoa(editedBodyText)}  // Update field 9 with edited text (base64 encoded)
+        }]
+    });
+    
+    console.log('QuickBase updated. Now calling webhook to upload to Voiceflow...');
+    
+    // Then call webhook to upload to Voiceflow
+    const webhookResponse = await fetch(MAKECOM_WEBHOOK, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            submissionId: recordId,
+            action: 'approve',
+            reviewerKerberos: currentUser,
+            reviewNotes: ''
+        })
+    });
+    
+    console.log('Webhook response status:', webhookResponse.status);
+    
+    if (!webhookResponse.ok) {
+        throw new Error('Failed to upload email body via webhook');
+    }
+}
 
         // Update QuickBase status to Approved
         console.log('Updating QuickBase status to Approved...');
