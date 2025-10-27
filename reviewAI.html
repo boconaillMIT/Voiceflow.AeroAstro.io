@@ -657,7 +657,6 @@ async function approveSubmission(recordId, isAttachment, filename) {
         async function rejectSubmission(recordId) {
     const notes = prompt('Enter rejection reason (optional):');
     
-    // If user clicks cancel on the prompt, don't proceed
     if (notes === null) {
         return;
     }
@@ -668,47 +667,46 @@ async function approveSubmission(recordId, isAttachment, filename) {
 
     try {
         showLoading(true);
-    const response = await makeQuickBaseRequest('POST', 'records/query', {
-        from: QUICKBASE_CONFIG.pendingTableId,
-        select: [3, 18],
-        where: `{3.EX.${recordId}}`
-    });
-    
-    const submission = response.data[0];
-    const filename = submission[18]?.value || '';
-    const isAttachment = filename !== '';
-
-    if (isAttachment) {
-        // Call rejection webhook to move file to rejected folder
-        console.log('Rejecting attachment, moving file to rejected folder...');
-        const webhookResponse = await fetch(REJECT_ATTACHMENT_WEBHOOK, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                recordId: recordId,
-                filename: filename
-            })
+        
+        // Get the current submission to check if it's an attachment
+        const response = await makeQuickBaseRequest('POST', 'records/query', {
+            from: QUICKBASE_CONFIG.pendingTableId,
+            select: [3, 18],
+            where: `{3.EX.${recordId}}`
         });
         
-        console.log('Rejection webhook response:', webhookResponse.status);
-        
-        if (!webhookResponse.ok) {
-            throw new Error('Failed to move rejected attachment');
+        const submission = response.data[0];
+        const filename = submission[18]?.value || '';
+        const isAttachment = filename !== '';
+
+        if (isAttachment) {
+            // Call rejection webhook to move file to rejected folder
+            console.log('Rejecting attachment, moving file to rejected folder...');
+            const webhookResponse = await fetch(REJECT_ATTACHMENT_WEBHOOK, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    recordId: recordId,
+                    filename: filename
+                })
+            });
+            
+            console.log('Rejection webhook response:', webhookResponse.status);
+            
+            if (!webhookResponse.ok) {
+                throw new Error('Failed to move rejected attachment');
+            }
+            
+            console.log('File moved, now updating QuickBase status...');
         }
-        
-        // Webhook already updated QB, so skip the manual update below
-        showMessage('Attachment rejected and moved to rejected folder!', 'success');
-        closeModal();
-        loadSubmissions();
-        return; // Exit early since webhook handled everything
-    }
-        // Update QuickBase status to Rejected
+
+        // Update QuickBase status to Rejected (for both attachments and email bodies)
         await makeQuickBaseRequest('POST', 'records', {
             to: QUICKBASE_CONFIG.pendingTableId,
             data: [{
                 3: {value: recordId},
                 11: {value: 'Rejected'},
-                14: {value: notes || 'No reason provided'}  // Assuming field 14 is for rejection notes
+                14: {value: notes || 'No reason provided'}
             }]
         });
 
