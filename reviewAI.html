@@ -661,10 +661,6 @@ async function approveSubmission(recordId, isAttachment, filename) {
         return;
     }
     
-    if (!confirm('Are you sure you want to reject this submission?')) {
-        return;
-    }
-
     try {
         showLoading(true);
         
