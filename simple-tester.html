@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v2</title>
+    <title>Voiceflow Chatbot Tester v3</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -110,7 +110,7 @@
             border: 1px solid #dee2e6;
             border-radius: 4px;
             padding: 15px;
-            height: 300px;
+            height: 500px;
             overflow-y: auto;
             font-size: 13px;
             margin: 15px 0;
@@ -215,8 +215,10 @@
     <div class="container">
         <!-- Left Panel: Controls -->
         <div class="panel">
-            <h2>🤖 Chatbot Tester v2</h2>
-            
+            <h2>🤖 Chatbot Tester v3</h2>
+                        <div class="debug" style="background: #e7f3ff; padding: 8px; border-radius: 4px; margin-bottom: 10px;">
+                ✨ NEW: Direct API capture for perfect sync
+            </div>
             <div class="section">
                 <h4>📝 Load Questions</h4>
                 
@@ -224,16 +226,16 @@
                 
                 <label>Manual Questions (edit as needed):</label>
                 <textarea id="questionTextArea" rows="6">who is the department head
-who is the DAF
-how can i create a budget?
-how do i request a waiver
-how do i request a proposal waiver
-how do i request a waiver of search?
-does the department still do waivers of search
-where is Gabby Hoyte's office
-who does Gabby Hoyte support?
-who is the development officer?
-who supports sertac karaman?</textarea>
+                    who is the DAF
+                    how can i create a budget?
+                    how do i request a waiver
+                    how do i request a proposal waiver
+                    how do i request a waiver of search?
+                    does the department still do waivers of search
+                    where is Gabby Hoyte's office
+                    who does Gabby Hoyte support?
+                    who is the development officer?
+                    who supports sertac karaman?</textarea>
                 <button onclick="loadFromTextArea()" class="green">📝 Load These Questions</button>
                 
                 <label>Google Sheet ID (optional):</label>
@@ -244,10 +246,20 @@ who supports sertac karaman?</textarea>
 
             <div class="section">
                 <h4>⚙️ Settings</h4>
-                <label>Delay between questions (seconds):</label>
-                <input type="number" id="delaySeconds" value="6" min="3" max="30">
+                <label>Max wait time per question (seconds):</label>
+                <input type="number" id="maxWaitSeconds" value="15" min="5" max="60">
+                <div class="debug">Test will wait up to this long for each response</div>
             </div>
-
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="statQuestions">0</div>
+                    <div class="stat-label">Questions Loaded</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statCompleted">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
             <div class="status" id="mainStatus">Ready - load questions above</div>
 
             <button onclick="loadChatbot()" id="loadChatBtn">🔗 Load Chatbot</button>
@@ -266,21 +278,174 @@ who supports sertac karaman?</textarea>
 
         <!-- Right Panel: Transcript -->
         <div class="panel">
-            <h3>💬 Live Transcript</h3>
+            <h3>💬 Live Q&A Transcript</h3>
             <div class="transcript" id="transcript">
                 <div class="message system">Transcript will appear here during testing</div>
             </div>
             <button onclick="clearTranscript()">🗑️ Clear Transcript</button>
-            <button onclick="copyToClipboard()">📋 Copy Transcript</button>
+            <button onclick="copyToClipboard()" class="green">📋 Copy Transcript</button>
+            <button onclick="exportToCSV()" class="gray">📊 Export CSV</button>
         </div>
     </div>
 
     <script>
-        // Global variables
         let questionsList = [];
         let currentQuestionIndex = 0;
-        let testInterval = null;
         let chatbotReady = false;
+        let testRunning = false;
+        let qaResults = [];
+        let waitingForResponse = false;
+        let currentQuestionStartTime = null;
+        let responseTimeout = null;
+ // ============================================
+        // MESSAGE LISTENER FOR API RESPONSES
+        // ============================================
+        window.addEventListener('message', function(event) {
+            // Security check - only accept messages from our iframe
+            const iframe = document.getElementById('chatIframe');
+            if (event.source !== iframe.contentWindow) {
+                return;
+            }
+
+            console.log('📨 Message received:', event.data);
+
+            if (event.data.type === 'CHATBOT_READY') {
+                chatbotReady = true;
+                updateStatus('Chatbot ready - API interceptor active!', 'success');
+                addSystemMessage('✅ Chatbot loaded with API interceptor');
+                checkReadyToTest();
+            }
+
+            if (event.data.type === 'VOICEFLOW_API_RESPONSE') {
+                console.log('📦 Received API response:', event.data.data);
+                
+                if (waitingForResponse && testRunning) {
+                    handleVoiceflowResponse(event.data.data);
+                }
+            }
+        });
+
+        // ============================================
+        // HANDLE VOICEFLOW API RESPONSE
+        // ============================================
+        function handleVoiceflowResponse(apiData) {
+            // Clear the timeout since we got a response
+            if (responseTimeout) {
+                clearTimeout(responseTimeout);
+                responseTimeout = null;
+            }
+
+            // Extract text from Voiceflow API response
+            let responseText = '';
+            
+            try {
+                // Voiceflow returns an array of trace objects
+                if (Array.isArray(apiData)) {
+                    for (const trace of apiData) {
+                        if (trace.type === 'text' && trace.payload && trace.payload.message) {
+                            responseText += trace.payload.message + '\n\n';
+                        } else if (trace.type === 'speak' && trace.payload && trace.payload.message) {
+                            responseText += trace.payload.message + '\n\n';
+                        }
+                    }
+                }
+                
+                responseText = responseText.trim();
+                
+                if (!responseText) {
+                    responseText = 'Response received (no text content)';
+                }
+            } catch (e) {
+                console.error('Error parsing API response:', e);
+                responseText = 'Error parsing response';
+            }
+
+            const responseTime = Date.now() - currentQuestionStartTime;
+            
+            // Update the current Q&A pair
+            const currentQuestion = questionsList[currentQuestionIndex - 1];
+            qaResults[qaResults.length - 1] = {
+                question: currentQuestion,
+                answer: responseText,
+                timestamp: new Date().toISOString(),
+                responseTime: responseTime
+            };
+
+            // Update the transcript display
+            updateTranscriptDisplay();
+            updateStats();
+
+            waitingForResponse = false;
+
+            // Send next question after a short delay
+            setTimeout(() => {
+                if (testRunning) {
+                    sendNextQuestion();
+                }
+            }, 1000);
+        }
+
+        // ============================================
+        // UPDATE TRANSCRIPT DISPLAY
+        // ============================================
+        function updateTranscriptDisplay() {
+            const transcript = document.getElementById('transcript');
+            transcript.innerHTML = '';
+
+            qaResults.forEach((qa, index) => {
+                const qaDiv = document.createElement('div');
+                qaDiv.className = 'qa-pair';
+                
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'qa-question';
+                questionDiv.textContent = `Q${index + 1}: ${qa.question}`;
+                
+                const answerDiv = document.createElement('div');
+                if (qa.answer === 'WAITING') {
+                    answerDiv.className = 'qa-waiting';
+                    answerDiv.textContent = '⏳ Waiting for response...';
+                } else {
+                    answerDiv.className = 'qa-answer';
+                    answerDiv.textContent = qa.answer;
+                    
+                    if (qa.responseTime) {
+                        const timeInfo = document.createElement('div');
+                        timeInfo.style.fontSize = '11px';
+                        timeInfo.style.color = '#6c757d';
+                        timeInfo.style.marginTop = '8px';
+                        timeInfo.textContent = `⏱️ Response time: ${(qa.responseTime / 1000).toFixed(1)}s`;
+                        answerDiv.appendChild(timeInfo);
+                    }
+                }
+                
+                qaDiv.appendChild(questionDiv);
+                qaDiv.appendChild(answerDiv);
+                transcript.appendChild(qaDiv);
+            });
+
+            // Auto-scroll to bottom
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // ============================================
+        // ADD SYSTEM MESSAGE
+        // ============================================
+        function addSystemMessage(message) {
+            const transcript = document.getElementById('transcript');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            messageDiv.textContent = message;
+            transcript.appendChild(messageDiv);
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // ============================================
+        // UPDATE STATS
+        // ============================================
+        function updateStats() {
+            document.getElementById('statQuestions').textContent = questionsList.length;
+            document.getElementById('statCompleted').textContent = qaResults.filter(qa => qa.answer !== 'WAITING').length;
+        }
 
         // Helper functions
         function addMessage(text, type = 'system') {
@@ -300,14 +465,16 @@ who supports sertac karaman?</textarea>
 
         function displayQuestions() {
             const display = document.getElementById('questionsDisplay');
-            if (questionsList.length === 0) {
-                display.innerHTML = '<div style="text-align: center; color: #6c757d;">No questions loaded</div>';
-                return;
-            }
+            display.innerHTML = '';
             
-            display.innerHTML = questionsList.map((q, i) => 
-                `<div class="question-item">${i + 1}. ${q}</div>`
-            ).join('');
+            questionsList.forEach((q, index) => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${index}`;  // ADD THIS LINE
+                div.textContent = `${index + 1}. ${q}`;
+                display.appendChild(div);
+            });
+            updateStats();  // ADD THIS LINE
         }
 
         // Question loading functions
@@ -356,6 +523,7 @@ who supports sertac karaman?</textarea>
             updateStatus(`Loaded ${questionsList.length} questions from text area`, 'success');
             addMessage(`✅ Loaded ${questionsList.length} questions from text area`);
             displayQuestions();
+            updateStats();
             checkReadyToTest();
         }
 
@@ -436,20 +604,11 @@ who supports sertac karaman?</textarea>
             const iframe = document.getElementById('chatIframe');
             iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
             
-            updateStatus('Loading chatbot...', 'warning');
-            addMessage('🔗 Loading chatbot...');
+            updateStatus('Loading chatbot with API interceptor...', 'warning');
+            addSystemMessage('🔗 Loading chatbot...');
             
-            iframe.onload = function() {
-                addMessage('✅ Chatbot page loaded, waiting for Voiceflow...');
-                updateStatus('Chatbot loaded, waiting for Voiceflow...', 'info');
-                
-                setTimeout(() => {
-                    chatbotReady = true;
-                    updateStatus('Chatbot ready!', 'success');
-                    addMessage('✅ Voiceflow should be ready now');
-                    checkReadyToTest();
-                }, 8000);
-            };
+            // The chatbot will send a CHATBOT_READY message when it's loaded
+            // (handled by the message listener)
         }
 
         function checkReadyToTest() {
@@ -471,37 +630,59 @@ who supports sertac karaman?</textarea>
                 return;
             }
 
-            const delay = parseInt(document.getElementById('delaySeconds').value) * 1000;
             currentQuestionIndex = 0;
+            qaResults = [];
+            testRunning = true;
             
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
+            document.getElementById('loadChatBtn').disabled = true;
             
             updateStatus('Testing in progress...', 'warning');
-            addMessage(`🚀 Starting test with ${questionsList.length} questions`);
+            addSystemMessage(`🚀 Starting test with ${questionsList.length} questions`);
+            updateStats();
             
             sendNextQuestion();
-            testInterval = setInterval(sendNextQuestion, delay);
         }
 
-        function sendNextQuestion() {
+       function sendNextQuestion() {
             if (currentQuestionIndex >= questionsList.length) {
                 stopTest();
                 updateStatus('All questions completed!', 'success');
-                addMessage('🎉 All questions completed!');
+                addSystemMessage('🎉 All questions completed!');
                 return;
             }
 
             const question = questionsList[currentQuestionIndex];
             const questionNum = currentQuestionIndex + 1;
             
-            addMessage(question, 'user');
+            // Update question display to show current
+            document.querySelectorAll('.question-item').forEach(item => {
+                item.classList.remove('current');
+            });
+            const currentItem = document.getElementById(`question-${currentQuestionIndex}`);
+            if (currentItem) {
+                currentItem.classList.add('current');
+            }
+
+            // Add to results as waiting
+            qaResults.push({
+                question: question,
+                answer: 'WAITING',
+                timestamp: new Date().toISOString()
+            });
+
+            updateTranscriptDisplay();
             
             try {
                 const iframe = document.getElementById('chatIframe');
                 const voiceflow = iframe.contentWindow.voiceflow;
                 
                 if (voiceflow && voiceflow.chat && voiceflow.chat.interact) {
+                    waitingForResponse = true;
+                    currentQuestionStartTime = Date.now();
+                    
+                    // Send the question
                     voiceflow.chat.interact({
                         type: 'text',
                         payload: question
@@ -509,79 +690,116 @@ who supports sertac karaman?</textarea>
                     
                     console.log(`Sent Q${questionNum}: ${question}`);
                     
-                    // Try to capture actual bot response
-                    setTimeout(() => {
-                        let botResponse = 'Response received (content not accessible via iframe)';
-                        
-                        try {
-                            // Try to access Voiceflow's shadow DOM for actual response
-                            const voiceflow = iframe.contentWindow.voiceflow;
-                            if (voiceflow && voiceflow.chat && voiceflow.chat._shadowRoot) {
-                                const shadowRoot = voiceflow.chat._shadowRoot;
-                                
-                                // Look for the latest bot response using the correct selector
-                                const botResponses = shadowRoot.querySelectorAll('.vfrc-system-response');
-                                if (botResponses.length > 0) {
-                                    const latestResponse = botResponses[botResponses.length - 1];
-                                    const text = latestResponse.textContent || latestResponse.innerText;
-                                    if (text && text.trim()) {
-                                        botResponse = text.trim();
-                                    }
+                    // Set timeout in case response never comes
+                    const maxWait = parseInt(document.getElementById('maxWaitSeconds').value) * 1000;
+                    responseTimeout = setTimeout(() => {
+                        if (waitingForResponse) {
+                            console.log('Response timeout for question:', question);
+                            qaResults[qaResults.length - 1].answer = '⏱️ Timeout - no response received';
+                            updateTranscriptDisplay();
+                            waitingForResponse = false;
+                            
+                            setTimeout(() => {
+                                if (testRunning) {
+                                    sendNextQuestion();
                                 }
-                            }
-                        } catch (error) {
-                            console.log('Response capture error:', error);
+                            }, 1000);
                         }
-                        
-                        addMessage(botResponse, 'bot');
-                    }, 3000);
+                    }, maxWait);
                     
                 } else {
-                    addMessage('Error: Cannot access Voiceflow in iframe', 'system');
+                    addSystemMessage('❌ Error: Cannot access Voiceflow in iframe');
+                    qaResults[qaResults.length - 1].answer = 'Error: Voiceflow not accessible';
+                    updateTranscriptDisplay();
                 }
             } catch (error) {
-                addMessage(`Error sending question: ${error.message}`, 'system');
+                addSystemMessage(`❌ Error: ${error.message}`);
+                qaResults[qaResults.length - 1].answer = `Error: ${error.message}`;
+                updateTranscriptDisplay();
             }
 
             currentQuestionIndex++;
+            
+            // Mark previous as completed in display
+            if (currentQuestionIndex > 1) {
+                const prevItem = document.getElementById(`question-${currentQuestionIndex - 2}`);
+                if (prevItem) {
+                    prevItem.classList.remove('current');
+                    prevItem.classList.add('completed');
+                }
+            }
         }
 
+
         function stopTest() {
-            if (testInterval) {
-                clearInterval(testInterval);
-                testInterval = null;
+            testRunning = false;
+            waitingForResponse = false;
+            
+            if (responseTimeout) {
+                clearTimeout(responseTimeout);
+                responseTimeout = null;
             }
             
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
+            document.getElementById('loadChatBtn').disabled = false;
             
             updateStatus('Test stopped', 'info');
-            addMessage('⏹️ Test stopped');
+            addSystemMessage('⏹️ Test stopped');
         }
 
         // Utility functions
         function clearTranscript() {
-            document.getElementById('transcript').innerHTML = 
-                '<div class="message system">Transcript cleared</div>';
+            qaResults = [];
+            updateTranscriptDisplay();
+            addSystemMessage('Transcript cleared');
         }
 
         function copyToClipboard() {
-            const transcript = document.getElementById('transcript');
-            const text = Array.from(transcript.children)
-                .map(div => div.textContent)
-                .join('\n');
+            let text = '=== VOICEFLOW TEST RESULTS ===\n\n';
+            
+            qaResults.forEach((qa, index) => {
+                text += `Q${index + 1}: ${qa.question}\n`;
+                text += `A${index + 1}: ${qa.answer}\n`;
+                if (qa.responseTime) {
+                    text += `Time: ${(qa.responseTime / 1000).toFixed(1)}s\n`;
+                }
+                text += '\n---\n\n';
+            });
             
             navigator.clipboard.writeText(text).then(() => {
-                addMessage('📋 Transcript copied to clipboard');
+                addSystemMessage('📋 Transcript copied to clipboard');
             });
         }
-
+        // ============================================
+        // EXPORT TO CSV
+        // ============================================
+        function exportToCSV() {
+            let csv = 'Question Number,Question,Answer,Response Time (seconds)\n';
+            
+            qaResults.forEach((qa, index) => {
+                const question = qa.question.replace(/"/g, '""');
+                const answer = qa.answer.replace(/"/g, '""');
+                const time = qa.responseTime ? (qa.responseTime / 1000).toFixed(1) : 'N/A';
+                csv += `${index + 1},"${question}","${answer}",${time}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voiceflow-test-${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            
+            addSystemMessage('📊 CSV exported successfully');
+        }
         // Initialize
         window.addEventListener('load', () => {
-            addMessage('🤖 Chatbot Tester v2 Ready');
-            addMessage('Step 1: Load questions using options above');
-            addMessage('Step 2: Load chatbot');
-            addMessage('Step 3: Start testing');
+            addSystemMessage('🤖 Chatbot Tester v3 Ready');
+            addSystemMessage('✨ Using API interception for accurate responses');
+            addSystemMessage('Step 1: Load questions');
+            addSystemMessage('Step 2: Load chatbot');
+            addSystemMessage('Step 3: Start testing');
         });
     </script>
 </body>
