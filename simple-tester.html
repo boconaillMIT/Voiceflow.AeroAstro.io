@@ -478,20 +478,27 @@
         }
 
         // Question loading functions
-        function useDefaultQuestions() {
-            questionsList = [
-                "who is the department head",
-                "who is the DAF",
-                "how can i create a budget?",
-                "how do i request a waiver",
-                "how do i request a proposal waiver",
-                "how do i request a waiver of search?",
-                "does the department still do waivers of search",
-                "where is Gabby Hoyte's office",
-                "who does Gabby Hoyte support?",
-                "who is the development officer?",
-                "who supports sertac karaman?"
-            ];
+            function useDefaultQuestions() {
+                questionsList = [
+                    "who is the department head",
+                    "who is the DAF",
+                    "how can i create a budget?",
+                    "how do i request a waiver",
+                    "how do i request a proposal waiver",
+                    "how do i request a waiver of search?",
+                    "does the department still do waivers of search",
+                    "where is Gabby Hoyte's office",
+                    "who does Gabby Hoyte support?",
+                    "who is the development officer?",
+                    "who supports sertac karaman?"
+                ];
+                
+                updateStatus('Loaded ${questionsList.length} default questions', 'success');
+                addSystemMessage('✅ Loaded ${questionsList.length} built-in questions');
+                displayQuestions();
+                updateStats();
+                checkReadyToTest();
+            }
             
             updateStatus(`Loaded ${questionsList.length} default questions`, 'success');
             addMessage(`✅ Loaded ${questionsList.length} built-in questions`);
