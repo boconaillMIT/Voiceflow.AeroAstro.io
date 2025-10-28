@@ -500,11 +500,6 @@
                 checkReadyToTest();
             }
             
-            updateStatus(`Loaded ${questionsList.length} default questions`, 'success');
-            addMessage(`✅ Loaded ${questionsList.length} built-in questions`);
-            displayQuestions();
-            checkReadyToTest();
-        }
 
         function loadFromTextArea() {
             const textarea = document.getElementById('questionTextArea');
