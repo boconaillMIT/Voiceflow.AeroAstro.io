@@ -665,6 +665,101 @@ function loadVoiceflow(userID, userData, validationResult) {  // Add validationR
     (function(d, t) {
         var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
         v.onload = function() {
+                        console.log('🔧 Installing API interceptor...');
+            
+            // Store original fetch
+            const originalFetch = window.fetch;
+            
+            // Intercept fetch calls to capture Voiceflow API responses
+            window.fetch = async function(...args) {
+                const response = await originalFetch.apply(this, args);
+                
+                // Check if this is a Voiceflow API call
+                const url = args[0];
+                if (typeof url === 'string' && (url.includes('voiceflow.com') || url.includes('runtime.voiceflow.com') || url.includes('/interact') || url.includes('/state'))) {
+                    console.log('📡 Voiceflow API call detected:', url);
+                    
+                    // Clone the response so we can read it twice (once here, once for Voiceflow)
+                    const clonedResponse = response.clone();
+                    
+                    try {
+                        const data = await clonedResponse.json();
+                        console.log('📦 API Response data:', data);
+                        
+                        // Send complete API response to parent window (the tester)
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({
+                                type: 'VOICEFLOW_API_RESPONSE',
+                                data: data,
+                                url: url,
+                                timestamp: new Date().toISOString()
+                            }, '*');
+                            console.log('✅ Response forwarded to parent window');
+                        }
+                    } catch (e) {
+                        console.log('⚠️ Could not parse API response:', e);
+                    }
+                }
+                
+                return response;
+            };
+            
+            // Also intercept XMLHttpRequest (in case Voiceflow uses it)
+            const originalXHR = window.XMLHttpRequest;
+            window.XMLHttpRequest = function() {
+                const xhr = new originalXHR();
+                const originalOpen = xhr.open;
+                const originalSend = xhr.send;
+                
+                let requestURL = '';
+                
+                xhr.open = function(method, url) {
+                    requestURL = url;
+                    return originalOpen.apply(this, arguments);
+                };
+                
+                xhr.send = function() {
+                    xhr.addEventListener('load', function() {
+                        if (requestURL.includes('voiceflow.com') || requestURL.includes('/interact') || requestURL.includes('/state')) {
+                            console.log('📡 Voiceflow XHR call detected:', requestURL);
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                console.log('📦 XHR Response data:', data);
+                                
+                                if (window.parent && window.parent !== window) {
+                                    window.parent.postMessage({
+                                        type: 'VOICEFLOW_API_RESPONSE',
+                                        data: data,
+                                        url: requestURL,
+                                        timestamp: new Date().toISOString()
+                                    }, '*');
+                                    console.log('✅ XHR Response forwarded to parent window');
+                                }
+                            } catch (e) {
+                                console.log('⚠️ Could not parse XHR response:', e);
+                            }
+                        }
+                    });
+                    return originalSend.apply(this, arguments);
+                };
+                
+                return xhr;
+            };
+            
+            console.log('✅ API interceptor installed successfully');
+            
+            // Notify parent that chatbot is ready with interceptor
+            setTimeout(() => {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'CHATBOT_READY',
+                        interceptorActive: true,
+                        timestamp: new Date().toISOString()
+                    }, '*');
+                    console.log('📢 CHATBOT_READY message sent to parent');
+                }
+            }, 3000);
+
             window.voiceflow.chat.load({
                 verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
                 url: 'https://general-runtime.voiceflow.com',
@@ -793,6 +888,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
