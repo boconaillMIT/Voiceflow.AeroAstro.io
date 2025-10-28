@@ -674,19 +674,20 @@ function loadVoiceflow(userID, userData, validationResult) {  // Add validationR
 window.fetch = async function(...args) {
     const response = await originalFetch.apply(this, args);
     
-    // Check if this is a Voiceflow API call
-    const url = args[0];
+    // Get URL as string (handle both string and URL object)
+    let url = args[0];
+    const urlString = typeof url === 'string' ? url : (url?.href || url?.toString() || '');
     
     // DEBUG: Log ALL fetch calls
-    console.log('🔍 FETCH CALL:', url);
+    console.log('🔍 FETCH CALL:', urlString);
     
     // Only intercept actual interaction endpoints (not logging endpoints)
-    if (typeof url === 'string' && 
-        (url.includes('voiceflow.com') || url.includes('runtime.voiceflow.com')) &&
-        !url.includes('webchat-log') &&  // IGNORE logging endpoint
-        !url.includes('analytics')) {     // IGNORE analytics endpoint
+    if (urlString && 
+        (urlString.includes('voiceflow.com') || urlString.includes('runtime.voiceflow.com')) &&
+        !urlString.includes('webchat-log') &&
+        !urlString.includes('analytics')) {
         
-        console.log('📡 Voiceflow API call detected:', url);
+    console.log('📡 Voiceflow API call detected:', urlString);
         
         // Clone the response so we can read it twice
         const clonedResponse = response.clone();
@@ -699,11 +700,10 @@ window.fetch = async function(...args) {
                 console.log('📦 API Response data:', data);
                 
                 // Send complete API response to parent window (the tester)
-                if (window.parent && window.parent !== window) {
                     window.parent.postMessage({
                         type: 'VOICEFLOW_API_RESPONSE',
                         data: data,
-                        url: url,
+                        url: urlString,
                         timestamp: new Date().toISOString()
                     }, '*');
                     console.log('✅ Response forwarded to parent window');
@@ -903,6 +903,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
