@@ -715,6 +715,12 @@ window.fetch = async function(...args) {
         } catch (e) {
             console.log('⚠️ Could not parse API response:', e);
         }
+    }  // Close the if statement
+
+return response;
+};  // Close window.fetch function
+
+// Also intercept XMLHttpRequest (in case Voiceflow uses it)
             
             // Also intercept XMLHttpRequest (in case Voiceflow uses it)
             const originalXHR = window.XMLHttpRequest;
@@ -900,6 +906,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
