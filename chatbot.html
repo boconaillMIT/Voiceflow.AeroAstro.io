@@ -671,41 +671,53 @@ function loadVoiceflow(userID, userData, validationResult) {  // Add validationR
             const originalFetch = window.fetch;
             
             // Intercept fetch calls to capture Voiceflow API responses
-            window.fetch = async function(...args) {
-                const response = await originalFetch.apply(this, args);
+window.fetch = async function(...args) {
+    const response = await originalFetch.apply(this, args);
+    
+    // Check if this is a Voiceflow API call
+    const url = args[0];
+    
+    // DEBUG: Log ALL fetch calls
+    console.log('🔍 FETCH CALL:', url);
+    
+    // Only intercept actual interaction endpoints (not logging endpoints)
+    if (typeof url === 'string' && 
+        (url.includes('voiceflow.com') || url.includes('runtime.voiceflow.com')) &&
+        !url.includes('webchat-log') &&  // IGNORE logging endpoint
+        !url.includes('analytics')) {     // IGNORE analytics endpoint
+        
+        console.log('📡 Voiceflow API call detected:', url);
+        
+        // Clone the response so we can read it twice
+        const clonedResponse = response.clone();
+        
+        try {
+            // Check if response has content before trying to parse
+            const text = await clonedResponse.text();
+            if (text && text.trim().length > 0) {
+                const data = JSON.parse(text);
+                console.log('📦 API Response data:', data);
                 
-                // Check if this is a Voiceflow API call
-                const url = args[0];
-                
-                // DEBUG: Log ALL fetch calls to see what URLs are being used
-                console.log('🔍 FETCH CALL:', url);
-                if (typeof url === 'string' && (url.includes('voiceflow.com') || url.includes('runtime.voiceflow.com') || url.includes('/interact') || url.includes('/state'))) {
-                    console.log('📡 Voiceflow API call detected:', url);
-                    
-                    // Clone the response so we can read it twice (once here, once for Voiceflow)
-                    const clonedResponse = response.clone();
-                    
-                    try {
-                        const data = await clonedResponse.json();
-                        console.log('📦 API Response data:', data);
-                        
-                        // Send complete API response to parent window (the tester)
-                        if (window.parent && window.parent !== window) {
-                            window.parent.postMessage({
-                                type: 'VOICEFLOW_API_RESPONSE',
-                                data: data,
-                                url: url,
-                                timestamp: new Date().toISOString()
-                            }, '*');
-                            console.log('✅ Response forwarded to parent window');
-                        }
-                    } catch (e) {
-                        console.log('⚠️ Could not parse API response:', e);
-                    }
+                // Send complete API response to parent window (the tester)
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'VOICEFLOW_API_RESPONSE',
+                        data: data,
+                        url: url,
+                        timestamp: new Date().toISOString()
+                    }, '*');
+                    console.log('✅ Response forwarded to parent window');
                 }
-                
-                return response;
-            };
+            } else {
+                console.log('⚠️ Empty response body, skipping');
+            }
+        } catch (e) {
+            console.log('⚠️ Could not parse API response:', e);
+        }
+    }
+    
+    return response;
+};
             
             // Also intercept XMLHttpRequest (in case Voiceflow uses it)
             const originalXHR = window.XMLHttpRequest;
@@ -891,6 +903,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
