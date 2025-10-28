@@ -707,7 +707,7 @@ window.fetch = async function(...args) {
                         timestamp: new Date().toISOString()
                     }, '*');
                     console.log('✅ Response forwarded to parent window');
-                }
+                
             } else {
                 console.log('⚠️ Empty response body, skipping');
             }
@@ -903,6 +903,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
