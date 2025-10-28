@@ -957,7 +957,7 @@ async function viewSubmission(recordId) {
         if (isAttachment) {
             detailsHtml += '<div class="detail-row"><div class="detail-col-full"><strong>Attachment Type:</strong><br>📎 PDF Document</div></div><div class="detail-row"><div class="detail-col-full"><strong>Filename:</strong><br>' + filename + '</div></div><div class="detail-row"><div class="detail-col-full"><em>This is an attachment file. Click "Approve & Upload to KB" to upload the PDF to Voiceflow.</em></div></div>';
         } else {
-            detailsHtml += '<div class="detail-row"><div class="detail-col-full"><strong>Attachments:</strong><br>' + (submission[12]?.value ? String(submission[13]?.value || 0) + ' file(s)' : 'None') + '</div></div><div class="detail-row"><div class="detail-col-full"><strong>Email Body:</strong> <em style="color: #666;">(editable - make changes before approving)</em><br><textarea id="emailBodyText" class="email-body-edit" rows="15">';
+detailsHtml += '<div class="detail-row"><div class="detail-col-full"><strong>Email Body:</strong> <em style="color: #666;">(editable - make changes before approving)</em><br><textarea id="emailBodyText" class="email-body-edit" rows="15">';
             
             try {
                 if (submission[9]?.value) {
