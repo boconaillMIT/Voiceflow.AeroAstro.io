@@ -337,11 +337,15 @@ header::before {
     
     .detail-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(4, 1fr);
         gap: 20px;
-        margin-bottom: 25px;
-        padding-bottom: 20px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
         border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .detail-row.subject-row {
+        grid-template-columns: 2fr 1fr;
     }
     
     .detail-row:last-of-type {
@@ -926,8 +930,30 @@ async function viewSubmission(recordId) {
         const filename = submission[18]?.value || '';
         const isAttachment = filename !== '';
         
-        let detailsHtml = '<div class="submission-details"><div class="detail-row"><div class="detail-col"><strong>From:</strong><br>' + (submission[6]?.value || 'Unknown') + '</div><div class="detail-col"><strong>Kerberos:</strong><br>' + (submission[7]?.value || 'Unknown') + '</div><div class="detail-col"><strong>Date:</strong><br>' + new Date(submission[10]?.value).toLocaleString() + '</div><div class="detail-col"><strong>Status:</strong><br><span class="badge badge-' + (submission[11]?.value || 'pending').toLowerCase() + '">' + (submission[11]?.value || 'Pending') + '</span></div></div><div class="detail-row"><div class="detail-col-full"><strong>Subject:</strong><br>' + (submission[8]?.value || 'No Subject') + '</div></div>';
-
+      let detailsHtml = `
+    <div class="submission-details">
+        <div class="detail-row">
+            <div class="detail-col">
+                <strong>From:</strong><br>${submission[6]?.value || 'Unknown'}
+            </div>
+            <div class="detail-col">
+                <strong>Kerberos:</strong><br>${submission[7]?.value || 'Unknown'}
+            </div>
+            <div class="detail-col">
+                <strong>Date:</strong><br>${new Date(submission[10]?.value).toLocaleString()}
+            </div>
+            <div class="detail-col">
+                <strong>Status:</strong><br><span class="badge badge-${(submission[11]?.value || 'pending').toLowerCase()}">${submission[11]?.value || 'Pending'}</span>
+            </div>
+        </div>
+        <div class="detail-row subject-row">
+            <div class="detail-col">
+                <strong>Subject:</strong><br>${submission[8]?.value || 'No Subject'}
+            </div>
+            <div class="detail-col">
+                <strong>Attachments:</strong><br>${isAttachment ? '📎 ' + filename : (submission[12]?.value ? String(submission[13]?.value || 0) + ' file(s)' : 'None')}
+            </div>
+        </div>`;
         if (isAttachment) {
             detailsHtml += '<div class="detail-row"><div class="detail-col-full"><strong>Attachment Type:</strong><br>📎 PDF Document</div></div><div class="detail-row"><div class="detail-col-full"><strong>Filename:</strong><br>' + filename + '</div></div><div class="detail-row"><div class="detail-col-full"><em>This is an attachment file. Click "Approve & Upload to KB" to upload the PDF to Voiceflow.</em></div></div>';
         } else {
