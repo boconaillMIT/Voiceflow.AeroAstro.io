@@ -147,6 +147,68 @@
             color: #6c757d;
             margin: 5px 0;
         }
+        .question-item.current {
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            font-weight: bold;
+        }
+        .question-item.completed {
+            background: #d4edda;
+            border-left: 3px solid #28a745;
+        }
+        .qa-pair {
+            margin: 15px 0;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .qa-question {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 6px 6px 0 0;
+            font-weight: bold;
+        }
+        .qa-answer {
+            background: #e9ecef;
+            color: #333;
+            padding: 12px;
+            border-radius: 0 0 6px 6px;
+            margin-top: 2px;
+            line-height: 1.6;
+        }
+        .qa-waiting {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 0 0 6px 6px;
+            margin-top: 2px;
+            font-style: italic;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
