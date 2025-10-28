@@ -311,6 +311,98 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+        /* Action Buttons Dropdown */
+.action-cell {
+    position: relative;
+}
+
+.action-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    background: #003d5c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    background: #002a40;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background: white;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 6px;
+    z-index: 1000;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.action-dropdown:hover .dropdown-content,
+.dropdown-content:hover {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 12px 16px;
+    border: none;
+    width: 100%;
+    text-align: left;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropdown-item:hover {
+    background: #f8f9fa;
+}
+
+.dropdown-item.grant {
+    color: #27ae60;
+}
+
+.dropdown-item.grant:hover {
+    background: #d4edda;
+}
+
+.dropdown-item.remove {
+    color: #e74c3c;
+}
+
+.dropdown-item.remove:hover {
+    background: #f8d7da;
+}
+
+.dropdown-item.delete {
+    color: #c0392b;
+    border-top: 1px solid #ecf0f1;
+}
+
+.dropdown-item.delete:hover {
+    background: #f8d7da;
+}
 </style>
 </head>
 <body>
@@ -595,25 +687,39 @@
         function displayUsers(users) {
             const tbody = document.getElementById('userTableBody');
             tbody.innerHTML = '';
-
             users.forEach(user => {
                 const row = tbody.insertRow();
+                
+                const isException = user[8]?.value || false;
+                const isAdmin = user[14]?.value || false;
+                const recordId = user[3].value;
+                const kerberos = user[6]?.value || '';
+                
                 row.innerHTML = `
-                    <td>${user[6]?.value || ''}</td>
+                    <td>${kerberos}</td>
                     <td>${user[7]?.value || ''}</td>
-                    <td>${user[8]?.value ? 'Yes' : 'No'}</td>
-                    <td>${user[14]?.value ? 'Yes' : 'No'}</td>
+                    <td>${isException ? 'Yes' : 'No'}</td>
+                    <td>${isAdmin ? 'Yes' : 'No'}</td>
                     <td>${user[11]?.value || 0}</td>
                     <td>${user[10]?.value ? new Date(user[10].value).toLocaleDateString() : 'Never'}</td>
                     <td>${user[13]?.value || ''}</td>
-                    <td>
-                        <button class="btn btn-danger" onclick="toggleExceptionAccess(${user[3].value}, ${user[8]?.value || false})">
-                            ${user[8]?.value ? 'Remove Exception' : 'Grant Exception'}
-                        </button>
-                        <button class="btn" onclick="toggleAdminAccess(${user[3].value}, ${user[14]?.value || false})">
-                            ${user[14]?.value ? 'Remove Admin' : 'Grant Admin'}
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteUser(${user[3].value}, '${user[6]?.value}')">Delete</button>
+                    <td class="action-cell">
+                        <div class="action-dropdown">
+                            <button class="action-btn">
+                                Actions ▼
+                            </button>
+                            <div class="dropdown-content">
+                                ${isException 
+                                    ? `<button class="dropdown-item remove" onclick="toggleExceptionAccess(${recordId}, true)">✗ Remove Exception</button>`
+                                    : `<button class="dropdown-item grant" onclick="toggleExceptionAccess(${recordId}, false)">✓ Grant Exception</button>`
+                                }
+                                ${isAdmin 
+                                    ? `<button class="dropdown-item remove" onclick="toggleAdminAccess(${recordId}, true)">✗ Remove Admin</button>`
+                                    : `<button class="dropdown-item grant" onclick="toggleAdminAccess(${recordId}, false)">✓ Grant Admin</button>`
+                                }
+                                <button class="dropdown-item delete" onclick="deleteUser(${recordId}, '${kerberos}')">🗑️ Delete User</button>
+                            </div>
+                        </div>
                     </td>
                 `;
             });
