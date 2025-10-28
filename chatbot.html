@@ -676,6 +676,9 @@ function loadVoiceflow(userID, userData, validationResult) {  // Add validationR
                 
                 // Check if this is a Voiceflow API call
                 const url = args[0];
+                
+                // DEBUG: Log ALL fetch calls to see what URLs are being used
+                console.log('🔍 FETCH CALL:', url);
                 if (typeof url === 'string' && (url.includes('voiceflow.com') || url.includes('runtime.voiceflow.com') || url.includes('/interact') || url.includes('/state'))) {
                     console.log('📡 Voiceflow API call detected:', url);
                     
@@ -888,6 +891,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
