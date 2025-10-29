@@ -697,42 +697,46 @@ window.fetch = async function(...args) {
         
         const clonedResponse = response.clone();
         
-        try {
+       try {
             const text = await clonedResponse.text();
             console.log('📝 Raw response text length:', text.length);
             console.log('📝 Raw response text preview:', text.substring(0, 500));
         
-        if (text && text.trim().length > 0) {
-            const data = JSON.parse(text);
-            console.log('📦 API Response data:', data);
-            console.log('📦 Data type:', typeof data);
-            console.log('📦 Is array?', Array.isArray(data));
-            
-            // Only send if it's an array with content, or an object with messages
-            const hasContent = (Array.isArray(data) && data.length > 0) || 
-                               (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0);
-            
-            console.log('📦 Has content?', hasContent);
-            
-            if (hasContent) {
-                // Send complete API response to parent window (the tester)
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({
-                        type: 'VOICEFLOW_API_RESPONSE',
-                        data: data,
-                        url: urlString,
-                        timestamp: new Date().toISOString()
-                    }, '*');
-                    console.log('✅ Response forwarded to parent window');
+            if (text && text.trim().length > 0) {
+                const data = JSON.parse(text);
+                console.log('📦 API Response data:', data);
+                console.log('📦 Data type:', typeof data);
+                console.log('📦 Is array?', Array.isArray(data));
+                
+                // Only send if it's an array with content, or an object with messages
+                const hasContent = (Array.isArray(data) && data.length > 0) || 
+                                   (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0);
+                
+                console.log('📦 Has content?', hasContent);
+                
+                if (hasContent) {
+                    // Send complete API response to parent window (the tester)
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({
+                            type: 'VOICEFLOW_API_RESPONSE',
+                            data: data,
+                            url: urlString,
+                            timestamp: new Date().toISOString()
+                        }, '*');
+                        console.log('✅ Response forwarded to parent window');
+                    }
+                } else {
+                    console.log('⚠️ Empty array or object, skipping');
                 }
             } else {
-                console.log('⚠️ Empty array or object, skipping');
+                console.log('⚠️ Empty response body, skipping');
             }
-        } else {
-            console.log('⚠️ Empty response body, skipping');
+        } catch (e) {
+            console.log('⚠️ Could not parse API response:', e);
         }
-
-return response;
+    }  // Close the if (urlString && ...) statement
+    
+    return response;
 };  // Close window.fetch function
 
 // Also intercept XMLHttpRequest (in case Voiceflow uses it)
@@ -921,6 +925,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
