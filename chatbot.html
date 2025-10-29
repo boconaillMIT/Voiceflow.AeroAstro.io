@@ -707,7 +707,14 @@ window.fetch = async function(...args) {
             console.log('📦 API Response data:', data);
             console.log('📦 Data type:', typeof data);
             console.log('📦 Is array?', Array.isArray(data));
-                
+            
+            // Only send if it's an array with content, or an object with messages
+            const hasContent = (Array.isArray(data) && data.length > 0) || 
+                               (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0);
+            
+            console.log('📦 Has content?', hasContent);
+            
+            if (hasContent) {
                 // Send complete API response to parent window (the tester)
                 if (window.parent && window.parent !== window) {
                     window.parent.postMessage({
@@ -719,12 +726,11 @@ window.fetch = async function(...args) {
                     console.log('✅ Response forwarded to parent window');
                 }
             } else {
-                console.log('⚠️ Empty response body, skipping');
+                console.log('⚠️ Empty array or object, skipping');
             }
-        } catch (e) {
-            console.log('⚠️ Could not parse API response:', e);
+        } else {
+            console.log('⚠️ Empty response body, skipping');
         }
-    }  // Close the if statement
 
 return response;
 };  // Close window.fetch function
@@ -915,6 +921,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
