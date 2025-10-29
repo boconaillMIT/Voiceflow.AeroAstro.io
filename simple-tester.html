@@ -441,6 +441,24 @@
             <button onclick="loadQuestions()" class="green">📥 Load Questions</button>
             <button onclick="loadSampleQuestions()" class="gray">📋 Load Sample Questions</button>
 
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+            <h3>📊 Or Load from Google Sheets</h3>
+            
+            <div class="input-group">
+                <label for="googleSheetId">Google Sheet ID:</label>
+                <input type="text" id="googleSheetId" placeholder="1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ" />
+                <small style="color: #666; font-size: 12px;">From sheet URL: docs.google.com/spreadsheets/d/[ID]/edit</small>
+            </div>
+
+            <div class="input-group">
+                <label for="googleSheetGid">Sheet GID (Optional):</label>
+                <input type="text" id="googleSheetGid" placeholder="0" />
+                <small style="color: #666; font-size: 12px;">From URL: #gid=123456 (leave blank for first sheet)</small>
+            </div>
+
+            <button onclick="loadFromGoogleSheets()" class="orange">📊 Load from Google Sheets</button>
+
             <div class="progress-bar">
                 <div id="progressBar" class="progress-fill" style="width: 0%"></div>
             </div>
@@ -837,6 +855,88 @@
             } else {
                 setStatus('❌ Connection failed. Run full diagnostic for details.', 'error');
                 addSystemMessage('Connection failed - try full diagnostic', true);
+            }
+        }
+
+        // Load questions from Google Sheets
+        async function loadFromGoogleSheets() {
+            const sheetId = document.getElementById('googleSheetId').value.trim();
+            const gid = document.getElementById('googleSheetGid').value.trim() || '0';
+            
+            if (!sheetId) {
+                setStatus('❌ Please enter a Google Sheet ID', 'error');
+                return;
+            }
+            
+            setStatus('🔄 Loading from Google Sheets...', 'info');
+            addDiagnosticLog(`Loading questions from Sheet ID: ${sheetId}, GID: ${gid}`, 'info');
+            
+            try {
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+                addDiagnosticLog(`Fetching URL: ${csvUrl}`, 'info');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(csvUrl, {
+                    signal: controller.signal,
+                    mode: 'cors'
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} - Sheet may not be published or accessible`);
+                }
+                
+                const csvText = await response.text();
+                addDiagnosticLog(`Received ${csvText.length} characters of CSV data`, 'info');
+                
+                if (!csvText.trim()) {
+                    throw new Error('Empty response from Google Sheets');
+                }
+                
+                // Parse CSV - questions in first column
+                const lines = csvText.split('\n');
+                const newQuestions = lines
+                    .slice(1) // Skip header row
+                    .map(line => {
+                        const firstComma = line.indexOf(',');
+                        return firstComma === -1 ? line : line.substring(0, firstComma);
+                    })
+                    .filter(q => q && q.trim())
+                    .map(q => q.replace(/"/g, '').trim());
+                
+                if (newQuestions.length === 0) {
+                    throw new Error('No questions found in first column');
+                }
+                
+                // Update textarea and load questions
+                document.getElementById('questions').value = newQuestions.join('\n');
+                questions = newQuestions;
+                
+                addDiagnosticLog(`Successfully loaded ${questions.length} questions from Google Sheets`, 'success', questions);
+                setStatus(`✅ Loaded ${questions.length} questions from Google Sheets`, 'success');
+                addSystemMessage(`Loaded ${questions.length} questions from Google Sheets`);
+                
+                displayQuestions();
+                updateStats();
+                checkReadyToTest();
+                
+            } catch (error) {
+                let errorMsg = error.message;
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Request timed out after 10 seconds';
+                }
+                
+                addDiagnosticLog(`Google Sheets error: ${errorMsg}`, 'error');
+                setStatus(`❌ Google Sheets failed: ${errorMsg}`, 'error');
+                addSystemMessage(`Failed to load from Google Sheets: ${errorMsg}`, true);
+                
+                // Provide troubleshooting tips
+                if (error.message.includes('403') || error.message.includes('404')) {
+                    addSystemMessage('💡 Make sure sheet is published: File → Share → Publish to web', true);
+                }
             }
         }
 
