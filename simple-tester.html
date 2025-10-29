@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5.1 - Debug Edition</title>
+    <title>Voiceflow Chatbot Tester v5.3 - Debug Edition</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -225,7 +225,7 @@
     <div class="container">
         <!-- Left Panel: Controls -->
         <div class="panel">
-            <h2>🤖 Chatbot Tester v5.1</h2>
+            <h2>🤖 Chatbot Tester v5.3</h2>
             <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
                 🐛 DEBUG EDITION: Check browser console (F12) for detailed logs
             </div>
@@ -309,7 +309,7 @@ how do i request a proposal waiver</textarea>
     </div>
 
     <script>
-        console.log('🚀 Script loaded - v5.1 Debug Edition');
+        console.log('🚀 Script loaded - v5.3 Debug Edition');
         
         let questionsList = [];
         let currentQuestionIndex = 0;
@@ -447,6 +447,9 @@ how do i request a proposal waiver</textarea>
                     const requestBody = {
                         action: {
                             type: 'launch'
+                        },
+                        config: {
+                            excludeTypes: ['flow', 'block']
                         }
                     };
                     
@@ -648,6 +651,9 @@ how do i request a proposal waiver</textarea>
                     action: {
                         type: 'text',
                         payload: question
+                    },
+                    config: {
+                        excludeTypes: ['flow', 'block']
                     }
                 };
                 
@@ -811,7 +817,7 @@ how do i request a proposal waiver</textarea>
         // Initialize
         window.addEventListener('load', () => {
             log('=== Page Loaded ===');
-            addSystemMessage('🤖 Chatbot Tester v5.1 - Debug Edition');
+            addSystemMessage('🤖 Chatbot Tester v5.3 - Debug Edition');
             addSystemMessage('Press F12 to see detailed console logs');
             addSystemMessage('Step 1: Enter API Key');
             addSystemMessage('Step 2: Load questions');
