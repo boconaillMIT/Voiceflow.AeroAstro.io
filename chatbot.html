@@ -1,1040 +1,649 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroAstro Chatbot</title>
-   <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        background: linear-gradient(to bottom, #001a2e 0%, #003d5c 50%, #4a90b8 100%);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .header {
-        background: linear-gradient(135deg, #003d5c 0%, #1e5a7a 50%, #4a90b8 100%);
-        color: white;
-        text-align: center;
-        padding: 40px 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: relative;
-    }
-
-    .header h1 {
-        font-size: 2.5em;
-        font-weight: 600;
-        margin-bottom: 10px;
-    }
-
-    .header p {
-        font-size: 1.1em;
-        opacity: 0.95;
-        font-weight: 300;
-    }
-
-    .header-logo {
-        position: absolute;
-        top: 50%;
-        left: 40px;
-        transform: translateY(-50%);
-        height: 60px;
-        width: auto;
-        opacity: 0.9;
-    }
-
-    .admin-link {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-size: 0.9em;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-    }
-
-    .admin-link:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-
-    .user-info {
-        background: white;
-        padding: 15px 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-        flex-wrap: wrap;
-        font-size: 0.95em;
-    }
-
-    .user-info span {
-        color: #2c3e50;
-    }
-
-    .user-info strong {
-        color: #003d5c;
-        font-weight: 600;
-    }
-
-    .container {
-        flex: 1;
-        max-width: 1200px;
-        width: 100%;
-        margin: 0 auto;
-        padding: 30px 20px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    #chatContainer {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        margin-bottom: 20px;
-        border: 2px solid #003d5c;
-    }
-
-    #chatMessages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        background: #f8f9fa;
-    }
-
-    .message {
-        margin-bottom: 15px;
-        padding: 12px 16px;
-        border-radius: 8px;
-        max-width: 80%;
-        animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
+    <title>Voiceflow Chatbot Tester v4 - API Direct</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px; 
+            background: #f5f5f5; 
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+        .container { 
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr 400px;
+            gap: 20px;
+            height: 90vh;
         }
-    }
-
-    .user-message {
-        background: #003d5c;
-        color: white;
-        margin-left: auto;
-        text-align: right;
-    }
-
-    .bot-message {
-        background: white;
-        color: #2c3e50;
-        border: 1px solid #e1e8ed;
-        margin-right: auto;
-    }
-
-    .system-message {
-        background: #fff3cd;
-        color: #856404;
-        text-align: center;
-        margin: 10px auto;
-        font-size: 0.9em;
-        max-width: 100%;
-    }
-
-    .input-container {
-        display: flex;
-        gap: 10px;
-        padding: 20px;
-        background: white;
-        border-top: 1px solid #e1e8ed;
-    }
-
-    #userInput {
-        flex: 1;
-        padding: 12px 16px;
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        font-size: 1em;
-        transition: all 0.3s ease;
-    }
-
-    #userInput:focus {
-        outline: none;
-        border-color: #003d5c;
-        box-shadow: 0 0 0 3px rgba(0, 61, 92, 0.1);
-    }
-
-    #sendButton {
-        padding: 12px 24px;
-        background: #003d5c;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1em;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-
-    #sendButton:hover {
-        background: #002a40;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-
-    #sendButton:disabled {
-        background: #95a5a6;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .typing-indicator {
-        display: none;
-        padding: 10px;
-        background: white;
-        border: 1px solid #e1e8ed;
-        border-radius: 8px;
-        width: fit-content;
-        margin-bottom: 15px;
-    }
-
-    .typing-indicator span {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #003d5c;
-        margin: 0 2px;
-        animation: bounce 1.4s infinite;
-    }
-
-    .typing-indicator span:nth-child(2) {
-        animation-delay: 0.2s;
-    }
-
-    .typing-indicator span:nth-child(3) {
-        animation-delay: 0.4s;
-    }
-
-    @keyframes bounce {
-        0%, 60%, 100% {
-            transform: translateY(0);
+        .panel { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-y: auto;
         }
-        30% {
-            transform: translateY(-10px);
+        .chatbot-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-    }
-
-    @media (max-width: 768px) {
-        .header h1 {
-            font-size: 1.8em;
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 8px 0;
+            width: 100%;
+            font-size: 14px;
+            font-weight: bold;
         }
-
-        .header-logo {
-            height: 40px;
-            left: 20px;
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button.green { background: #28a745; }
+        button.gray { background: #6c757d; }
+        button.red { background: #dc3545; }
+        .status { 
+            padding: 12px; 
+            border-radius: 4px; 
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
         }
-
-        .admin-link {
-            position: static;
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .section {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            background: #f8f9fa;
+        }
+        .section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        label {
             display: block;
-            margin-top: 15px;
-            width: fit-content;
-            margin-left: auto;
-            margin-right: auto;
+            margin: 8px 0 4px 0;
+            font-weight: bold;
+            font-size: 13px;
         }
-
-        .message {
-            max-width: 90%;
+        .questions-display {
+            background: #e9ecef;
+            border: 1px solid #adb5bd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
         }
-
-        .user-info {
-            gap: 15px;
-            font-size: 0.85em;
+        .question-item {
+            padding: 6px;
+            margin: 3px 0;
+            border-radius: 3px;
+            background: white;
         }
-    }
-</style>
+        .question-item.current {
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            font-weight: bold;
+        }
+        .question-item.completed {
+            background: #d4edda;
+            border-left: 3px solid #28a745;
+        }
+        .transcript {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            height: 500px;
+            overflow-y: auto;
+            font-size: 13px;
+            margin: 15px 0;
+        }
+        .qa-pair {
+            margin: 15px 0;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .qa-question {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 6px 6px 0 0;
+            font-weight: bold;
+        }
+        .qa-answer {
+            background: #e9ecef;
+            color: #333;
+            padding: 12px;
+            border-radius: 0 0 6px 6px;
+            margin-top: 2px;
+            line-height: 1.6;
+        }
+        .qa-waiting {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 0 0 6px 6px;
+            margin-top: 2px;
+            font-style: italic;
+        }
+        .message.system {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+            text-align: center;
+            font-style: italic;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
-<div class="header" style="position: relative;">
-        <img src="AO-logo-low_color-left.png" alt="AeroAstro Logo" class="header-logo">
- 
-    <h1>AeroAstro Chatbot</h1>
-    <p>AI Assistant for MIT's Department of Aeronautics and Astronautics</p>
-    <!-- Admin button -->
-    <div style="position: absolute; bottom: 10px; right: 15px;">
-        <a href="admin.html" id="adminLink" style="display: none; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 12px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;">Admin</a>
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <h2>🤖 Chatbot Tester v4</h2>
+            <div style="background: #e7f3ff; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
+                ✨ NEW: Direct API communication for 100% reliable capture
+            </div>
+            
+            <div class="section">
+                <h4>📝 Load Questions</h4>
+                
+                <label>Manual Questions:</label>
+                <textarea id="questionTextArea" rows="8">who is the department head
+who is the DAF
+how can i create a budget?
+how do i request a waiver
+how do i request a proposal waiver
+how do i request a waiver of search?
+does the department still do waivers of search
+where is Gabby Hoyte's office
+who does Gabby Hoyte support?
+who is the development officer?
+who supports sertac karaman?</textarea>
+                <button onclick="loadFromTextArea()" class="green">📝 Load These Questions</button>
+                
+                <label>Google Sheet ID (optional):</label>
+                <input type="text" id="googleSheetId" placeholder="Enter Google Sheet ID" value="1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ">
+                <button onclick="tryGoogleSheets()" id="googleBtn">📥 Load from Google Sheets</button>
+                <div style="font-size: 11px; color: #6c757d; margin: 5px 0;" id="googleStatus">Optional: Load from Google Sheets</div>
+            </div>
+
+            <div class="section">
+                <h4>⚙️ API Configuration</h4>
+                <label>Project ID:</label>
+                <input type="text" id="projectId" value="66de313d6a0d94e1bd71c5ce" readonly>
+                <label>User ID:</label>
+                <input type="text" id="userId" value="mit-tester" placeholder="Enter user ID">
+                <div style="font-size: 11px; color: #6c757d; margin: 5px 0;">API will send questions directly to Voiceflow</div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="statQuestions">0</div>
+                    <div class="stat-label">Questions Loaded</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statCompleted">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+
+            <div class="status" id="mainStatus">Ready - load questions above</div>
+
+            <button onclick="loadChatbot()" id="loadChatBtn">🔗 Load Chatbot (Visual Only)</button>
+            <button onclick="startTest()" id="startBtn" disabled>▶️ Start Automated Test</button>
+            <button onclick="stopTest()" id="stopBtn" disabled class="red">⏹️ Stop Test</button>
+
+            <div class="questions-display" id="questionsDisplay">
+                <div style="text-align: center; color: #6c757d;">Load questions above to see them here</div>
+            </div>
+        </div>
+
+        <!-- Middle Panel: Chatbot (Visual Reference Only) -->
+        <div class="chatbot-panel">
+            <iframe id="chatIframe" src="about:blank"></iframe>
+        </div>
+
+        <!-- Right Panel: Transcript -->
+        <div class="panel">
+            <h3>💬 Live Q&A Transcript</h3>
+            <div class="transcript" id="transcript">
+                <div class="message system">Q&A pairs will appear here during testing</div>
+            </div>
+            <button onclick="clearTranscript()">🗑️ Clear Transcript</button>
+            <button onclick="copyToClipboard()" class="green">📋 Copy Transcript</button>
+            <button onclick="exportToCSV()" class="gray">📊 Export CSV</button>
+        </div>
     </div>
-</div>
 
-    <div class="user-info" id="user-info">
-        <div class="info-row">
-            <span class="info-label">Welcome:</span>
-            <span class="info-value" id="display-name">Loading...</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Kerberos:</span>
-            <span class="info-value" id="display-kerberos">Loading...</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Title:</span>
-            <span class="info-value" id="display-title">Loading...</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Department:</span>
-            <span class="info-value" id="display-department">Loading...</span>
-        </div>
-    </div>
+    <script>
+        let questionsList = [];
+        let currentQuestionIndex = 0;
+        let testRunning = false;
+        let qaResults = [];
 
-    <div class="chat-container">
-        <p><b>Welcome! Starting your personalized AeroAstro AI assistant...</b></p>
-        <div id="voiceflow-chat"></div>
-    </div>
+        // Voiceflow API configuration
+        const VOICEFLOW_API_URL = 'https://general-runtime.voiceflow.com';
+        const VOICEFLOW_PROJECT_ID = '66de313d6a0d94e1bd71c5ce';
 
-    <script type="text/javascript">
-        // URL CLEANUP FUNCTION
-        function cleanUrlAfterProcessing() {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.has('kerberos') || urlParams.has('authenticated') || urlParams.has('email')) {
-                console.log('=== URL CLEANUP: Found parameters to clean ===');
-                
-                setTimeout(() => {
-                    // DON'T call collectUserData again - just check window.currentUser
-                    if (window.currentUser && window.currentUser.kerberos) {
-                        console.log('=== URL CLEANUP: User verified, cleaning URL ===');
-                        
-                        const cleanUrl = window.location.origin + window.location.pathname;
-                        window.history.replaceState({}, document.title, cleanUrl);
-                        
-                        console.log('=== URL CLEANUP: Parameters cleaned ===');
-                        
-                        const notification = document.createElement('div');
-                        notification.style.cssText = `
-                            position: fixed;
-                            top: 10px;
-                            right: 10px;
-                            background: #28a745;
-                            color: white;
-                            padding: 8px 12px;
-                            border-radius: 4px;
-                            font-size: 12px;
-                            z-index: 10000;
-                            opacity: 0.9;
-                        `;
-                        notification.textContent = 'URL secured';
-                        document.body.appendChild(notification);
-                        
-                        setTimeout(() => {
-                            if (document.body.contains(notification)) {
-                                document.body.removeChild(notification);
-                            }
-                        }, 3000);
-                        
-                    } else {
-                        console.log('=== URL CLEANUP: User data not ready, keeping parameters ===');
-                    }
-                }, 1000);
-            }
+        function updateStats() {
+            document.getElementById('statQuestions').textContent = questionsList.length;
+            document.getElementById('statCompleted').textContent = qaResults.filter(qa => qa.answer !== 'WAITING').length;
         }
 
-        // Add this GLOBAL variable at the very top of your chatbot.html, before any functions
-        window.VALIDATION_CALL_LOG = [];
-
-        window.VALIDATION_LOCK = {
-            active: false,
-            result: null,
-            timestamp: null
-        };
-        // Function to get URL parameters
-        function getURLParameter(name) {
-            return new URLSearchParams(window.location.search).get(name);
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('mainStatus');
+            status.textContent = message;
+            status.className = `status ${type}`;
         }
 
-        // Function to get stored metadata
-        function getStoredMetadata() {
-            try {
-                const stored = localStorage.getItem('user_metadata');
-                return stored ? JSON.parse(stored) : null;
-            } catch (e) {
-                console.error('Error parsing localStorage:', e.message);
-                return null;
-            }
-        }
-            // Add this function to your chatbot.html
-        function checkAdminAccess(userData, validationResult) {
-            console.log('Checking admin access for:', userData.kerberos);
-            console.log('Validation result:', validationResult);
-            
-            const isAdmin = validationResult.isAdmin === true || 
-                           validationResult.isAdmin === "true" || 
-                           validationResult.isAdmin === '1';
-            
-            console.log('isAdmin check result:', isAdmin);
-            
-            if (isAdmin) {
-                const adminLink = document.getElementById('adminLink');
-                if (adminLink) {
-                    adminLink.style.display = 'inline-block';
-                    console.log('Admin button shown');
-                } else {
-                    console.log('Admin link element not found');
-                }
-            } else {
-                console.log('User is not an admin');
-            }
-        }
-        // SECURE: Collect user data (never trust authenticated parameter)
-        function collectUserData() {
-            console.log('Starting secure user data collection...');
-            
-            const urlData = {
-                name: getURLParameter('name'),
-                firstName: getURLParameter('firstName'),
-                lastName: getURLParameter('lastName'),
-                kerberos: getURLParameter('kerberos'),
-                email: getURLParameter('email'),
-                title: getURLParameter('title'),
-                department: getURLParameter('department'),
-                groups: getURLParameter('groups'),
-                // SECURITY: Never trust authenticated parameter from URL
-                authenticated: false
-            };
-
-            const storedData = getStoredMetadata();
-
-            const userData = {
-                name: urlData.name || (storedData && storedData.name) || 
-                      (urlData.firstName && urlData.lastName ? `${urlData.firstName} ${urlData.lastName}` : '') ||
-                      (storedData && storedData.firstName && storedData.lastName ? `${storedData.firstName} ${storedData.lastName}` : '') ||
-                      'User',
-                firstName: urlData.firstName || (storedData && storedData.firstName) || '',
-                lastName: urlData.lastName || (storedData && storedData.lastName) || '',
-                kerberos: urlData.kerberos || (storedData && storedData.kerberos) || '',
-                email: urlData.email || (storedData && storedData.email) || '',
-                title: urlData.title || (storedData && storedData.title) || '',
-                department: urlData.department || (storedData && storedData.department) || '',
-                groups: urlData.groups || (storedData && storedData.groups) || '',
-                // CRITICAL: Authentication must be validated server-side
-                authenticated: false,
-                loginTime: (storedData && storedData.loginTime) || new Date().toISOString()
-            };
-
-            console.log('Collected user data (authentication pending validation):', userData);
-            return userData;
+        function addSystemMessage(message) {
+            const transcript = document.getElementById('transcript');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            messageDiv.textContent = message;
+            transcript.appendChild(messageDiv);
+            transcript.scrollTop = transcript.scrollHeight;
         }
 
-// Prevent duplicate validation calls
-let validationInProgress = false;
-
-// More robust duplicate prevention using promise caching
-let validationPromise = null;
-const VALIDATION_TIMEOUT = 10000; // 10 seconds
-async function validateUserAccess(userData) {
-    const cacheKey = `${userData.kerberos}-${userData.department}`;
-    const now = Date.now();
-    
-    // Check if there's an active validation
-    if (window.VALIDATION_LOCK.active) {
-        console.log('⚠️ BLOCKED: Validation already in progress');
-        // Wait for the active validation to complete
-        let attempts = 0;
-        while (window.VALIDATION_LOCK.active && attempts < 50) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        if (window.VALIDATION_LOCK.result) {
-            console.log('✅ Returning cached result from active validation');
-            return window.VALIDATION_LOCK.result;
-        }
-    }
-    
-    // Check if we have a recent cached result (within 30 seconds)
-    if (window.VALIDATION_LOCK.result && 
-        window.VALIDATION_LOCK.timestamp && 
-        (now - window.VALIDATION_LOCK.timestamp) < 30000) {
-        console.log('✅ Returning cached validation result (age: ' + 
-            (now - window.VALIDATION_LOCK.timestamp) + 'ms)');
-        return window.VALIDATION_LOCK.result;
-    }
-    
-    console.log('🆕 Starting NEW validation');
-    window.VALIDATION_LOCK.active = true;
-    window.VALIDATION_LOCK.timestamp = now;
-    
-    try {
-        const result = await performValidation(userData);
-        window.VALIDATION_LOCK.result = result;
-        window.VALIDATION_LOCK.active = false;
-        return result;
-    } catch (error) {
-        window.VALIDATION_LOCK.active = false;
-        throw error;
-    }
-}
-
-async function performValidation(userData) {
-    const callTimestamp = new Date().toISOString();
-    
-    console.log('───────────────────────────────────────────────────────');
-    console.log('📡 performValidation CALLED');
-    console.log('Timestamp:', callTimestamp);
-    console.log('Kerberos:', userData.kerberos);
-    console.log('───────────────────────────────────────────────────────');
-    
-    // Log this call
-    window.VALIDATION_CALL_LOG.push({
-        timestamp: callTimestamp,
-        function: 'performValidation',
-        kerberos: userData.kerberos,
-        action: 'STARTING'
-    });
-    
-    if (!userData.kerberos) {
-        console.error('❌ No Kerberos ID - validation failed');
-        return { authenticated: false, hasAccess: false, error: 'No Kerberos ID provided' };
-    }
-
-    if (!userData.department) {
-        console.error('❌ No department - validation failed');
-        return { authenticated: false, hasAccess: false, error: 'No department information' };
-    }
-
-    console.log(`🔐 Validating access: ${userData.kerberos} (${userData.department})`);
-    
-//const webhookUrl = 'https://hook.us2.make.com/9c74dhseqfvnj6488gtx8mg4ho8hek3y';  //101625
-    const webhookUrl = 'https://hook.us2.make.com/nsevfwoyexfveb4goqoxk4eta2sadle2';  //102125
-        const requestBody = {
-        kerberosId: userData.kerberos,
-        department: userData.department
-    };
-    
-    console.log('📤 Sending request to Make.com:', requestBody);
-    
-    // Log the fetch call
-    window.VALIDATION_CALL_LOG.push({
-        timestamp: new Date().toISOString(),
-        function: 'performValidation',
-        kerberos: userData.kerberos,
-        action: 'FETCH_STARTED',
-        url: webhookUrl
-    });
-    
-    const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        cache: 'no-store',
-        mode: 'cors',
-        credentials: 'omit'
-    });
-
-    // Log the response
-    window.VALIDATION_CALL_LOG.push({
-        timestamp: new Date().toISOString(),
-        function: 'performValidation',
-        kerberos: userData.kerberos,
-        action: 'FETCH_COMPLETED',
-        status: response.status
-    });
-
-    if (!response.ok) {
-        console.error('❌ Validation request failed:', response.status);
-        throw new Error(`Validation request failed: ${response.status}`);
-    }
-
-    const validationResult = await response.json();
-    console.log('📥 Make.com validation result:', validationResult);
-
-    // Handle various response formats
-    const hasAccess = validationResult.hasAccess === true || 
-                      validationResult.hasAccess === "true" || 
-                      validationResult.hasAccess === 1 ||
-                      validationResult.hasAccess === '1';
-    
-    const isFirstLogin = validationResult.isFirstLogin === true || validationResult.isFirstLogin === "true";
-    const isExceptionUser = validationResult.isExceptionUser === true || validationResult.isExceptionUser === "true";
-    const isAdmin = validationResult.isAdmin === true || validationResult.isAdmin === "true" || validationResult.isAdmin === 1 || validationResult.isAdmin === '1';
-
-    console.log('✅ Validation processing complete');
-    
-    return {
-        authenticated: hasAccess,
-        hasAccess: hasAccess,
-        isFirstLogin: isFirstLogin,
-        isExceptionUser: isExceptionUser,
-        accessType: validationResult.accessType,
-        isAdmin: isAdmin,
-        error: null
-    };
-}
-        // Add helper function to view the log
-function showValidationLog() {
-    console.log('\n📊 VALIDATION CALL LOG:');
-    console.log('Total calls:', window.VALIDATION_CALL_LOG.length);
-    console.table(window.VALIDATION_CALL_LOG);
-    
-    // Count fetch calls
-    const fetchCalls = window.VALIDATION_CALL_LOG.filter(log => log.action === 'FETCH_STARTED');
-    console.log('\n🎯 ACTUAL FETCH CALLS TO MAKE.COM:', fetchCalls.length);
-    if (fetchCalls.length > 1) {
-        console.warn('⚠️ MULTIPLE FETCH CALLS DETECTED!');
-        console.table(fetchCalls);
-    }
-}
-
-// Auto-show log after 5 seconds
-setTimeout(() => {
-    if (window.VALIDATION_CALL_LOG.length > 0) {
-        showValidationLog();
-    }
-}, 5000);
-        // Update user display
-        function updateUserDisplay(userData) {
-            if (userData.authenticated || userData.kerberos) {
-                document.getElementById('display-name').textContent = userData.name || 'Not provided';
-                document.getElementById('display-kerberos').textContent = userData.kerberos || 'Not provided';
-                document.getElementById('display-title').textContent = userData.title || 'Not provided';
-                document.getElementById('display-department').textContent = userData.department || 'Not provided';
-                
-                document.getElementById('user-info').classList.add('visible');
-            }
-        }
-
-        // Generate userID for Voiceflow
-        function generateUserID(userData) {
-            const kerberos = userData.kerberos;
+        function loadFromTextArea() {
+            const textarea = document.getElementById('questionTextArea');
+            const text = textarea.value;
+            const questions = text.split('\n')
+                .map(q => q.trim())
+                .filter(q => q.length > 0);
             
-            if (kerberos) {
-                return `mit-${kerberos}`;
-            }
-            
-            let userID = localStorage.getItem('userID');
-            if (!userID) {
-                userID = 'user-' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('userID', userID);
-            }
-            return userID;
-        }
-
-        // Load Voiceflow
-function loadVoiceflow(userID, userData, validationResult) {  // Add validationResult parameter
-    console.log('🎬 === LOADVOICEFLOW CALLED ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('UserID:', userID);
-    console.log('UserData:', userData);
-    console.log('ValidationResult:', validationResult);
-    console.log('Payload being sent to Voiceflow:', {
-        user_name: userData.name || '',
-        user_kerberos: userData.kerberos || '',
-        user_title: userData.title || '',
-        user_department: userData.department || '',
-        user_email: userData.email || '',
-        user_firstname: userData.firstName || '',
-        user_lastname: userData.lastName || '',
-        user_authenticated: userData.authenticated || false,
-        user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
-        user_logintime: userData.loginTime || '',
-        is_first_login: validationResult ? validationResult.isFirstLogin : false,
-        is_admin: validationResult ? validationResult.isAdmin : false
-    });
-    console.log('=== END LOADVOICEFLOW DIAGNOSTIC ===');
-    (function(d, t) {
-        var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
-        v.onload = function() {
-                        console.log('🔧 Installing API interceptor...');
-            
-            // Store original fetch
-            const originalFetch = window.fetch;
-            
-            // Intercept fetch calls to capture Voiceflow API responses
-window.fetch = async function(...args) {
-    const response = await originalFetch.apply(this, args);
-    
-    // Get URL as string (handle both string and URL object)
-    let url = args[0];
-    const urlString = typeof url === 'string' ? url : (url?.href || url?.toString() || '');
-    
-    // DEBUG: Log ALL fetch calls
-    console.log('🔍 FETCH CALL:', urlString);
-    
-    // Only intercept actual interaction endpoints (not logging endpoints)
-    if (urlString && 
-        (urlString.includes('voiceflow.com') || urlString.includes('runtime.voiceflow.com')) &&
-        !urlString.includes('webchat-log') &&
-        !urlString.includes('analytics')) {
-        
-        console.log('📡 Voiceflow API call detected:', urlString);
-        console.log('📡 Full URL details:', {
-            url: urlString,
-            status: response.status,
-            statusText: response.statusText,
-            headers: Array.from(response.headers.entries())
-        });
-        
-        const clonedResponse = response.clone();
-        
-       try {
-            const text = await clonedResponse.text();
-            console.log('📝 Raw response text length:', text.length);
-            console.log('📝 Raw response text preview:', text.substring(0, 500));
-        
-            if (text && text.trim().length > 0) {
-                const data = JSON.parse(text);
-                console.log('📦 API Response data:', data);
-                console.log('📦 Data type:', typeof data);
-                console.log('📦 Is array?', Array.isArray(data));
-                
-                // Only send if it's an array with content, or an object with messages
-                const hasContent = (Array.isArray(data) && data.length > 0) || 
-                                   (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length > 0);
-                
-                console.log('📦 Has content?', hasContent);
-                
-                if (hasContent) {
-                    // Send complete API response to parent window (the tester)
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({
-                            type: 'VOICEFLOW_API_RESPONSE',
-                            data: data,
-                            url: urlString,
-                            timestamp: new Date().toISOString()
-                        }, '*');
-                        console.log('✅ Response forwarded to parent window');
-                    }
-                } else {
-                    console.log('⚠️ Empty array or object, skipping');
-                }
-            } else {
-                console.log('⚠️ Empty response body, skipping');
-            }
-        } catch (e) {
-            console.log('⚠️ Could not parse API response:', e);
-        }
-    }  // Close the if (urlString && ...) statement
-    
-    return response;
-};  // Close window.fetch function
-
-// Also intercept XMLHttpRequest (in case Voiceflow uses it)
-            
-            // Also intercept XMLHttpRequest (in case Voiceflow uses it)
-            const originalXHR = window.XMLHttpRequest;
-            window.XMLHttpRequest = function() {
-                const xhr = new originalXHR();
-                const originalOpen = xhr.open;
-                const originalSend = xhr.send;
-                
-                let requestURL = '';
-                
-                xhr.open = function(method, url) {
-                    requestURL = url;
-                    return originalOpen.apply(this, arguments);
-                };
-                
-                xhr.send = function() {
-                    xhr.addEventListener('load', function() {
-                        if (requestURL.includes('voiceflow.com') || requestURL.includes('/interact') || requestURL.includes('/state')) {
-                            console.log('📡 Voiceflow XHR call detected:', requestURL);
-                            try {
-                                const data = JSON.parse(xhr.responseText);
-                                console.log('📦 XHR Response data:', data);
-                                
-                                if (window.parent && window.parent !== window) {
-                                    window.parent.postMessage({
-                                        type: 'VOICEFLOW_API_RESPONSE',
-                                        data: data,
-                                        url: requestURL,
-                                        timestamp: new Date().toISOString()
-                                    }, '*');
-                                    console.log('✅ XHR Response forwarded to parent window');
-                                }
-                            } catch (e) {
-                                console.log('⚠️ Could not parse XHR response:', e);
-                            }
-                        }
-                    });
-                    return originalSend.apply(this, arguments);
-                };
-                
-                return xhr;
-            };
-            
-            console.log('✅ API interceptor installed successfully');
-            
-            // Notify parent that chatbot is ready with interceptor
-            setTimeout(() => {
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({
-                        type: 'CHATBOT_READY',
-                        interceptorActive: true,
-                        timestamp: new Date().toISOString()
-                    }, '*');
-                    console.log('📢 CHATBOT_READY message sent to parent');
-                }
-            }, 3000);
-
-            window.voiceflow.chat.load({
-                verify: { projectID: '66de313d6a0d94e1bd71c5ce' },
-                url: 'https://general-runtime.voiceflow.com',
-                versionID: 'production',
-                userID: userID,
-                launch: { 
-                    event: { 
-                        type: 'launch', 
-                            payload: { 
-                                user_name: userData.name || '',
-                                user_kerberos: userData.kerberos || '',
-                                user_title: userData.title || '',
-                                user_department: userData.department || '',
-                                user_email: userData.email || '',
-                                user_firstname: userData.firstName || '',
-                                user_lastname: userData.lastName || '',
-                                user_authenticated: userData.authenticated || false,
-                                user_groups: Array.isArray(userData.groups) ? userData.groups.join(',') : (userData.groups || ''),
-                                user_logintime: userData.loginTime || '',
-                                boolFirstLogin: validationResult ? validationResult.isFirstLogin : false,
-                                boolIsAdmin: validationResult ? validationResult.isAdmin : false,
-                                boolExceptionUser: validationResult ? validationResult.isExceptionUser : false
-                            }
-                    } 
-                },
-                assistant: {
-                    persistence: 'memory'
-                }
-            });
-            
-            setTimeout(() => {
-                try {
-                    window.voiceflow.chat.open();
-                } catch (openError) {
-                    console.error('Error opening chat:', openError.message);
-                }
-            }, 2000);
-        };
-        // Intercept Voiceflow's interact method to catch responses
-setTimeout(() => {
-    try {
-        window.voiceflow.chat.open();
-    } catch (openError) {
-        console.error('Error opening chat:', openError.message);
-    }
-}, 2000);
-
-// Listen for Voiceflow message events
-// Poll for new messages in the chat
-setTimeout(() => {
-    console.log('🔄 Setting up chat state polling...');
-    
-    let lastMessageCount = 0;
-    let pollInterval;
-    
-    // Function to check for new messages
-        function checkForNewMessages() {
-            try {
-                // Try to access the chat widget's shadow DOM
-                const voiceflowWidget = document.querySelector('div[class*="vfrc"]') || 
-                                       document.querySelector('[id*="voiceflow"]');
-                
-                if (voiceflowWidget && voiceflowWidget.shadowRoot) {
-                    const messages = voiceflowWidget.shadowRoot.querySelectorAll('.vfrc-message, .vfrc-system-response, [class*="message"]');
-                    
-                    if (messages.length > lastMessageCount) {
-                        console.log(`📬 New messages detected! Count: ${messages.length} (was ${lastMessageCount})`);
-                        
-                        // Get the new messages
-                        const newMessages = Array.from(messages).slice(lastMessageCount);
-                        const messagesData = newMessages.map(msg => ({
-                            text: msg.textContent || msg.innerText,
-                            html: msg.innerHTML,
-                            timestamp: new Date().toISOString()
-                        }));
-                        
-                        console.log('💬 New messages:', messagesData);
-                        
-                        // Send to parent
-                        if (window.parent && window.parent !== window) {
-                            window.parent.postMessage({
-                                type: 'VOICEFLOW_API_RESPONSE',
-                                data: messagesData,
-                                source: 'POLLING',
-                                timestamp: new Date().toISOString()
-                            }, '*');
-                            console.log('✅ Messages forwarded to parent');
-                        }
-                        
-                        lastMessageCount = messages.length;
-                    }
-                }
-            } catch (error) {
-                console.log('⚠️ Error checking messages:', error.message);
-            }
-        }
-        
-        // Start polling every 500ms
-        pollInterval = setInterval(checkForNewMessages, 500);
-        console.log('✅ Chat polling started (checking every 500ms)');
-        
-        // Also notify parent about the polling
-        if (window.parent && window.parent !== window) {
-            window.parent.postMessage({
-                type: 'CHATBOT_READY',
-                interceptorActive: true,
-                method: 'POLLING',
-                timestamp: new Date().toISOString()
-            }, '*');
-        }
-    }, 5000);
-
-        
-        v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
-        v.type = "text/javascript"; 
-        s.parentNode.insertBefore(v, s);
-    })(document, 'script');
-}
-
-        // SECURE: Initialize page with mandatory validation
-async function initializePage() {
-    console.log('=== PAGE INITIALIZATION START ===');
-    console.log('Timestamp:', new Date().toISOString());
-    
-    const userData = collectUserData();
-    console.log('User data collected:', userData.kerberos);
-    
-    if (!userData.kerberos) {
-        console.log('No Kerberos ID found - redirecting to login');
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 3000);
-        return;
-    }
-    
-    document.getElementById('display-name').textContent = 'Validating access...';
-    document.getElementById('user-info').classList.add('visible');
-    
-    console.log('=== CALLING VALIDATION (STEP 1) ===');
-    const validation = await validateUserAccess(userData);
-    console.log('=== VALIDATION COMPLETED (STEP 1) ===');
-    
-    if (!validation.authenticated) {
-        console.log('Access denied by server validation');
-                
-                // Show access denied page
-                document.body.innerHTML = `
-                    <div class="access-denied">
-                        <h1>Access Denied</h1>
-                        <p>You are not authorized to access this chatbot.</p>
-                        <p><strong>Reason:</strong> You must be a member of the Department of Aeronautics and Astronautics or have special access granted.</p>
-                        <p><strong>Your Info:</strong> ${userData.kerberos} (${userData.department || 'Unknown Department'})</p>
-                        ${validation.error ? `<p><strong>Technical Details:</strong> ${validation.error}</p>` : ''}
-                        <p>If you believe this is an error, please contact the administrator.</p>
-                        <a href="login.html" class="retry-btn">Try Login Again</a>
-                    </div>
-                `;
+            if (questions.length === 0) {
+                updateStatus('No questions found in text area', 'error');
                 return;
             }
-            
-            console.log('Server validation successful - granting access');
-            
-            // Update with validated status
-            userData.authenticated = true;
-            userData.hasAccess = validation.hasAccess;
-            userData.isFirstLogin = validation.isFirstLogin;
-            userData.isExceptionUser = validation.isExceptionUser;
-            
-            updateUserDisplay(userData);
-            const userID = generateUserID(userData);
-            
-            window.currentUser = userData;
-            
-            console.log('=== CALLING ADMIN CHECK ===');
-            checkAdminAccess(userData, validation);
-            
-            console.log('=== CALLING URL CLEANUP ===');
-            cleanUrlAfterProcessing();
-            
-            console.log('=== LOADING VOICEFLOW ===');
-            loadVoiceflow(userID, userData, validation);  // Add validation as 3rd parameter
-            
-            console.log('=== PAGE INITIALIZATION COMPLETE ===');
+
+            questionsList = questions;
+            updateStatus(`Loaded ${questionsList.length} questions`, 'success');
+            addSystemMessage(`✅ Loaded ${questionsList.length} questions from text area`);
+            displayQuestions();
+            updateStats();
+            checkReadyToTest();
         }
 
-        
-    // Initialize when page loads - prevent duplicate initialization
-    let pageInitialized = false;
-
-        document.addEventListener('DOMContentLoaded', function() {
-        if (pageInitialized) {
-            console.log('=== WARNING: DOMContentLoaded fired again, ignoring ===');
-            return;
+        function displayQuestions() {
+            const display = document.getElementById('questionsDisplay');
+            display.innerHTML = '';
+            
+            questionsList.forEach((q, index) => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${index}`;
+                div.textContent = `${index + 1}. ${q}`;
+                display.appendChild(div);
+            });
         }
-        
-        pageInitialized = true;
-        console.log('=== DOMContentLoaded: First time, initializing page ===');
-        initializePage();
-    });
+
+        async function tryGoogleSheets() {
+            const btn = document.getElementById('googleBtn');
+            const status = document.getElementById('googleStatus');
+            const sheetId = document.getElementById('googleSheetId').value.trim();
+
+            if (!sheetId) {
+                updateStatus('Please enter a Google Sheet ID', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Loading...';
+            status.textContent = 'Attempting to fetch...';
+
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+                
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 8000);
+                
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} - Sheet may not be published`);
+                }
+
+                const csvText = await response.text();
+                const lines = csvText.split('\n');
+                const questions = lines
+                    .slice(1)
+                    .map(line => line.split(',')[0])
+                    .filter(q => q && q.trim())
+                    .map(q => q.replace(/"/g, '').trim());
+
+                if (questions.length === 0) {
+                    throw new Error('No questions found in first column');
+                }
+
+                questionsList = questions;
+                updateStatus(`Loaded ${questionsList.length} questions from Google Sheets`, 'success');
+                addSystemMessage(`✅ Loaded ${questionsList.length} questions from Google Sheets`);
+                status.textContent = `Success: ${questionsList.length} questions loaded`;
+                displayQuestions();
+                updateStats();
+                checkReadyToTest();
+
+            } catch (error) {
+                let errorMsg = error.message;
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Timed out - sheet may not be published';
+                }
+                
+                updateStatus(`Google Sheets failed: ${errorMsg}`, 'error');
+                status.textContent = `Failed: ${errorMsg}`;
+            } finally {
+                btn.textContent = '📥 Load from Google Sheets';
+                btn.disabled = false;
+            }
+        }
+
+        function loadChatbot() {
+            const iframe = document.getElementById('chatIframe');
+            iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
+            
+            updateStatus('Chatbot loaded (for visual reference)', 'info');
+            addSystemMessage('🔗 Chatbot loaded (visual only - test uses API directly)');
+            checkReadyToTest();
+        }
+
+        function checkReadyToTest() {
+            const startBtn = document.getElementById('startBtn');
+            if (questionsList.length > 0) {
+                startBtn.disabled = false;
+                updateStatus('Ready to start testing!', 'success');
+            }
+        }
+
+        async function startTest() {
+            if (questionsList.length === 0) {
+                updateStatus('Please load questions first', 'error');
+                return;
+            }
+
+            currentQuestionIndex = 0;
+            qaResults = [];
+            testRunning = true;
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('loadChatBtn').disabled = true;
+            
+            updateStatus('Testing in progress...', 'warning');
+            addSystemMessage(`🚀 Starting API-based test with ${questionsList.length} questions`);
+            updateStats();
+            
+            await sendNextQuestion();
+        }
+
+        async function sendNextQuestion() {
+            if (!testRunning || currentQuestionIndex >= questionsList.length) {
+                if (currentQuestionIndex >= questionsList.length) {
+                    stopTest();
+                    updateStatus('All questions completed!', 'success');
+                    addSystemMessage('🎉 All questions completed!');
+                }
+                return;
+            }
+
+            const question = questionsList[currentQuestionIndex];
+            const questionNum = currentQuestionIndex + 1;
+            
+            // Update question display
+            document.querySelectorAll('.question-item').forEach(item => {
+                item.classList.remove('current');
+            });
+            const currentItem = document.getElementById(`question-${currentQuestionIndex}`);
+            if (currentItem) {
+                currentItem.classList.add('current');
+            }
+
+            // Add to results as waiting
+            qaResults.push({
+                question: question,
+                answer: 'WAITING',
+                timestamp: new Date().toISOString()
+            });
+
+            updateTranscriptDisplay();
+            
+            console.log(`Sending Q${questionNum}: ${question}`);
+            
+            try {
+                const startTime = Date.now();
+                const userId = document.getElementById('userId').value || 'mit-tester';
+                
+                // Send question to Voiceflow API
+                const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}/interact`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': VOICEFLOW_PROJECT_ID
+                    },
+                    body: JSON.stringify({
+                        action: {
+                            type: 'text',
+                            payload: question
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API returned ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const responseTime = Date.now() - startTime;
+                
+                console.log('API Response:', data);
+                
+                // Extract text from response
+                let responseText = '';
+                if (Array.isArray(data)) {
+                    for (const trace of data) {
+                        if (trace.type === 'text' && trace.payload && trace.payload.message) {
+                            responseText += trace.payload.message + '\n\n';
+                        } else if (trace.type === 'speak' && trace.payload && trace.payload.message) {
+                            responseText += trace.payload.message + '\n\n';
+                        }
+                    }
+                }
+                
+                responseText = responseText.trim() || 'No text response received';
+                
+                // Update the Q&A pair
+                qaResults[qaResults.length - 1] = {
+                    question: question,
+                    answer: responseText,
+                    timestamp: new Date().toISOString(),
+                    responseTime: responseTime
+                };
+
+                updateTranscriptDisplay();
+                updateStats();
+                
+                // Mark as completed
+                if (currentItem) {
+                    currentItem.classList.remove('current');
+                    currentItem.classList.add('completed');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                qaResults[qaResults.length - 1].answer = `Error: ${error.message}`;
+                updateTranscriptDisplay();
+            }
+
+            currentQuestionIndex++;
+            
+            // Continue to next question after 1 second
+            if (testRunning) {
+                setTimeout(sendNextQuestion, 1000);
+            }
+        }
+
+        function stopTest() {
+            testRunning = false;
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('loadChatBtn').disabled = false;
+            
+            updateStatus('Test stopped', 'info');
+            addSystemMessage('⏹️ Test stopped');
+        }
+
+        function updateTranscriptDisplay() {
+            const transcript = document.getElementById('transcript');
+            transcript.innerHTML = '';
+
+            qaResults.forEach((qa, index) => {
+                const qaDiv = document.createElement('div');
+                qaDiv.className = 'qa-pair';
+                
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'qa-question';
+                questionDiv.textContent = `Q${index + 1}: ${qa.question}`;
+                
+                const answerDiv = document.createElement('div');
+                if (qa.answer === 'WAITING') {
+                    answerDiv.className = 'qa-waiting';
+                    answerDiv.textContent = '⏳ Waiting for response...';
+                } else {
+                    answerDiv.className = 'qa-answer';
+                    answerDiv.textContent = qa.answer;
+                    
+                    if (qa.responseTime) {
+                        const timeInfo = document.createElement('div');
+                        timeInfo.style.fontSize = '11px';
+                        timeInfo.style.color = '#6c757d';
+                        timeInfo.style.marginTop = '8px';
+                        timeInfo.textContent = `⏱️ Response time: ${(qa.responseTime / 1000).toFixed(1)}s`;
+                        answerDiv.appendChild(timeInfo);
+                    }
+                }
+                
+                qaDiv.appendChild(questionDiv);
+                qaDiv.appendChild(answerDiv);
+                transcript.appendChild(qaDiv);
+            });
+
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        function clearTranscript() {
+            qaResults = [];
+            updateTranscriptDisplay();
+            addSystemMessage('Transcript cleared');
+            updateStats();
+        }
+
+        function copyToClipboard() {
+            let text = '=== VOICEFLOW TEST RESULTS ===\n\n';
+            
+            qaResults.forEach((qa, index) => {
+                text += `Q${index + 1}: ${qa.question}\n`;
+                text += `A${index + 1}: ${qa.answer}\n`;
+                if (qa.responseTime) {
+                    text += `Time: ${(qa.responseTime / 1000).toFixed(1)}s\n`;
+                }
+                text += '\n---\n\n';
+            });
+            
+            navigator.clipboard.writeText(text).then(() => {
+                addSystemMessage('📋 Transcript copied to clipboard');
+            });
+        }
+
+        function exportToCSV() {
+            let csv = 'Question Number,Question,Answer,Response Time (seconds)\n';
+            
+            qaResults.forEach((qa, index) => {
+                const question = qa.question.replace(/"/g, '""');
+                const answer = qa.answer.replace(/"/g, '""');
+                const time = qa.responseTime ? (qa.responseTime / 1000).toFixed(1) : 'N/A';
+                csv += `${index + 1},"${question}","${answer}",${time}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voiceflow-test-${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            
+            addSystemMessage('📊 CSV exported successfully');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            addSystemMessage('🤖 Chatbot Tester v4 Ready');
+            addSystemMessage('✨ Using direct API calls for 100% reliable capture');
+            addSystemMessage('Step 1: Load questions');
+            addSystemMessage('Step 2: (Optional) Load chatbot for visual reference');
+            addSystemMessage('Step 3: Start testing');
+        });
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
