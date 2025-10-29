@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5.6 - Diagnostic Edition</title>
+    <title>Voiceflow Chatbot Tester v5.7 - Diagnostic Edition</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -384,7 +384,7 @@
     <div class="header">
         <h1>🔬 Voiceflow Chatbot Tester</h1>
         <p>Diagnostic Edition - Advanced API Testing & Debugging</p>
-        <span class="version-badge">v5.6 Diagnostic Edition</span>
+        <span class="version-badge">v5.7 Diagnostic Edition</span>
     </div>
 
     <div class="container">
@@ -393,7 +393,17 @@
             <h3>⚙️ Configuration</h3>
             
             <div class="input-group">
-                <label for="apiKey">🔑 Voiceflow API Key:</label>
+                <label for="apiKeySelect">🔑 Select API Key:</label>
+                <select id="apiKeySelect" onchange="loadSelectedApiKey()">
+                    <option value="">-- Select API Key --</option>
+                    <option value="VF.DM.66df267d16a91c9f126fab7e.pZsTqAbO2vhQgVNa">Test Agent (Basic)</option>
+                    <option value="VF.DM.66df267d16a9116a91c9f126fab7e.pZsTqAbO2vhQgVNa">Production Agent</option>
+                    <option value="custom">Custom (enter below)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="apiKey">Or Enter Custom API Key:</label>
                 <input type="text" id="apiKey" placeholder="VF.DM.xxxxx.xxxxxx" />
                 <small style="color: #666; font-size: 12px;">Get from: Settings → API Keys</small>
             </div>
@@ -475,7 +485,30 @@
     </div>
 
     <script>
-        console.log('🔬 Voiceflow Tester v5.6 Diagnostic Edition Loaded');
+        console.log('🔬 Voiceflow Tester v5.7 Diagnostic Edition Loaded');
+        
+        // Load selected API key from dropdown
+        function loadSelectedApiKey() {
+            const select = document.getElementById('apiKeySelect');
+            const apiKeyInput = document.getElementById('apiKey');
+            const selectedValue = select.value;
+            
+            if (selectedValue && selectedValue !== 'custom') {
+                apiKeyInput.value = selectedValue;
+                addDiagnosticLog(`Loaded API key: ${select.options[select.selectedIndex].text}`, 'info');
+                
+                // Auto-extract project ID
+                const extractedId = extractProjectId(selectedValue);
+                if (extractedId && !document.getElementById('projectId').value) {
+                    document.getElementById('projectId').value = extractedId;
+                    addDiagnosticLog(`Auto-detected Project ID: ${extractedId}`, 'info');
+                }
+                
+                checkReadyToTest();
+            } else if (selectedValue === 'custom') {
+                apiKeyInput.focus();
+            }
+        }
         
         // Global variables
         let questions = [];
@@ -1237,9 +1270,9 @@
 
         // Initialize on page load
         window.addEventListener('load', () => {
-            addDiagnosticLog('=== TESTER v5.6 DIAGNOSTIC EDITION INITIALIZED ===', 'success');
+            addDiagnosticLog('=== TESTER v5.7 DIAGNOSTIC EDITION INITIALIZED ===', 'success');
             setStatus('💡 Enter API key and run diagnostic to begin', 'info');
-            addSystemMessage('Tester v5.6 Diagnostic Edition ready');
+            addSystemMessage('Tester v5.7 Diagnostic Edition ready');
             addDiagnosticLog('Ready to test multiple API endpoints', 'info');
         });
 
