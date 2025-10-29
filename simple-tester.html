@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5 - Enhanced API</title>
+    <title>Voiceflow Chatbot Tester v5.1 - Debug Edition</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -46,12 +46,8 @@
         button:disabled { background: #ccc; cursor: not-allowed; }
         button.green { background: #28a745; }
         button.green:hover { background: #218838; }
-        button.gray { background: #6c757d; }
-        button.gray:hover { background: #5a6268; }
         button.red { background: #dc3545; }
         button.red:hover { background: #c82333; }
-        button.orange { background: #fd7e14; }
-        button.orange:hover { background: #e8690a; }
         .status { 
             padding: 12px; 
             border-radius: 4px; 
@@ -74,7 +70,7 @@
             margin: 0 0 15px 0;
             color: #495057;
         }
-        input, textarea {
+        input, textarea, select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ced4da;
@@ -212,24 +208,6 @@
             color: #6c757d;
             margin-top: 5px;
         }
-        .debug-toggle {
-            margin: 10px 0;
-        }
-        .debug-panel {
-            display: none;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            margin: 10px 0;
-            font-family: monospace;
-            font-size: 11px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .debug-panel.active {
-            display: block;
-        }
         .checkbox-label {
             display: flex;
             align-items: center;
@@ -247,9 +225,9 @@
     <div class="container">
         <!-- Left Panel: Controls -->
         <div class="panel">
-            <h2>🤖 Chatbot Tester v5</h2>
-            <div style="background: #e7f3ff; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
-                ✨ v5: Session reset + Better parsing + Adaptive delays
+            <h2>🤖 Chatbot Tester v5.1</h2>
+            <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
+                🐛 DEBUG EDITION: Check browser console (F12) for detailed logs
             </div>
             
             <div class="section">
@@ -260,19 +238,8 @@
 who is the DAF
 how can i create a budget?
 how do i request a waiver
-how do i request a proposal waiver
-how do i request a waiver of search?
-does the department still do waivers of search
-where is Gabby Hoyte's office
-who does Gabby Hoyte support?
-who is the development officer?
-who supports sertac karaman?</textarea>
+how do i request a proposal waiver</textarea>
                 <button onclick="loadFromTextArea()" class="green">📝 Load These Questions</button>
-                
-                <label>Google Sheet ID (optional):</label>
-                <input type="text" id="googleSheetId" placeholder="Enter Google Sheet ID" value="1flnWLAXZGoTpDjkRMuuD3LvyphYIij0gruCu_4x__gQ">
-                <button onclick="tryGoogleSheets()" id="googleBtn">📥 Load from Google Sheets</button>
-                <div style="font-size: 11px; color: #6c757d; margin: 5px 0;" id="googleStatus">Optional: Load from Google Sheets</div>
             </div>
 
             <div class="section">
@@ -280,22 +247,22 @@ who supports sertac karaman?</textarea>
                 <label>Voiceflow API Key:</label>
                 <input type="text" id="apiKey" placeholder="VF.DM.66df267d16a9116a91c9f126fab7e.pZsTqAbO2vhQgVNa" style="font-family: monospace; font-size: 11px;">
                 <div style="font-size: 11px; color: #6c757d; margin: 5px 0;">Get from Voiceflow → Integrations page</div>
+                
                 <label>User ID:</label>
-                <input type="text" id="userId" value="mit-tester" placeholder="Enter user ID">
+                <input type="text" id="userId" value="mit-tester-debug" placeholder="Enter user ID">
+                
                 <label>Version ID:</label>
                 <select id="versionId">
                     <option value="production">production</option>
                     <option value="development">development</option>
                 </select>
+                
                 <label>Delay between questions (ms):</label>
-                <input type="number" id="delayMs" value="1500" min="500" max="10000" step="100">
+                <input type="number" id="delayMs" value="2000" min="500" max="10000" step="100">
+                
                 <label class="checkbox-label">
                     <input type="checkbox" id="resetSession" checked>
-                    Reset session before test (recommended)
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="debugMode">
-                    Debug mode (show raw API responses)
+                    Reset session before test
                 </label>
             </div>
 
@@ -310,18 +277,18 @@ who supports sertac karaman?</textarea>
                 </div>
             </div>
 
-            <div class="status" id="mainStatus">Ready - load questions above</div>
+            <div class="status" id="mainStatus">Ready</div>
 
-            <button onclick="loadChatbot()" id="loadChatBtn">🔗 Load Chatbot (Visual Only)</button>
+            <button onclick="testConnection()" id="testBtn">🔌 Test API Connection</button>
             <button onclick="startTest()" id="startBtn" disabled>▶️ Start Automated Test</button>
             <button onclick="stopTest()" id="stopBtn" disabled class="red">⏹️ Stop Test</button>
 
             <div class="questions-display" id="questionsDisplay">
-                <div style="text-align: center; color: #6c757d;">Load questions above to see them here</div>
+                <div style="text-align: center; color: #6c757d;">Load questions above</div>
             </div>
         </div>
 
-        <!-- Middle Panel: Chatbot (Visual Reference Only) -->
+        <!-- Middle Panel: Chatbot -->
         <div class="chatbot-panel">
             <iframe id="chatIframe" src="about:blank"></iframe>
         </div>
@@ -330,75 +297,44 @@ who supports sertac karaman?</textarea>
         <div class="panel">
             <h3>💬 Live Q&A Transcript</h3>
             <div class="transcript" id="transcript">
-                <div class="message system">Q&A pairs will appear here during testing</div>
+                <div class="message system">Q&A pairs will appear here</div>
             </div>
             <button onclick="clearTranscript()">🗑️ Clear Transcript</button>
             <button onclick="copyToClipboard()" class="green">📋 Copy Transcript</button>
-            <button onclick="exportToCSV()" class="gray">📊 Export CSV</button>
-            <button onclick="toggleDebug()" class="orange" id="debugToggleBtn">🔍 Show Debug Log</button>
-            <div class="debug-panel" id="debugPanel"></div>
         </div>
     </div>
 
     <script>
+        console.log('🚀 Script loaded - v5.1 Debug Edition');
+        
         let questionsList = [];
         let currentQuestionIndex = 0;
         let testRunning = false;
         let qaResults = [];
-        let debugLog = [];
 
-        // Voiceflow API configuration
         const VOICEFLOW_API_URL = 'https://general-runtime.voiceflow.com';
 
-        function addDebugLog(message, data = null) {
+        function log(message, data = null) {
             const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-            const logEntry = {
-                time: timestamp,
-                message: message,
-                data: data
-            };
-            debugLog.push(logEntry);
-            
-            if (document.getElementById('debugMode').checked) {
-                console.log(`[${timestamp}] ${message}`, data || '');
-                updateDebugPanel();
-            }
-        }
-
-        function updateDebugPanel() {
-            const panel = document.getElementById('debugPanel');
-            panel.innerHTML = debugLog.slice(-50).map(entry => {
-                let html = `<div style="margin: 5px 0; padding: 5px; background: white; border-radius: 3px;">`;
-                html += `<strong>[${entry.time}]</strong> ${entry.message}`;
-                if (entry.data) {
-                    html += `<pre style="margin: 5px 0; font-size: 10px;">${JSON.stringify(entry.data, null, 2)}</pre>`;
-                }
-                html += `</div>`;
-                return html;
-            }).join('');
-            panel.scrollTop = panel.scrollHeight;
-        }
-
-        function toggleDebug() {
-            const panel = document.getElementById('debugPanel');
-            const btn = document.getElementById('debugToggleBtn');
-            panel.classList.toggle('active');
-            btn.textContent = panel.classList.contains('active') ? '🔍 Hide Debug Log' : '🔍 Show Debug Log';
-            if (panel.classList.contains('active')) {
-                updateDebugPanel();
+            if (data) {
+                console.log(`[${timestamp}] ${message}`, data);
+            } else {
+                console.log(`[${timestamp}] ${message}`);
             }
         }
 
         function updateStats() {
-            document.getElementById('statQuestions').textContent = questionsList.length;
             const completed = qaResults.filter(qa => qa.answer !== 'WAITING').length;
+            document.getElementById('statQuestions').textContent = questionsList.length;
             document.getElementById('statCompleted').textContent = completed;
+            log(`Stats updated: ${questionsList.length} questions, ${completed} completed`);
         }
 
         function updateStatus(message, type = 'info') {
             const status = document.getElementById('mainStatus');
             status.textContent = message;
             status.className = `status ${type}`;
+            log(`Status: ${message} (${type})`);
         }
 
         function addSystemMessage(message) {
@@ -408,30 +344,34 @@ who supports sertac karaman?</textarea>
             messageDiv.textContent = message;
             transcript.appendChild(messageDiv);
             transcript.scrollTop = transcript.scrollHeight;
+            log(`System message: ${message}`);
         }
 
         function loadFromTextArea() {
+            log('Loading questions from textarea');
             const textarea = document.getElementById('questionTextArea');
             const text = textarea.value;
             const questions = text.split('\n')
                 .map(q => q.trim())
                 .filter(q => q.length > 0);
             
+            log('Parsed questions:', questions);
+            
             if (questions.length === 0) {
-                updateStatus('No questions found in text area', 'error');
+                updateStatus('No questions found', 'error');
                 return;
             }
 
             questionsList = questions;
             updateStatus(`Loaded ${questionsList.length} questions`, 'success');
-            addSystemMessage(`✅ Loaded ${questionsList.length} questions from text area`);
-            addDebugLog(`Loaded ${questionsList.length} questions from textarea`);
+            addSystemMessage(`✅ Loaded ${questionsList.length} questions`);
             displayQuestions();
             updateStats();
             checkReadyToTest();
         }
 
         function displayQuestions() {
+            log('Displaying questions in UI');
             const display = document.getElementById('questionsDisplay');
             display.innerHTML = '';
             
@@ -444,105 +384,111 @@ who supports sertac karaman?</textarea>
             });
         }
 
-        async function tryGoogleSheets() {
-            const btn = document.getElementById('googleBtn');
-            const status = document.getElementById('googleStatus');
-            const sheetId = document.getElementById('googleSheetId').value.trim();
-
-            if (!sheetId) {
-                updateStatus('Please enter a Google Sheet ID', 'error');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = '⏳ Loading...';
-            status.textContent = 'Attempting to fetch...';
-            addDebugLog('Attempting to load from Google Sheets', { sheetId });
-
-            try {
-                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
-                
-                const controller = new AbortController();
-                setTimeout(() => controller.abort(), 8000);
-                
-                const response = await fetch(url, {
-                    signal: controller.signal,
-                    mode: 'cors'
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status} - Sheet may not be published`);
-                }
-
-                const csvText = await response.text();
-                const lines = csvText.split('\n');
-                const questions = lines
-                    .slice(1)
-                    .map(line => line.split(',')[0])
-                    .filter(q => q && q.trim())
-                    .map(q => q.replace(/"/g, '').trim());
-
-                if (questions.length === 0) {
-                    throw new Error('No questions found in first column');
-                }
-
-                questionsList = questions;
-                updateStatus(`Loaded ${questionsList.length} questions from Google Sheets`, 'success');
-                addSystemMessage(`✅ Loaded ${questionsList.length} questions from Google Sheets`);
-                addDebugLog(`Successfully loaded ${questionsList.length} questions from Google Sheets`);
-                status.textContent = `Success: ${questionsList.length} questions loaded`;
-                displayQuestions();
-                updateStats();
-                checkReadyToTest();
-
-            } catch (error) {
-                let errorMsg = error.message;
-                if (error.name === 'AbortError') {
-                    errorMsg = 'Timed out - sheet may not be published';
-                }
-                
-                updateStatus(`Google Sheets failed: ${errorMsg}`, 'error');
-                status.textContent = `Failed: ${errorMsg}`;
-                addDebugLog('Google Sheets load failed', { error: errorMsg });
-            } finally {
-                btn.textContent = '📥 Load from Google Sheets';
-                btn.disabled = false;
-            }
-        }
-
-        function loadChatbot() {
-            const iframe = document.getElementById('chatIframe');
-            iframe.src = 'https://aeroastrovfbot.netlify.app/chatbot.html';
-            
-            updateStatus('Chatbot loaded (for visual reference)', 'info');
-            addSystemMessage('🔗 Chatbot loaded (visual only - test uses API directly)');
-            addDebugLog('Chatbot iframe loaded');
-            checkReadyToTest();
-        }
-
         function checkReadyToTest() {
+            log('Checking if ready to test');
             const startBtn = document.getElementById('startBtn');
+            const testBtn = document.getElementById('testBtn');
             const apiKey = document.getElementById('apiKey').value.trim();
+            
+            log('Check ready:', { 
+                questionsLoaded: questionsList.length,
+                hasApiKey: !!apiKey,
+                apiKeyLength: apiKey.length
+            });
+            
+            if (apiKey) {
+                testBtn.disabled = false;
+            }
             
             if (questionsList.length > 0 && apiKey) {
                 startBtn.disabled = false;
                 updateStatus('Ready to start testing!', 'success');
             } else if (questionsList.length > 0 && !apiKey) {
                 startBtn.disabled = true;
-                updateStatus('Enter your Voiceflow API Key to continue', 'warning');
+                updateStatus('Enter API Key to continue', 'warning');
+            } else if (!questionsList.length && apiKey) {
+                startBtn.disabled = true;
+                updateStatus('Load questions to continue', 'warning');
+            }
+        }
+
+        async function testConnection() {
+            log('Testing API connection');
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const userId = document.getElementById('userId').value || 'test-user';
+            const versionId = document.getElementById('versionId').value;
+            
+            if (!apiKey) {
+                updateStatus('Enter API Key first', 'error');
+                alert('Please enter your Voiceflow API Key');
+                return;
+            }
+            
+            updateStatus('Testing connection...', 'warning');
+            addSystemMessage('🔌 Testing API connection...');
+            
+            try {
+                log('Sending test request to Voiceflow API', {
+                    url: `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
+                    userId,
+                    versionId
+                });
+                
+                const requestBody = {
+                    request: {
+                        type: 'launch'
+                    }
+                };
+                
+                log('Request body:', requestBody);
+                
+                const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}/interact`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': apiKey,
+                        'versionID': versionId
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                log('Response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log('Error response body:', errorText);
+                    throw new Error(`API ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log('API Response data:', data);
+                
+                updateStatus('✅ Connection successful!', 'success');
+                addSystemMessage('✅ API connection successful! Ready to test.');
+                alert('Connection successful! You can now start testing.');
+                
+            } catch (error) {
+                log('Connection test failed:', error);
+                updateStatus(`Connection failed: ${error.message}`, 'error');
+                addSystemMessage(`❌ Connection failed: ${error.message}`);
+                alert(`Connection failed: ${error.message}\n\nCheck console (F12) for details.`);
             }
         }
 
         async function resetSession() {
-            const userId = document.getElementById('userId').value || 'mit-tester';
+            const userId = document.getElementById('userId').value || 'mit-tester-debug';
             const apiKey = document.getElementById('apiKey').value.trim();
             
+            log('Resetting session', { userId });
+            
             if (!apiKey) {
-                addDebugLog('Cannot reset session - API key not provided');
+                log('Cannot reset - no API key');
                 return false;
             }
-            
-            addDebugLog('Attempting to reset session', { userId });
             
             try {
                 const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}`, {
@@ -552,67 +498,67 @@ who supports sertac karaman?</textarea>
                     }
                 });
                 
+                log('Session reset response:', { status: response.status, ok: response.ok });
+                
                 if (response.ok) {
-                    addDebugLog('Session reset successfully');
-                    addSystemMessage('🔄 Session reset - starting fresh conversation');
+                    addSystemMessage('🔄 Session reset');
                     return true;
-                } else {
-                    addDebugLog('Session reset returned non-OK status', { status: response.status });
-                    return false;
                 }
+                return false;
             } catch (error) {
-                addDebugLog('Session reset failed', { error: error.message });
-                console.error('Failed to reset session:', error);
+                log('Session reset error:', error);
                 return false;
             }
         }
 
         async function startTest() {
+            log('Starting test');
+            
             if (questionsList.length === 0) {
-                updateStatus('Please load questions first', 'error');
+                updateStatus('Load questions first', 'error');
+                alert('Please load questions first');
+                return;
+            }
+            
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                updateStatus('Enter API Key first', 'error');
+                alert('Please enter your Voiceflow API Key');
                 return;
             }
 
             currentQuestionIndex = 0;
             qaResults = [];
-            debugLog = [];
             testRunning = true;
             
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
-            document.getElementById('loadChatBtn').disabled = true;
+            document.getElementById('testBtn').disabled = true;
             
-            addDebugLog('Starting test', { questionCount: questionsList.length });
+            log('Test starting', { questionCount: questionsList.length });
             
-            // Reset session if checkbox is checked
+            // Reset session if checked
             if (document.getElementById('resetSession').checked) {
                 updateStatus('Resetting session...', 'warning');
                 await resetSession();
-                // Small delay after reset
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
             
             updateStatus('Testing in progress...', 'warning');
-            addSystemMessage(`🚀 Starting API-based test with ${questionsList.length} questions`);
+            addSystemMessage(`🚀 Starting test with ${questionsList.length} questions`);
             updateStats();
             
             await sendNextQuestion();
         }
 
         function parseVoiceflowResponse(data) {
+            log('Parsing Voiceflow response', data);
+            
             let responseText = '';
-            let hasResponse = false;
-            const metadata = {
-                traceTypes: [],
-                hasText: false,
-                hasSpeak: false,
-                hasVisual: false,
-                hasCard: false,
-                hasButtons: false
-            };
+            const metadata = { traceTypes: [] };
 
             if (!Array.isArray(data)) {
-                addDebugLog('Response is not an array', { data });
+                log('Response is not an array!');
                 return { text: 'Invalid response format', metadata };
             }
 
@@ -621,59 +567,15 @@ who supports sertac karaman?</textarea>
                 
                 if (trace.type === 'text' && trace.payload?.message) {
                     responseText += trace.payload.message + '\n\n';
-                    hasResponse = true;
-                    metadata.hasText = true;
                 } 
                 else if (trace.type === 'speak' && trace.payload?.message) {
                     responseText += trace.payload.message + '\n\n';
-                    hasResponse = true;
-                    metadata.hasSpeak = true;
-                } 
-                else if (trace.type === 'visual') {
-                    metadata.hasVisual = true;
-                    if (trace.payload?.visualType === 'text' && trace.payload?.text) {
-                        responseText += trace.payload.text + '\n\n';
-                        hasResponse = true;
-                    } else if (trace.payload?.image) {
-                        responseText += '[Image]\n';
-                        hasResponse = true;
-                    }
-                } 
-                else if (trace.type === 'card' && trace.payload) {
-                    metadata.hasCard = true;
-                    responseText += `[Card: ${trace.payload.title || 'Untitled'}]\n`;
-                    if (trace.payload.description) {
-                        responseText += trace.payload.description + '\n';
-                    }
-                    if (trace.payload.text) {
-                        responseText += trace.payload.text + '\n';
-                    }
-                    responseText += '\n';
-                    hasResponse = true;
-                }
-                else if (trace.type === 'choice' || trace.type === 'buttons') {
-                    metadata.hasButtons = true;
-                    if (trace.payload?.buttons && Array.isArray(trace.payload.buttons)) {
-                        responseText += '[Buttons: ';
-                        responseText += trace.payload.buttons.map(b => b.name || b.label).join(', ');
-                        responseText += ']\n\n';
-                        hasResponse = true;
-                    }
                 }
             }
 
-            responseText = responseText.trim();
+            responseText = responseText.trim() || `[No text - types: ${metadata.traceTypes.join(', ')}]`;
             
-            if (!responseText) {
-                if (hasResponse) {
-                    responseText = '[Response contains non-text elements]';
-                } else if (metadata.traceTypes.length > 0) {
-                    responseText = `[No text content - trace types: ${metadata.traceTypes.join(', ')}]`;
-                } else {
-                    responseText = 'No response received';
-                }
-            }
-
+            log('Parsed response:', { text: responseText, metadata });
             return { text: responseText, metadata };
         }
 
@@ -682,8 +584,7 @@ who supports sertac karaman?</textarea>
                 if (currentQuestionIndex >= questionsList.length) {
                     stopTest();
                     updateStatus('All questions completed!', 'success');
-                    addSystemMessage('🎉 All questions completed!');
-                    addDebugLog('Test completed successfully');
+                    addSystemMessage('🎉 Test completed!');
                 }
                 return;
             }
@@ -691,7 +592,10 @@ who supports sertac karaman?</textarea>
             const question = questionsList[currentQuestionIndex];
             const questionNum = currentQuestionIndex + 1;
             
-            // Update question display
+            log(`\n=== Sending Q${questionNum} ===`);
+            log('Question:', question);
+            
+            // Update UI
             document.querySelectorAll('.question-item').forEach(item => {
                 item.classList.remove('current');
             });
@@ -709,17 +613,11 @@ who supports sertac karaman?</textarea>
 
             updateTranscriptDisplay();
             
-            addDebugLog(`Sending Q${questionNum}`, { question });
-            
             try {
                 const startTime = Date.now();
-                const userId = document.getElementById('userId').value || 'mit-tester';
+                const userId = document.getElementById('userId').value || 'mit-tester-debug';
                 const apiKey = document.getElementById('apiKey').value.trim();
                 const versionId = document.getElementById('versionId').value;
-                
-                if (!apiKey) {
-                    throw new Error('API Key is required. Get it from Voiceflow → Integrations page');
-                }
                 
                 const requestBody = {
                     request: {
@@ -728,9 +626,16 @@ who supports sertac karaman?</textarea>
                     }
                 };
                 
-                addDebugLog('API Request', requestBody);
+                log('API Request:', {
+                    url: `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
+                    method: 'POST',
+                    body: requestBody,
+                    headers: {
+                        'Authorization': apiKey.substring(0, 20) + '...',
+                        'versionID': versionId
+                    }
+                });
                 
-                // Send question to Voiceflow API
                 const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}/interact`, {
                     method: 'POST',
                     headers: {
@@ -741,32 +646,29 @@ who supports sertac karaman?</textarea>
                     body: JSON.stringify(requestBody)
                 });
 
+                const responseTime = Date.now() - startTime;
+                log('Response received:', { 
+                    status: response.status, 
+                    ok: response.ok,
+                    responseTime: `${responseTime}ms`
+                });
+
                 if (!response.ok) {
                     let errorDetail = response.statusText;
                     try {
                         const errorBody = await response.json();
+                        log('Error body:', errorBody);
                         errorDetail = errorBody.message || errorBody.error || errorDetail;
-                        addDebugLog('API Error Response', errorBody);
                     } catch {}
                     throw new Error(`API ${response.status}: ${errorDetail}`);
                 }
 
                 const data = await response.json();
-                const responseTime = Date.now() - startTime;
+                log('API Response data:', data);
                 
-                addDebugLog('API Response received', { 
-                    responseTime: `${responseTime}ms`,
-                    traceCount: Array.isArray(data) ? data.length : 0
-                });
-                
-                if (document.getElementById('debugMode').checked) {
-                    addDebugLog('Full API Response', data);
-                }
-                
-                // Parse response
                 const parsed = parseVoiceflowResponse(data);
                 
-                // Update the Q&A pair
+                // Update result
                 qaResults[qaResults.length - 1] = {
                     question: question,
                     answer: parsed.text,
@@ -778,20 +680,15 @@ who supports sertac karaman?</textarea>
                 updateTranscriptDisplay();
                 updateStats();
                 
-                // Mark as completed
                 if (currentItem) {
                     currentItem.classList.remove('current');
                     currentItem.classList.add('completed');
                 }
                 
-                addDebugLog(`Q${questionNum} completed`, { 
-                    responseTime: `${responseTime}ms`,
-                    answerLength: parsed.text.length 
-                });
+                log(`Q${questionNum} completed successfully`);
 
             } catch (error) {
-                console.error('Error:', error);
-                addDebugLog(`Q${questionNum} failed`, { error: error.message });
+                log(`Q${questionNum} FAILED:`, error);
                 
                 qaResults[qaResults.length - 1].answer = `❌ Error: ${error.message}`;
                 qaResults[qaResults.length - 1].isError = true;
@@ -806,31 +703,24 @@ who supports sertac karaman?</textarea>
 
             currentQuestionIndex++;
             
-            // Adaptive delay based on previous response time
-            let delay = parseInt(document.getElementById('delayMs').value) || 1500;
+            const delay = parseInt(document.getElementById('delayMs').value) || 2000;
+            log(`Waiting ${delay}ms before next question`);
             
-            const lastResult = qaResults[qaResults.length - 1];
-            if (lastResult.responseTime && lastResult.responseTime > 3000) {
-                delay = Math.max(delay, 2000); // Longer delay for slow responses
-                addDebugLog('Using extended delay due to slow response', { delay: `${delay}ms` });
-            }
-            
-            // Continue to next question after delay
             if (testRunning) {
                 setTimeout(sendNextQuestion, delay);
             }
         }
 
         function stopTest() {
+            log('Stopping test');
             testRunning = false;
             
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
-            document.getElementById('loadChatBtn').disabled = false;
+            document.getElementById('testBtn').disabled = false;
             
             updateStatus('Test stopped', 'info');
             addSystemMessage('⏹️ Test stopped');
-            addDebugLog('Test stopped by user');
         }
 
         function updateTranscriptDisplay() {
@@ -848,26 +738,18 @@ who supports sertac karaman?</textarea>
                 const answerDiv = document.createElement('div');
                 if (qa.answer === 'WAITING') {
                     answerDiv.className = 'qa-waiting';
-                    answerDiv.textContent = '⏳ Waiting for response...';
+                    answerDiv.textContent = '⏳ Waiting...';
                 } else {
                     answerDiv.className = qa.isError ? 'qa-answer error' : 'qa-answer';
                     answerDiv.textContent = qa.answer;
                     
-                    // Add metadata
-                    if (qa.responseTime || qa.metadata) {
+                    if (qa.responseTime) {
                         const metaDiv = document.createElement('div');
                         metaDiv.className = 'qa-metadata';
-                        
-                        let metaText = '';
-                        if (qa.responseTime) {
-                            metaText += `⏱️ Response time: ${(qa.responseTime / 1000).toFixed(1)}s`;
+                        metaDiv.textContent = `⏱️ ${(qa.responseTime / 1000).toFixed(1)}s`;
+                        if (qa.metadata?.traceTypes) {
+                            metaDiv.textContent += ` • ${qa.metadata.traceTypes.join(', ')}`;
                         }
-                        if (qa.metadata && qa.metadata.traceTypes.length > 0) {
-                            if (metaText) metaText += ' • ';
-                            metaText += `Trace types: ${qa.metadata.traceTypes.join(', ')}`;
-                        }
-                        
-                        metaDiv.textContent = metaText;
                         answerDiv.appendChild(metaDiv);
                     }
                 }
@@ -881,73 +763,44 @@ who supports sertac karaman?</textarea>
         }
 
         function clearTranscript() {
-            if (testRunning) {
-                if (!confirm('Test is running. Are you sure you want to clear?')) {
-                    return;
-                }
-            }
-            
+            log('Clearing transcript');
             qaResults = [];
-            debugLog = [];
             updateTranscriptDisplay();
-            updateDebugPanel();
             addSystemMessage('Transcript cleared');
             updateStats();
         }
 
         function copyToClipboard() {
             let text = '=== VOICEFLOW TEST RESULTS ===\n\n';
-            text += `Test Date: ${new Date().toLocaleString()}\n`;
-            text += `Total Questions: ${qaResults.length}\n`;
-            text += `Completed: ${qaResults.filter(qa => qa.answer !== 'WAITING' && !qa.isError).length}\n`;
-            text += `Errors: ${qaResults.filter(qa => qa.isError).length}\n\n`;
-            text += '---\n\n';
             
             qaResults.forEach((qa, index) => {
                 text += `Q${index + 1}: ${qa.question}\n`;
-                text += `A${index + 1}: ${qa.answer}\n`;
-                if (qa.responseTime) {
-                    text += `Time: ${(qa.responseTime / 1000).toFixed(1)}s\n`;
-                }
-                text += '\n---\n\n';
+                text += `A${index + 1}: ${qa.answer}\n\n`;
             });
             
             navigator.clipboard.writeText(text).then(() => {
-                addSystemMessage('📋 Transcript copied to clipboard');
+                addSystemMessage('📋 Copied to clipboard');
             });
-        }
-
-        function exportToCSV() {
-            let csv = 'Question Number,Question,Answer,Response Time (seconds),Status\n';
-            
-            qaResults.forEach((qa, index) => {
-                const question = qa.question.replace(/"/g, '""');
-                const answer = qa.answer.replace(/"/g, '""').replace(/\n/g, ' ');
-                const time = qa.responseTime ? (qa.responseTime / 1000).toFixed(1) : 'N/A';
-                const status = qa.isError ? 'Error' : (qa.answer === 'WAITING' ? 'Pending' : 'Success');
-                csv += `${index + 1},"${question}","${answer}",${time},${status}\n`;
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `voiceflow-test-${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
-            
-            addSystemMessage('📊 CSV exported successfully');
         }
 
         // Initialize
         window.addEventListener('load', () => {
-            addSystemMessage('🤖 Chatbot Tester v5 Ready');
-            addSystemMessage('✨ New: Session reset, better parsing, adaptive delays');
-            addSystemMessage('Step 1: Enter your Voiceflow API Key (from Integrations page)');
+            log('=== Page Loaded ===');
+            addSystemMessage('🤖 Chatbot Tester v5.1 - Debug Edition');
+            addSystemMessage('Press F12 to see detailed console logs');
+            addSystemMessage('Step 1: Enter API Key');
             addSystemMessage('Step 2: Load questions');
-            addSystemMessage('Step 3: Start testing');
+            addSystemMessage('Step 3: Test connection (recommended)');
+            addSystemMessage('Step 4: Start test');
             
-            // Add event listener to API key field
-            document.getElementById('apiKey').addEventListener('input', checkReadyToTest);
+            // Add listeners
+            const apiKeyInput = document.getElementById('apiKey');
+            apiKeyInput.addEventListener('input', () => {
+                log('API key changed');
+                checkReadyToTest();
+            });
+            
+            log('Initialization complete');
         });
     </script>
 </body>
