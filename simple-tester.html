@@ -1,154 +1,247 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5.4 - Testing Basic Agent</title>
+    <title>Voiceflow Chatbot Tester v5.6 - Diagnostic Edition</title>
     <style>
         body { 
-            font-family: Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             margin: 0;
             padding: 20px; 
-            background: #f5f5f5; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .header p {
+            margin: 5px 0;
+            opacity: 0.9;
         }
         .container { 
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 350px 1fr 400px;
+            grid-template-columns: 400px 1fr 500px;
             gap: 20px;
-            height: 90vh;
+            min-height: 80vh;
         }
         .panel { 
             background: white; 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             overflow-y: auto;
         }
-        .chatbot-panel {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow: hidden;
+        .panel h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        textarea {
+            min-height: 150px;
+            resize: vertical;
         }
         button { 
             background: #007bff; 
             color: white; 
             border: none; 
             padding: 12px 20px; 
-            border-radius: 4px; 
+            border-radius: 6px; 
             cursor: pointer; 
-            margin: 8px 0;
+            margin: 5px 0;
             width: 100%;
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.3);
         }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        button.green { background: #28a745; }
-        button.green:hover { background: #218838; }
-        button.red { background: #dc3545; }
-        button.red:hover { background: #c82333; }
-        .status { 
-            padding: 12px; 
-            border-radius: 4px; 
-            margin: 15px 0;
-            font-weight: bold;
-            text-align: center;
+        button:hover { 
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.4);
         }
-        .status.success { background: #d4edda; color: #155724; }
-        .status.error { background: #f8d7da; color: #721c24; }
-        .status.warning { background: #fff3cd; color: #856404; }
-        .status.info { background: #d1ecf1; color: #0c5460; }
-        .section {
-            border: 1px solid #dee2e6;
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled { 
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        button.green { 
+            background: #28a745;
+            box-shadow: 0 2px 8px rgba(40,167,69,0.3);
+        }
+        button.green:hover { 
+            background: #218838;
+            box-shadow: 0 4px 12px rgba(40,167,69,0.4);
+        }
+        button.orange { 
+            background: #fd7e14;
+            box-shadow: 0 2px 8px rgba(253,126,20,0.3);
+        }
+        button.orange:hover { 
+            background: #e8590c;
+            box-shadow: 0 4px 12px rgba(253,126,20,0.4);
+        }
+        button.red { 
+            background: #dc3545;
+            box-shadow: 0 2px 8px rgba(220,53,69,0.3);
+        }
+        button.red:hover { 
+            background: #c82333;
+            box-shadow: 0 4px 12px rgba(220,53,69,0.4);
+        }
+        button.gray { 
+            background: #6c757d;
+            box-shadow: 0 2px 8px rgba(108,117,125,0.3);
+        }
+        button.gray:hover { 
+            background: #5a6268;
+            box-shadow: 0 4px 12px rgba(108,117,125,0.4);
+        }
+        button.purple {
+            background: #6f42c1;
+            box-shadow: 0 2px 8px rgba(111,66,193,0.3);
+        }
+        button.purple:hover {
+            background: #5a32a3;
+            box-shadow: 0 4px 12px rgba(111,66,193,0.4);
+        }
+        .status {
+            padding: 12px;
             border-radius: 6px;
-            padding: 15px;
             margin: 15px 0;
-            background: #f8f9fa;
+            font-size: 14px;
+            font-weight: 500;
         }
-        .section h4 {
-            margin: 0 0 15px 0;
-            color: #495057;
+        .status.info { background: #d1ecf1; color: #0c5460; border-left: 4px solid #17a2b8; }
+        .status.success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .status.error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .status.warning { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
         }
-        input, textarea, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            margin: 8px 0;
-            box-sizing: border-box;
-            font-family: inherit;
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
         }
-        textarea {
-            resize: vertical;
-            font-family: monospace;
-            font-size: 13px;
+        .stat-card h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            opacity: 0.9;
+            text-transform: uppercase;
         }
-        label {
-            display: block;
-            margin: 8px 0 4px 0;
+        .stat-card .number {
+            font-size: 32px;
             font-weight: bold;
-            font-size: 13px;
+            margin: 0;
         }
-        .questions-display {
-            background: #e9ecef;
-            border: 1px solid #adb5bd;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 15px 0;
-            max-height: 200px;
+        .question-list {
+            max-height: 300px;
             overflow-y: auto;
-            font-size: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 15px 0;
         }
         .question-item {
-            padding: 6px;
-            margin: 3px 0;
-            border-radius: 3px;
-            background: white;
-        }
-        .question-item.current {
-            background: #fff3cd;
-            border-left: 3px solid #ffc107;
-            font-weight: bold;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-left: 3px solid #007bff;
+            border-radius: 4px;
+            font-size: 13px;
         }
         .question-item.completed {
             background: #d4edda;
-            border-left: 3px solid #28a745;
+            border-left-color: #28a745;
         }
         .question-item.error {
             background: #f8d7da;
-            border-left: 3px solid #dc3545;
+            border-left-color: #dc3545;
+        }
+        .question-item.active {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            font-weight: bold;
         }
         .transcript {
             background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 15px;
-            height: 500px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 600px;
+            max-height: 800px;
             overflow-y: auto;
-            font-size: 13px;
-            margin: 15px 0;
+            font-size: 14px;
         }
         .qa-pair {
-            margin: 15px 0;
-            padding: 12px;
+            margin: 20px 0;
+            padding: 0;
             background: white;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
         .qa-question {
-            background: #007bff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 10px;
-            border-radius: 6px 6px 0 0;
-            font-weight: bold;
+            padding: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .qa-question .number {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
         }
         .qa-answer {
-            background: #e9ecef;
+            background: #f8f9fa;
             color: #333;
-            padding: 12px;
-            border-radius: 0 0 6px 6px;
-            margin-top: 2px;
+            padding: 15px;
             line-height: 1.6;
             white-space: pre-wrap;
         }
@@ -159,679 +252,1009 @@
         .qa-waiting {
             background: #fff3cd;
             color: #856404;
-            padding: 10px;
-            border-radius: 0 0 6px 6px;
-            margin-top: 2px;
+            padding: 15px;
             font-style: italic;
         }
         .qa-metadata {
-            font-size: 11px;
+            font-size: 12px;
             color: #6c757d;
-            margin-top: 8px;
-            padding-top: 8px;
+            padding: 10px 15px;
+            background: #f1f3f5;
             border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
         }
-        .message.system {
-            background: #d1ecf1;
-            color: #0c5460;
-            padding: 8px;
-            border-radius: 4px;
+        .system-message {
+            padding: 10px;
             margin: 8px 0;
-            text-align: center;
-            font-style: italic;
+            background: #e7f3ff;
+            border-left: 3px solid #007bff;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #004085;
         }
-        iframe {
+        .system-message.error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .system-message.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        .system-message.warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+        .progress-bar {
             width: 100%;
-            height: 100%;
-            border: none;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
         }
-        .stats {
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        .button-group {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin: 15px 0;
         }
-        .stat-box {
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .stat-label {
-            font-size: 11px;
-            color: #6c757d;
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
             margin-top: 5px;
         }
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: normal;
-            cursor: pointer;
+        .diagnostic-log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+            margin: 15px 0;
+            line-height: 1.4;
         }
-        .checkbox-label input {
-            width: auto;
-            margin: 0;
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+        .log-entry.info { 
+            color: #4fc3f7;
+            border-left-color: #4fc3f7;
+        }
+        .log-entry.success { 
+            color: #66bb6a;
+            border-left-color: #66bb6a;
+        }
+        .log-entry.error { 
+            color: #ef5350;
+            border-left-color: #ef5350;
+        }
+        .log-entry.warning { 
+            color: #ffca28;
+            border-left-color: #ffca28;
+        }
+        .log-entry .timestamp {
+            color: #888;
+            font-size: 11px;
+        }
+        .endpoint-test {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .endpoint-test.testing {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+        .endpoint-test.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .endpoint-test.failed {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .endpoint-url {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #666;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>🔬 Voiceflow Chatbot Tester</h1>
+        <p>Diagnostic Edition - Advanced API Testing & Debugging</p>
+        <span class="version-badge">v5.6 Diagnostic Edition</span>
+    </div>
+
     <div class="container">
         <!-- Left Panel: Controls -->
         <div class="panel">
-            <h2>🤖 Chatbot Tester v5.4</h2>
-            <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
-                🐛 DEBUG EDITION: Check browser console (F12) for detailed logs
-            </div>
+            <h3>⚙️ Configuration</h3>
             
-            <div class="section">
-                <h4>📝 Load Questions</h4>
-                
-                <label>Manual Questions:</label>
-                <textarea id="questionTextArea" rows="8">who is the department head
-who is the DAF
-how can i create a budget?
-how do i request a waiver
-how do i request a proposal waiver</textarea>
-                <button onclick="loadFromTextArea()" class="green">📝 Load These Questions</button>
+            <div class="input-group">
+                <label for="apiKey">🔑 Voiceflow API Key:</label>
+                <input type="text" id="apiKey" placeholder="VF.DM.xxxxx.xxxxxx" />
+                <small style="color: #666; font-size: 12px;">Get from: Settings → API Keys</small>
             </div>
 
-            <div class="section">
-                <h4>⚙️ API Configuration</h4>
-                <label>Voiceflow API Key:</label>
-                <input type="text" id="apiKey" value="VF.DM.690232ebc72a4f5485d01113.Z1eYyYt0nEAFow59" style="font-family: monospace; font-size: 11px;">
-                <div style="font-size: 11px; color: #6c757d; margin: 5px 0;">Testing with BASIC agent</div>
-                
-                <label>Project ID:</label>
-                <input type="text" id="projectId" value="66de313d6a0d94e1bd71c5ce" style="font-family: monospace; font-size: 11px;">
-                <div style="font-size: 11px; color: #6c757d; margin: 5px 0;">Get from Voiceflow → Agent Settings</div>
-                
-                <label>User ID:</label>
-                <input type="text" id="userId" value="mit-tester-debug" placeholder="Enter user ID">
-                
-                <label>Version ID:</label>
-                <select id="versionId">
-                    <option value="development" selected>development</option>
-                    <option value="production">production</option>
-                </select>
-                
-                <label>Delay between questions (ms):</label>
-                <input type="number" id="delayMs" value="2000" min="500" max="10000" step="100">
-                
-                <label class="checkbox-label">
-                    <input type="checkbox" id="resetSession" checked>
-                    Reset session before test
-                </label>
+            <div class="input-group">
+                <label for="projectId">🆔 Project ID (Optional):</label>
+                <input type="text" id="projectId" placeholder="Leave blank for auto-detection" />
+                <small style="color: #666; font-size: 12px;">Only needed for v2 endpoint testing</small>
+            </div>
+
+            <button onclick="runFullDiagnostic()" class="purple">🔬 Run Full Diagnostic</button>
+            <button onclick="testConnection()" class="orange">🔌 Quick Connection Test</button>
+
+            <div id="statusDiv" class="status info">
+                💡 Enter API key and run diagnostic to find working endpoint
+            </div>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+            <h3>📝 Test Questions</h3>
+            
+            <div class="input-group">
+                <label for="questions">Enter questions (one per line):</label>
+                <textarea id="questions" placeholder="who is the department head&#10;how can i create a budget?&#10;how do i request a waiver"></textarea>
+            </div>
+
+            <button onclick="loadQuestions()" class="green">📥 Load Questions</button>
+            <button onclick="loadSampleQuestions()" class="gray">📋 Load Sample Questions</button>
+
+            <div class="progress-bar">
+                <div id="progressBar" class="progress-fill" style="width: 0%"></div>
             </div>
 
             <div class="stats">
-                <div class="stat-box">
-                    <div class="stat-number" id="statQuestions">0</div>
-                    <div class="stat-label">Questions Loaded</div>
+                <div class="stat-card">
+                    <h4>Total Questions</h4>
+                    <p class="number" id="totalCount">0</p>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-number" id="statCompleted">0</div>
-                    <div class="stat-label">Completed</div>
+                <div class="stat-card">
+                    <h4>Completed</h4>
+                    <p class="number" id="completedCount">0</p>
                 </div>
             </div>
 
-            <div class="status" id="mainStatus">Ready</div>
+            <div id="questionList" class="question-list"></div>
 
-            <button onclick="testConnection()" id="testBtn">🔌 Test API Connection</button>
-            <button onclick="startTest()" id="startBtn" disabled>▶️ Start Automated Test</button>
-            <button onclick="stopTest()" id="stopBtn" disabled class="red">⏹️ Stop Test</button>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
 
-            <div class="questions-display" id="questionsDisplay">
-                <div style="text-align: center; color: #6c757d;">Load questions above</div>
+            <h3>🚀 Actions</h3>
+            
+            <button id="startBtn" onclick="startTest()" disabled>▶️ Start Test</button>
+            <button id="stopBtn" onclick="stopTest()" class="red" disabled>⏹️ Stop Test</button>
+            
+            <div class="button-group">
+                <button onclick="clearTranscript()" class="gray">🗑️ Clear</button>
+                <button onclick="copyToClipboard()" class="gray">📋 Copy</button>
             </div>
+            
+            <button onclick="exportToCSV()" class="green">📊 Export CSV</button>
+            <button onclick="copyDiagnosticLog()" class="gray">📋 Copy Diagnostic Log</button>
         </div>
 
-        <!-- Middle Panel: Chatbot -->
-        <div class="chatbot-panel">
-            <iframe id="chatIframe" src="about:blank"></iframe>
-        </div>
-
-        <!-- Right Panel: Transcript -->
+        <!-- Middle Panel: Transcript -->
         <div class="panel">
-            <h3>💬 Live Q&A Transcript</h3>
-            <div class="transcript" id="transcript">
-                <div class="message system">Q&A pairs will appear here</div>
-            </div>
-            <button onclick="clearTranscript()">🗑️ Clear Transcript</button>
-            <button onclick="copyToClipboard()" class="green">📋 Copy Transcript</button>
+            <h3>📜 Test Transcript</h3>
+            <div id="transcript" class="transcript"></div>
+        </div>
+
+        <!-- Right Panel: Diagnostic Log -->
+        <div class="panel">
+            <h3>🔬 Diagnostic Log</h3>
+            <div id="diagnosticLog" class="diagnostic-log"></div>
+            
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+            
+            <h3>🌐 Endpoint Test Results</h3>
+            <div id="endpointResults"></div>
         </div>
     </div>
 
     <script>
-        console.log('🚀 Script loaded - v5.4 Testing Basic Agent');
+        console.log('🔬 Voiceflow Tester v5.6 Diagnostic Edition Loaded');
         
-        let questionsList = [];
+        // Global variables
+        let questions = [];
         let currentQuestionIndex = 0;
-        let testRunning = false;
         let qaResults = [];
-        let workingEndpointFormat = 0; // 0 or 1, stores which endpoint format works
+        let isTesting = false;
+        let currentUserId = null;
+        let workingEndpoint = null;
+        let diagnosticHistory = [];
+        
+        // API Endpoints to test
+        const API_ENDPOINTS = {
+            v1: {
+                name: 'V1 State API',
+                baseUrl: 'https://general-runtime.voiceflow.com/state/user',
+                buildUrl: (userId) => `https://general-runtime.voiceflow.com/state/user/${userId}/interact`,
+                headers: (apiKey) => ({
+                    'Authorization': apiKey,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                })
+            },
+            v2: {
+                name: 'V2 Project API',
+                baseUrl: 'https://general-runtime.voiceflow.com',
+                buildUrl: (userId, projectId) => `https://general-runtime.voiceflow.com/v2/project/${projectId}/user/${userId}/interact`,
+                headers: (apiKey) => ({
+                    'Authorization': apiKey,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }),
+                requiresProjectId: true
+            },
+            dm: {
+                name: 'DM API (Alternative)',
+                baseUrl: 'https://general-runtime.voiceflow.com/state/user',
+                buildUrl: (userId) => `https://general-runtime.voiceflow.com/state/user/${userId}/interact`,
+                headers: (apiKey) => ({
+                    'Authorization': apiKey,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'versionID': 'production'
+                })
+            }
+        };
 
-        const VOICEFLOW_API_URL = 'https://general-runtime.voiceflow.com';
-
-        function log(message, data = null) {
-            const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+        // Diagnostic logging
+        function addDiagnosticLog(message, type = 'info', data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                timestamp,
+                message,
+                type,
+                data
+            };
+            
+            diagnosticHistory.push(logEntry);
+            
+            const logDiv = document.getElementById('diagnosticLog');
+            const entryDiv = document.createElement('div');
+            entryDiv.className = `log-entry ${type}`;
+            
+            let logText = `<span class="timestamp">[${timestamp}]</span> ${message}`;
             if (data) {
-                console.log(`[${timestamp}] ${message}`, data);
-            } else {
-                console.log(`[${timestamp}] ${message}`);
+                logText += `\n${JSON.stringify(data, null, 2)}`;
+            }
+            
+            entryDiv.innerHTML = logText.replace(/\n/g, '<br>');
+            logDiv.appendChild(entryDiv);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            // Also log to console
+            console.log(`[${timestamp}] [${type.toUpperCase()}] ${message}`, data || '');
+        }
+
+        // Status message display
+        function setStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusDiv');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            addDiagnosticLog(`Status: ${message}`, type);
+        }
+
+        // System message in transcript
+        function addSystemMessage(message, isError = false) {
+            const transcript = document.getElementById('transcript');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `system-message ${isError ? 'error' : 'success'}`;
+            msgDiv.textContent = `${isError ? '❌' : '✅'} ${message}`;
+            transcript.appendChild(msgDiv);
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // Extract project ID from API key
+        function extractProjectId(apiKey) {
+            // VF.DM.{projectId}.{token}
+            const parts = apiKey.split('.');
+            if (parts.length >= 3 && parts[0] === 'VF' && parts[1] === 'DM') {
+                return parts[2];
+            }
+            return null;
+        }
+
+        // Test a specific endpoint
+        async function testEndpoint(endpointKey, endpoint, apiKey, projectId = null) {
+            addDiagnosticLog(`Testing ${endpoint.name}...`, 'info');
+            
+            const resultsDiv = document.getElementById('endpointResults');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'endpoint-test testing';
+            testDiv.id = `endpoint-${endpointKey}`;
+            testDiv.innerHTML = `
+                <strong>🔄 ${endpoint.name}</strong><br>
+                <div class="endpoint-url">Testing...</div>
+            `;
+            resultsDiv.appendChild(testDiv);
+            
+            try {
+                const testUserId = 'diagnostic_' + Date.now();
+                
+                // Skip if requires project ID but we don't have one
+                if (endpoint.requiresProjectId && !projectId) {
+                    testDiv.className = 'endpoint-test failed';
+                    testDiv.innerHTML = `
+                        <strong>⚠️ ${endpoint.name}</strong><br>
+                        <div class="endpoint-url">Skipped - No Project ID provided</div>
+                    `;
+                    addDiagnosticLog(`${endpoint.name} skipped - requires Project ID`, 'warning');
+                    return { success: false, reason: 'No Project ID' };
+                }
+                
+                const url = endpoint.requiresProjectId 
+                    ? endpoint.buildUrl(testUserId, projectId)
+                    : endpoint.buildUrl(testUserId);
+                
+                testDiv.querySelector('.endpoint-url').textContent = url;
+                
+                addDiagnosticLog(`Request URL: ${url}`, 'info');
+                addDiagnosticLog(`Headers:`, 'info', endpoint.headers(apiKey));
+                
+                const requestBody = {
+                    action: {
+                        type: 'launch'
+                    }
+                };
+                
+                addDiagnosticLog(`Request Body:`, 'info', requestBody);
+                
+                const startTime = Date.now();
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: endpoint.headers(apiKey),
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const responseTime = Date.now() - startTime;
+                
+                addDiagnosticLog(`Response Status: ${response.status} ${response.statusText}`, 
+                    response.ok ? 'success' : 'error');
+                addDiagnosticLog(`Response Time: ${responseTime}ms`, 'info');
+                
+                // Get response body
+                const responseText = await response.text();
+                let responseData;
+                
+                try {
+                    responseData = JSON.parse(responseText);
+                    addDiagnosticLog(`Response Body:`, response.ok ? 'success' : 'error', responseData);
+                } catch (e) {
+                    addDiagnosticLog(`Response Body (raw): ${responseText.substring(0, 500)}`, 'error');
+                    responseData = { error: 'Invalid JSON', raw: responseText };
+                }
+                
+                if (response.ok) {
+                    testDiv.className = 'endpoint-test success';
+                    testDiv.innerHTML = `
+                        <strong>✅ ${endpoint.name}</strong><br>
+                        <div class="endpoint-url">${url}</div>
+                        <div style="margin-top: 8px; font-size: 12px; color: #155724;">
+                            Status: ${response.status} | Time: ${responseTime}ms
+                        </div>
+                    `;
+                    addDiagnosticLog(`✅ ${endpoint.name} WORKS!`, 'success');
+                    return { success: true, endpoint: endpointKey, url, responseTime, data: responseData };
+                } else {
+                    testDiv.className = 'endpoint-test failed';
+                    testDiv.innerHTML = `
+                        <strong>❌ ${endpoint.name}</strong><br>
+                        <div class="endpoint-url">${url}</div>
+                        <div style="margin-top: 8px; font-size: 12px; color: #721c24;">
+                            Status: ${response.status} ${response.statusText}
+                        </div>
+                    `;
+                    addDiagnosticLog(`❌ ${endpoint.name} failed: ${response.status} ${response.statusText}`, 'error');
+                    return { success: false, status: response.status, error: responseData };
+                }
+            } catch (error) {
+                testDiv.className = 'endpoint-test failed';
+                testDiv.innerHTML = `
+                    <strong>❌ ${endpoint.name}</strong><br>
+                    <div class="endpoint-url">Error: ${error.message}</div>
+                `;
+                addDiagnosticLog(`❌ ${endpoint.name} exception: ${error.message}`, 'error', error);
+                return { success: false, error: error.message };
             }
         }
 
-        function updateStats() {
-            const completed = qaResults.filter(qa => qa.answer !== 'WAITING').length;
-            document.getElementById('statQuestions').textContent = questionsList.length;
-            document.getElementById('statCompleted').textContent = completed;
-            log(`Stats updated: ${questionsList.length} questions, ${completed} completed`);
-        }
-
-        function updateStatus(message, type = 'info') {
-            const status = document.getElementById('mainStatus');
-            status.textContent = message;
-            status.className = `status ${type}`;
-            log(`Status: ${message} (${type})`);
-        }
-
-        function addSystemMessage(message) {
-            const transcript = document.getElementById('transcript');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message system';
-            messageDiv.textContent = message;
-            transcript.appendChild(messageDiv);
-            transcript.scrollTop = transcript.scrollHeight;
-            log(`System message: ${message}`);
-        }
-
-        function loadFromTextArea() {
-            log('Loading questions from textarea');
-            const textarea = document.getElementById('questionTextArea');
-            const text = textarea.value;
-            const questions = text.split('\n')
-                .map(q => q.trim())
-                .filter(q => q.length > 0);
+        // Run full diagnostic
+        async function runFullDiagnostic() {
+            const apiKey = document.getElementById('apiKey').value.trim();
             
-            log('Parsed questions:', questions);
+            if (!apiKey) {
+                setStatus('❌ Please enter API key first', 'error');
+                return;
+            }
             
-            if (questions.length === 0) {
-                updateStatus('No questions found', 'error');
+            // Clear previous results
+            document.getElementById('endpointResults').innerHTML = '';
+            diagnosticHistory = [];
+            document.getElementById('diagnosticLog').innerHTML = '';
+            
+            setStatus('🔬 Running full diagnostic...', 'info');
+            addDiagnosticLog('=== FULL DIAGNOSTIC TEST STARTED ===', 'info');
+            addDiagnosticLog(`API Key: ${apiKey.substring(0, 20)}...`, 'info');
+            
+            // Extract or get project ID
+            let projectId = document.getElementById('projectId').value.trim();
+            if (!projectId) {
+                projectId = extractProjectId(apiKey);
+                if (projectId) {
+                    addDiagnosticLog(`Extracted Project ID from API key: ${projectId}`, 'success');
+                    document.getElementById('projectId').value = projectId;
+                } else {
+                    addDiagnosticLog(`No Project ID found in API key`, 'warning');
+                }
+            } else {
+                addDiagnosticLog(`Using provided Project ID: ${projectId}`, 'info');
+            }
+            
+            // Test all endpoints
+            const results = [];
+            
+            for (const [key, endpoint] of Object.entries(API_ENDPOINTS)) {
+                const result = await testEndpoint(key, endpoint, apiKey, projectId);
+                results.push({ key, ...result });
+                
+                // Small delay between tests
+                await sleep(500);
+            }
+            
+            // Analyze results
+            const workingEndpoints = results.filter(r => r.success);
+            
+            addDiagnosticLog('=== DIAGNOSTIC TEST COMPLETE ===', 'info');
+            
+            if (workingEndpoints.length > 0) {
+                workingEndpoint = workingEndpoints[0];
+                setStatus(`✅ Found working endpoint: ${API_ENDPOINTS[workingEndpoint.key].name}`, 'success');
+                addDiagnosticLog(`✅ Working endpoint found: ${workingEndpoint.key}`, 'success', workingEndpoint);
+                addSystemMessage(`Diagnostic complete - using ${API_ENDPOINTS[workingEndpoint.key].name}`);
+                checkReadyToTest();
+            } else {
+                workingEndpoint = null;
+                setStatus('❌ No working endpoints found. Check diagnostic log for details.', 'error');
+                addDiagnosticLog('❌ NO WORKING ENDPOINTS FOUND', 'error');
+                addSystemMessage('Diagnostic failed - no endpoints working', true);
+                
+                // Provide helpful suggestions
+                addDiagnosticLog('=== TROUBLESHOOTING SUGGESTIONS ===', 'warning');
+                addDiagnosticLog('1. Verify API key is correct and active', 'warning');
+                addDiagnosticLog('2. Check if Project ID is required and correct', 'warning');
+                addDiagnosticLog('3. Verify agent is published and not in draft mode', 'warning');
+                addDiagnosticLog('4. Check Voiceflow dashboard for API errors', 'warning');
+                addDiagnosticLog('5. Try generating a new API key', 'warning');
+            }
+            
+            // Show summary
+            const summary = {
+                total: results.length,
+                working: workingEndpoints.length,
+                failed: results.length - workingEndpoints.length
+            };
+            addDiagnosticLog(`Summary: ${summary.working}/${summary.total} endpoints working`, 
+                summary.working > 0 ? 'success' : 'error', summary);
+        }
+
+        // Quick connection test (uses first working endpoint or v1)
+        async function testConnection() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (!apiKey) {
+                setStatus('❌ Please enter API key first', 'error');
                 return;
             }
 
-            questionsList = questions;
-            updateStatus(`Loaded ${questionsList.length} questions`, 'success');
-            addSystemMessage(`✅ Loaded ${questionsList.length} questions`);
+            setStatus('🔄 Testing connection...', 'info');
+            
+            // Use working endpoint if available, otherwise try v1
+            const endpointKey = workingEndpoint ? workingEndpoint.key : 'v1';
+            const endpoint = API_ENDPOINTS[endpointKey];
+            const projectId = document.getElementById('projectId').value.trim() || extractProjectId(apiKey);
+            
+            const result = await testEndpoint(endpointKey, endpoint, apiKey, projectId);
+            
+            if (result.success) {
+                workingEndpoint = { key: endpointKey, ...result };
+                setStatus('✅ Connection successful!', 'success');
+                addSystemMessage('API connection verified');
+                checkReadyToTest();
+            } else {
+                setStatus('❌ Connection failed. Run full diagnostic for details.', 'error');
+                addSystemMessage('Connection failed - try full diagnostic', true);
+            }
+        }
+
+        // Load questions from textarea
+        function loadQuestions() {
+            const textarea = document.getElementById('questions');
+            const text = textarea.value.trim();
+            
+            if (!text) {
+                setStatus('❌ Please enter some questions', 'error');
+                return;
+            }
+
+            questions = text.split('\n')
+                .map(q => q.trim())
+                .filter(q => q.length > 0);
+            
+            addDiagnosticLog(`Loaded ${questions.length} questions`, 'success', questions);
+            
+            setStatus(`✅ Loaded ${questions.length} questions`, 'success');
+            addSystemMessage(`Loaded ${questions.length} questions`);
+            
             displayQuestions();
             updateStats();
             checkReadyToTest();
         }
 
-        function displayQuestions() {
-            log('Displaying questions in UI');
-            const display = document.getElementById('questionsDisplay');
-            display.innerHTML = '';
-            
-            questionsList.forEach((q, index) => {
-                const div = document.createElement('div');
-                div.className = 'question-item';
-                div.id = `question-${index}`;
-                div.textContent = `${index + 1}. ${q}`;
-                display.appendChild(div);
-            });
-        }
-
-        function checkReadyToTest() {
-            log('Checking if ready to test');
-            const startBtn = document.getElementById('startBtn');
-            const testBtn = document.getElementById('testBtn');
-            const apiKey = document.getElementById('apiKey').value.trim();
-            
-            log('Check ready:', { 
-                questionsLoaded: questionsList.length,
-                hasApiKey: !!apiKey,
-                apiKeyLength: apiKey.length
-            });
-            
-            if (apiKey) {
-                testBtn.disabled = false;
-            }
-            
-            if (questionsList.length > 0 && apiKey) {
-                startBtn.disabled = false;
-                updateStatus('Ready to start testing!', 'success');
-            } else if (questionsList.length > 0 && !apiKey) {
-                startBtn.disabled = true;
-                updateStatus('Enter API Key to continue', 'warning');
-            } else if (!questionsList.length && apiKey) {
-                startBtn.disabled = true;
-                updateStatus('Load questions to continue', 'warning');
-            }
-        }
-
-        async function testConnection() {
-            log('Testing API connection');
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const userId = document.getElementById('userId').value || 'test-user';
-            const versionId = document.getElementById('versionId').value;
-            const projectId = document.getElementById('projectId').value.trim();
-            
-            if (!apiKey) {
-                updateStatus('Enter API Key first', 'error');
-                alert('Please enter your Voiceflow API Key');
-                return;
-            }
-            
-            updateStatus('Testing connection...', 'warning');
-            addSystemMessage('🔌 Testing API connection...');
-            
-            // Try multiple endpoint formats
-            const endpoints = [
-                `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
-                `${VOICEFLOW_API_URL}/v2/project/${projectId}/user/${userId}/interact`
+        // Load sample questions
+        function loadSampleQuestions() {
+            const samples = [
+                "who is the department head",
+                "who is the DAF",
+                "how can i create a budget?",
+                "how do i request a waiver",
+                "how do i request a proposal waiver"
             ];
             
-            for (let i = 0; i < endpoints.length; i++) {
-                const url = endpoints[i];
-                try {
-                    log(`Attempt ${i + 1}: Testing endpoint`, { url, versionId });
-                    
-                    const requestBody = {
-                        action: {
-                            type: 'launch'
-                        },
-                        config: {
-                            excludeTypes: ['flow', 'block']
-                        }
-                    };
-                    
-                    log('Request body:', requestBody);
-                    
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': apiKey,
-                            'versionID': versionId
-                        },
-                        body: JSON.stringify(requestBody)
-                    });
-                    
-                    log(`Attempt ${i + 1} response:`, {
-                        status: response.status,
-                        statusText: response.statusText,
-                        ok: response.ok
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        log('✅ SUCCESS with endpoint:', url);
-                        log('API Response data:', data);
-                        
-                        workingEndpointFormat = i; // Save which format worked
-                        
-                        updateStatus(`✅ Connection successful! (Using endpoint ${i + 1})`, 'success');
-                        addSystemMessage(`✅ API connection successful! Endpoint: ${url.split('/').slice(3).join('/')}`);
-                        alert(`Connection successful!\n\nEndpoint: ${url.split('/').slice(3).join('/')}`);
-                        return;
-                    }
-                    
-                    // If not ok, try to get error details but continue to next endpoint
-                    const errorText = await response.text();
-                    log(`Attempt ${i + 1} failed:`, errorText);
-                    
-                } catch (error) {
-                    log(`Attempt ${i + 1} error:`, error);
-                }
-            }
-            
-            // If we got here, all attempts failed
-            updateStatus('❌ All connection attempts failed', 'error');
-            addSystemMessage('❌ All connection attempts failed. Check console for details.');
-            alert('Connection failed with all endpoint formats.\n\nCheck console (F12) for details.\n\nPossible issues:\n- API key may be invalid\n- Project ID may be incorrect\n- Agent not published to production');
+            document.getElementById('questions').value = samples.join('\n');
+            loadQuestions();
         }
 
-        async function resetSession() {
-            const userId = document.getElementById('userId').value || 'mit-tester-debug';
+        // Display questions in list
+        function displayQuestions() {
+            const list = document.getElementById('questionList');
+            list.innerHTML = '';
+            
+            questions.forEach((q, index) => {
+                const item = document.createElement('div');
+                item.className = 'question-item';
+                item.id = `question-${index}`;
+                item.textContent = `${index + 1}. ${q}`;
+                list.appendChild(item);
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalCount').textContent = questions.length;
+            document.getElementById('completedCount').textContent = qaResults.length;
+            
+            const progress = questions.length > 0 ? (qaResults.length / questions.length) * 100 : 0;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        // Check if ready to start testing
+        function checkReadyToTest() {
             const apiKey = document.getElementById('apiKey').value.trim();
+            const hasQuestions = questions.length > 0;
+            const hasApiKey = apiKey.length > 0;
+            const hasWorkingEndpoint = workingEndpoint !== null;
             
-            log('Resetting session', { userId });
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = !(hasQuestions && hasApiKey && hasWorkingEndpoint);
             
-            if (!apiKey) {
-                log('Cannot reset - no API key');
-                return false;
-            }
-            
-            try {
-                const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': apiKey
-                    }
-                });
-                
-                log('Session reset response:', { status: response.status, ok: response.ok });
-                
-                if (response.ok) {
-                    addSystemMessage('🔄 Session reset');
-                    return true;
-                }
-                return false;
-            } catch (error) {
-                log('Session reset error:', error);
-                return false;
+            if (hasQuestions && hasApiKey && hasWorkingEndpoint) {
+                setStatus('✅ Ready to start testing!', 'success');
+            } else if (hasQuestions && hasApiKey && !hasWorkingEndpoint) {
+                setStatus('⚠️ Run diagnostic to find working endpoint', 'warning');
             }
         }
 
+        // Start testing
         async function startTest() {
-            log('Starting test');
+            if (isTesting || !workingEndpoint) return;
             
-            if (questionsList.length === 0) {
-                updateStatus('Load questions first', 'error');
-                alert('Please load questions first');
-                return;
-            }
-            
-            const apiKey = document.getElementById('apiKey').value.trim();
-            if (!apiKey) {
-                updateStatus('Enter API Key first', 'error');
-                alert('Please enter your Voiceflow API Key');
-                return;
-            }
-
+            isTesting = true;
             currentQuestionIndex = 0;
             qaResults = [];
-            testRunning = true;
+            currentUserId = 'user_' + Date.now();
             
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
-            document.getElementById('testBtn').disabled = true;
             
-            log('Test starting', { questionCount: questionsList.length });
+            setStatus('🚀 Starting test...', 'info');
+            addSystemMessage('Test started');
+            addDiagnosticLog(`=== TEST STARTED ===`, 'info');
+            addDiagnosticLog(`User ID: ${currentUserId}`, 'info');
+            addDiagnosticLog(`Using endpoint: ${API_ENDPOINTS[workingEndpoint.key].name}`, 'info');
             
-            // Reset session if checked
-            if (document.getElementById('resetSession').checked) {
-                updateStatus('Resetting session...', 'warning');
-                await resetSession();
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+            // Launch conversation
+            await launchConversation();
             
-            updateStatus('Testing in progress...', 'warning');
-            addSystemMessage(`🚀 Starting test with ${questionsList.length} questions`);
-            updateStats();
-            
-            await sendNextQuestion();
-        }
-
-        function parseVoiceflowResponse(data) {
-            log('Parsing Voiceflow response', data);
-            
-            let responseText = '';
-            const metadata = { traceTypes: [] };
-
-            if (!Array.isArray(data)) {
-                log('Response is not an array!');
-                return { text: 'Invalid response format', metadata };
-            }
-
-            for (const trace of data) {
-                metadata.traceTypes.push(trace.type);
+            // Process questions
+            for (let i = 0; i < questions.length; i++) {
+                if (!isTesting) break;
                 
-                if (trace.type === 'text' && trace.payload?.message) {
-                    responseText += trace.payload.message + '\n\n';
-                } 
-                else if (trace.type === 'speak' && trace.payload?.message) {
-                    responseText += trace.payload.message + '\n\n';
+                currentQuestionIndex = i;
+                await askQuestion(questions[i], i);
+                
+                // Wait between questions
+                if (i < questions.length - 1) {
+                    await sleep(1000);
                 }
             }
-
-            responseText = responseText.trim() || `[No text - types: ${metadata.traceTypes.join(', ')}]`;
             
-            log('Parsed response:', { text: responseText, metadata });
-            return { text: responseText, metadata };
+            if (isTesting) {
+                setStatus('✅ Test completed!', 'success');
+                addSystemMessage('All questions completed');
+                addDiagnosticLog('=== TEST COMPLETED ===', 'success');
+            }
+            
+            stopTest();
         }
 
-        async function sendNextQuestion() {
-            if (!testRunning || currentQuestionIndex >= questionsList.length) {
-                if (currentQuestionIndex >= questionsList.length) {
-                    stopTest();
-                    updateStatus('All questions completed!', 'success');
-                    addSystemMessage('🎉 Test completed!');
-                }
-                return;
-            }
-
-            const question = questionsList[currentQuestionIndex];
-            const questionNum = currentQuestionIndex + 1;
-            
-            log(`\n=== Sending Q${questionNum} ===`);
-            log('Question:', question);
-            
-            // Update UI
-            document.querySelectorAll('.question-item').forEach(item => {
-                item.classList.remove('current');
-            });
-            const currentItem = document.getElementById(`question-${currentQuestionIndex}`);
-            if (currentItem) {
-                currentItem.classList.add('current');
-            }
-
-            // Add to results as waiting
-            qaResults.push({
-                question: question,
-                answer: 'WAITING',
-                timestamp: new Date().toISOString()
-            });
-
-            updateTranscriptDisplay();
+        // Launch conversation
+        async function launchConversation() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const endpoint = API_ENDPOINTS[workingEndpoint.key];
+            const projectId = document.getElementById('projectId').value.trim();
             
             try {
-                const startTime = Date.now();
-                const userId = document.getElementById('userId').value || 'mit-tester-debug';
-                const apiKey = document.getElementById('apiKey').value.trim();
-                const versionId = document.getElementById('versionId').value;
-                const projectId = document.getElementById('projectId').value.trim();
+                addDiagnosticLog('Launching conversation...', 'info');
                 
-                // Build URL based on which endpoint format worked in the connection test
-                const urls = [
-                    `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
-                    `${VOICEFLOW_API_URL}/v2/project/${projectId}/user/${userId}/interact`
-                ];
-                const url = urls[workingEndpointFormat];
-                
-                const requestBody = {
-                    action: {
-                        type: 'text',
-                        payload: question
-                    },
-                    config: {
-                        excludeTypes: ['flow', 'block']
-                    }
-                };
-                
-                log('API Request:', {
-                    url: url,
-                    method: 'POST',
-                    body: requestBody,
-                    headers: {
-                        'Authorization': apiKey.substring(0, 20) + '...',
-                        'versionID': versionId
-                    }
-                });
+                const url = endpoint.requiresProjectId 
+                    ? endpoint.buildUrl(currentUserId, projectId)
+                    : endpoint.buildUrl(currentUserId);
                 
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': apiKey,
-                        'versionID': versionId
-                    },
-                    body: JSON.stringify(requestBody)
+                    headers: endpoint.headers(apiKey),
+                    body: JSON.stringify({
+                        action: { type: 'launch' }
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addDiagnosticLog('Conversation launched successfully', 'success', data);
+                } else {
+                    const errorData = await response.text();
+                    addDiagnosticLog(`Launch warning: ${response.status}`, 'warning', errorData);
+                }
+            } catch (error) {
+                addDiagnosticLog(`Launch error: ${error.message}`, 'error');
+            }
+        }
+
+        // Ask a question
+        async function askQuestion(question, index) {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const endpoint = API_ENDPOINTS[workingEndpoint.key];
+            const projectId = document.getElementById('projectId').value.trim();
+            const questionItem = document.getElementById(`question-${index}`);
+            
+            if (questionItem) {
+                questionItem.classList.add('active');
+            }
+            
+            // Add question to transcript
+            addQuestionToTranscript(question, index);
+            
+            const startTime = Date.now();
+            
+            try {
+                addDiagnosticLog(`Asking Q${index + 1}: ${question}`, 'info');
+                
+                const url = endpoint.requiresProjectId 
+                    ? endpoint.buildUrl(currentUserId, projectId)
+                    : endpoint.buildUrl(currentUserId);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: endpoint.headers(apiKey),
+                    body: JSON.stringify({
+                        action: {
+                            type: 'text',
+                            payload: question
+                        }
+                    })
                 });
 
                 const responseTime = Date.now() - startTime;
-                log('Response received:', { 
-                    status: response.status, 
-                    ok: response.ok,
-                    responseTime: `${responseTime}ms`
-                });
-
-                if (!response.ok) {
-                    let errorDetail = response.statusText;
-                    try {
-                        const errorBody = await response.json();
-                        log('Error body:', errorBody);
-                        errorDetail = errorBody.message || errorBody.error || errorDetail;
-                    } catch {}
-                    throw new Error(`API ${response.status}: ${errorDetail}`);
-                }
-
-                const data = await response.json();
-                log('API Response data:', data);
                 
-                const parsed = parseVoiceflowResponse(data);
-                
-                // Update result
-                qaResults[qaResults.length - 1] = {
-                    question: question,
-                    answer: parsed.text,
-                    timestamp: new Date().toISOString(),
-                    responseTime: responseTime,
-                    metadata: parsed.metadata
-                };
-
-                updateTranscriptDisplay();
-                updateStats();
-                
-                if (currentItem) {
-                    currentItem.classList.remove('current');
-                    currentItem.classList.add('completed');
-                }
-                
-                log(`Q${questionNum} completed successfully`);
-
-            } catch (error) {
-                log(`Q${questionNum} FAILED:`, error);
-                
-                qaResults[qaResults.length - 1].answer = `❌ Error: ${error.message}`;
-                qaResults[qaResults.length - 1].isError = true;
-                
-                if (currentItem) {
-                    currentItem.classList.remove('current');
-                    currentItem.classList.add('error');
-                }
-                
-                updateTranscriptDisplay();
-            }
-
-            currentQuestionIndex++;
-            
-            const delay = parseInt(document.getElementById('delayMs').value) || 2000;
-            log(`Waiting ${delay}ms before next question`);
-            
-            if (testRunning) {
-                setTimeout(sendNextQuestion, delay);
-            }
-        }
-
-        function stopTest() {
-            log('Stopping test');
-            testRunning = false;
-            
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('testBtn').disabled = false;
-            
-            updateStatus('Test stopped', 'info');
-            addSystemMessage('⏹️ Test stopped');
-        }
-
-        function updateTranscriptDisplay() {
-            const transcript = document.getElementById('transcript');
-            transcript.innerHTML = '';
-
-            qaResults.forEach((qa, index) => {
-                const qaDiv = document.createElement('div');
-                qaDiv.className = 'qa-pair';
-                
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'qa-question';
-                questionDiv.textContent = `Q${index + 1}: ${qa.question}`;
-                
-                const answerDiv = document.createElement('div');
-                if (qa.answer === 'WAITING') {
-                    answerDiv.className = 'qa-waiting';
-                    answerDiv.textContent = '⏳ Waiting...';
-                } else {
-                    answerDiv.className = qa.isError ? 'qa-answer error' : 'qa-answer';
-                    answerDiv.textContent = qa.answer;
+                if (response.ok) {
+                    const data = await response.json();
+                    addDiagnosticLog(`Response Q${index + 1} received (${responseTime}ms)`, 'success', data);
                     
-                    if (qa.responseTime) {
-                        const metaDiv = document.createElement('div');
-                        metaDiv.className = 'qa-metadata';
-                        metaDiv.textContent = `⏱️ ${(qa.responseTime / 1000).toFixed(1)}s`;
-                        if (qa.metadata?.traceTypes) {
-                            metaDiv.textContent += ` • ${qa.metadata.traceTypes.join(', ')}`;
-                        }
-                        answerDiv.appendChild(metaDiv);
+                    // Extract answer
+                    const answer = extractAnswer(data);
+                    
+                    // Store result
+                    const result = {
+                        question,
+                        answer,
+                        responseTime,
+                        rawData: data
+                    };
+                    
+                    qaResults.push(result);
+                    
+                    // Update UI
+                    updateAnswerInTranscript(index, answer, responseTime);
+                    
+                    if (questionItem) {
+                        questionItem.classList.remove('active');
+                        questionItem.classList.add('completed');
                     }
+                } else {
+                    const errorText = await response.text();
+                    addDiagnosticLog(`Error Q${index + 1}: ${response.status} ${response.statusText}`, 'error', errorText);
+                    
+                    const errorMsg = `API Error: ${response.status} - ${errorText.substring(0, 100)}`;
+                    updateAnswerInTranscript(index, errorMsg, responseTime, true);
+                    
+                    if (questionItem) {
+                        questionItem.classList.remove('active');
+                        questionItem.classList.add('error');
+                    }
+                    
+                    qaResults.push({
+                        question,
+                        answer: errorMsg,
+                        responseTime,
+                        error: true
+                    });
+                }
+            } catch (error) {
+                addDiagnosticLog(`Exception Q${index + 1}: ${error.message}`, 'error', error);
+                const errorMsg = `Error: ${error.message}`;
+                updateAnswerInTranscript(index, errorMsg, Date.now() - startTime, true);
+                
+                if (questionItem) {
+                    questionItem.classList.remove('active');
+                    questionItem.classList.add('error');
                 }
                 
-                qaDiv.appendChild(questionDiv);
-                qaDiv.appendChild(answerDiv);
-                transcript.appendChild(qaDiv);
-            });
-
-            transcript.scrollTop = transcript.scrollHeight;
-        }
-
-        function clearTranscript() {
-            log('Clearing transcript');
-            qaResults = [];
-            updateTranscriptDisplay();
-            addSystemMessage('Transcript cleared');
+                qaResults.push({
+                    question,
+                    answer: errorMsg,
+                    responseTime: Date.now() - startTime,
+                    error: true
+                });
+            }
+            
             updateStats();
         }
 
+        // Extract answer from API response
+        function extractAnswer(data) {
+            if (!data || !Array.isArray(data)) {
+                return 'No response';
+            }
+
+            let texts = [];
+            
+            for (const item of data) {
+                if (item.type === 'text' && item.payload?.message) {
+                    texts.push(item.payload.message);
+                } else if (item.type === 'speak' && item.payload?.message) {
+                    texts.push(item.payload.message);
+                }
+            }
+
+            return texts.length > 0 ? texts.join('\n\n') : 'No response';
+        }
+
+        // Add question to transcript
+        function addQuestionToTranscript(question, index) {
+            const transcript = document.getElementById('transcript');
+            
+            const qaDiv = document.createElement('div');
+            qaDiv.className = 'qa-pair';
+            qaDiv.id = `qa-${index}`;
+            
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'qa-question';
+            questionDiv.innerHTML = `<span class="number">Q${index + 1}</span><span>${question}</span>`;
+            
+            const answerDiv = document.createElement('div');
+            answerDiv.className = 'qa-waiting';
+            answerDiv.textContent = '⏳ Waiting for response...';
+            answerDiv.id = `answer-${index}`;
+            
+            qaDiv.appendChild(questionDiv);
+            qaDiv.appendChild(answerDiv);
+            transcript.appendChild(qaDiv);
+            
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // Update answer in transcript
+        function updateAnswerInTranscript(index, answer, responseTime, isError = false) {
+            const answerDiv = document.getElementById(`answer-${index}`);
+            
+            if (answerDiv) {
+                answerDiv.className = `qa-answer ${isError ? 'error' : ''}`;
+                answerDiv.textContent = answer;
+                
+                // Add metadata
+                const metaDiv = document.createElement('div');
+                metaDiv.className = 'qa-metadata';
+                metaDiv.innerHTML = `
+                    <span>⏱️ ${(responseTime / 1000).toFixed(2)}s</span>
+                    <span>🕐 ${new Date().toLocaleTimeString()}</span>
+                `;
+                
+                const qaDiv = document.getElementById(`qa-${index}`);
+                if (qaDiv) {
+                    qaDiv.appendChild(metaDiv);
+                }
+            }
+            
+            const transcript = document.getElementById('transcript');
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // Stop test
+        function stopTest() {
+            isTesting = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            if (currentQuestionIndex < questions.length) {
+                setStatus('⏹️ Test stopped', 'warning');
+                addSystemMessage('Test stopped by user');
+                addDiagnosticLog('Test stopped by user', 'warning');
+            }
+        }
+
+        // Clear transcript
+        function clearTranscript() {
+            if (!confirm('Clear all results?')) return;
+            
+            qaResults = [];
+            currentQuestionIndex = 0;
+            document.getElementById('transcript').innerHTML = '';
+            
+            // Reset question items
+            questions.forEach((q, index) => {
+                const item = document.getElementById(`question-${index}`);
+                if (item) {
+                    item.className = 'question-item';
+                }
+            });
+            
+            updateStats();
+            setStatus('🗑️ Transcript cleared', 'info');
+            addSystemMessage('Transcript cleared');
+        }
+
+        // Copy to clipboard
         function copyToClipboard() {
-            let text = '=== VOICEFLOW TEST RESULTS ===\n\n';
+            if (qaResults.length === 0) {
+                setStatus('❌ No results to copy', 'error');
+                return;
+            }
+            
+            let text = '=== VOICEFLOW TEST RESULTS ===\n';
+            text += `Generated: ${new Date().toLocaleString()}\n`;
+            text += `Total Questions: ${qaResults.length}\n`;
+            text += `Endpoint Used: ${workingEndpoint ? API_ENDPOINTS[workingEndpoint.key].name : 'Unknown'}\n\n`;
+            text += '═══════════════════════════════\n\n';
             
             qaResults.forEach((qa, index) => {
                 text += `Q${index + 1}: ${qa.question}\n`;
-                text += `A${index + 1}: ${qa.answer}\n\n`;
+                text += `A${index + 1}: ${qa.answer}\n`;
+                text += `Time: ${(qa.responseTime / 1000).toFixed(2)}s\n`;
+                text += '\n───────────────────────────────\n\n';
             });
             
             navigator.clipboard.writeText(text).then(() => {
-                addSystemMessage('📋 Copied to clipboard');
+                setStatus('✅ Copied to clipboard!', 'success');
+                addSystemMessage('Results copied to clipboard');
             });
         }
 
-        // Initialize
-        window.addEventListener('load', () => {
-            log('=== Page Loaded ===');
-            addSystemMessage('🤖 Chatbot Tester v5.4 - Testing Basic Agent');
-            addSystemMessage('Press F12 to see detailed console logs');
-            addSystemMessage('Step 1: Enter API Key');
-            addSystemMessage('Step 2: Load questions');
-            addSystemMessage('Step 3: Test connection (recommended)');
-            addSystemMessage('Step 4: Start test');
+        // Copy diagnostic log
+        function copyDiagnosticLog() {
+            if (diagnosticHistory.length === 0) {
+                setStatus('❌ No diagnostic log to copy', 'error');
+                return;
+            }
             
-            // Add listeners
-            const apiKeyInput = document.getElementById('apiKey');
-            apiKeyInput.addEventListener('input', () => {
-                log('API key changed');
-                checkReadyToTest();
+            let text = '=== DIAGNOSTIC LOG ===\n';
+            text += `Generated: ${new Date().toLocaleString()}\n\n`;
+            
+            diagnosticHistory.forEach(entry => {
+                text += `[${entry.timestamp}] [${entry.type.toUpperCase()}] ${entry.message}\n`;
+                if (entry.data) {
+                    text += JSON.stringify(entry.data, null, 2) + '\n';
+                }
+                text += '\n';
             });
             
-            log('Initialization complete');
+            navigator.clipboard.writeText(text).then(() => {
+                setStatus('✅ Diagnostic log copied!', 'success');
+                addSystemMessage('Diagnostic log copied to clipboard');
+            });
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if (qaResults.length === 0) {
+                setStatus('❌ No results to export', 'error');
+                return;
+            }
+            
+            let csv = 'Question Number,Question,Answer,Response Time (seconds),Timestamp,Endpoint\n';
+            
+            qaResults.forEach((qa, index) => {
+                const question = qa.question.replace(/"/g, '""');
+                const answer = qa.answer.replace(/"/g, '""');
+                const time = (qa.responseTime / 1000).toFixed(2);
+                const timestamp = new Date().toISOString();
+                const endpoint = workingEndpoint ? API_ENDPOINTS[workingEndpoint.key].name : 'Unknown';
+                csv += `${index + 1},"${question}","${answer}",${time},"${timestamp}","${endpoint}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voiceflow-test-diagnostic-${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            setStatus('✅ CSV exported!', 'success');
+            addSystemMessage('Results exported to CSV');
+        }
+
+        // Utility: sleep
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            addDiagnosticLog('=== TESTER v5.6 DIAGNOSTIC EDITION INITIALIZED ===', 'success');
+            setStatus('💡 Enter API key and run diagnostic to begin', 'info');
+            addSystemMessage('Tester v5.6 Diagnostic Edition ready');
+            addDiagnosticLog('Ready to test multiple API endpoints', 'info');
+        });
+
+        // API key input listener
+        document.getElementById('apiKey').addEventListener('input', () => {
+            // Auto-extract project ID if possible
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (apiKey && !document.getElementById('projectId').value) {
+                const extractedId = extractProjectId(apiKey);
+                if (extractedId) {
+                    document.getElementById('projectId').value = extractedId;
+                    addDiagnosticLog(`Auto-detected Project ID: ${extractedId}`, 'info');
+                }
+            }
+            checkReadyToTest();
         });
     </script>
 </body>
