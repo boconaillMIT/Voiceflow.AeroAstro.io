@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5.2 - Debug Edition</title>
+    <title>Voiceflow Chatbot Tester v5.1 - Debug Edition</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -435,7 +435,7 @@ how do i request a proposal waiver</textarea>
                 });
                 
                 const requestBody = {
-                    request: {
+                    action: {
                         type: 'launch'
                     }
                 };
@@ -620,7 +620,7 @@ how do i request a proposal waiver</textarea>
                 const versionId = document.getElementById('versionId').value;
                 
                 const requestBody = {
-                    request: {
+                    action: {
                         type: 'text',
                         payload: question
                     }
