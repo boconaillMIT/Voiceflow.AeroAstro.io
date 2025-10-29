@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5.7 - Diagnostic Edition</title>
+    <title>Voiceflow Chatbot Tester v5.8 - Diagnostic Edition</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -384,7 +384,7 @@
     <div class="header">
         <h1>🔬 Voiceflow Chatbot Tester</h1>
         <p>Diagnostic Edition - Advanced API Testing & Debugging</p>
-        <span class="version-badge">v5.7 Diagnostic Edition</span>
+        <span class="version-badge">v5.8 Diagnostic Edition - Version Selector</span>
     </div>
 
     <div class="container">
@@ -412,6 +412,15 @@
                 <label for="projectId">🆔 Project ID (Optional):</label>
                 <input type="text" id="projectId" placeholder="Leave blank for auto-detection" />
                 <small style="color: #666; font-size: 12px;">Only needed for v2 endpoint testing</small>
+            </div>
+
+            <div class="input-group">
+                <label for="versionId">📦 Agent Version:</label>
+                <select id="versionId">
+                    <option value="production">Production (published)</option>
+                    <option value="development">Development (draft)</option>
+                </select>
+                <small style="color: #666; font-size: 12px;">Try Development if Production fails</small>
             </div>
 
             <button onclick="runFullDiagnostic()" class="purple">🔬 Run Full Diagnostic</button>
@@ -485,7 +494,7 @@
     </div>
 
     <script>
-        console.log('🔬 Voiceflow Tester v5.7 Diagnostic Edition Loaded');
+        console.log('🔬 Voiceflow Tester v5.8 Diagnostic Edition - Version Selector');
         
         // Load selected API key from dropdown
         function loadSelectedApiKey() {
@@ -525,20 +534,22 @@
                 name: 'V1 State API',
                 baseUrl: 'https://general-runtime.voiceflow.com/state/user',
                 buildUrl: (userId) => `https://general-runtime.voiceflow.com/state/user/${userId}/interact`,
-                headers: (apiKey) => ({
+                headers: (apiKey, versionId) => ({
                     'Authorization': apiKey,
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'versionID': versionId || 'production'
                 })
             },
             v2: {
                 name: 'V2 Project API',
                 baseUrl: 'https://general-runtime.voiceflow.com',
                 buildUrl: (userId, projectId) => `https://general-runtime.voiceflow.com/v2/project/${projectId}/user/${userId}/interact`,
-                headers: (apiKey) => ({
+                headers: (apiKey, versionId) => ({
                     'Authorization': apiKey,
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'versionID': versionId || 'production'
                 }),
                 requiresProjectId: true
             },
@@ -546,11 +557,11 @@
                 name: 'DM API (Alternative)',
                 baseUrl: 'https://general-runtime.voiceflow.com/state/user',
                 buildUrl: (userId) => `https://general-runtime.voiceflow.com/state/user/${userId}/interact`,
-                headers: (apiKey) => ({
+                headers: (apiKey, versionId) => ({
                     'Authorization': apiKey,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'versionID': 'production'
+                    'versionID': versionId || 'production'
                 })
             }
         };
@@ -613,15 +624,15 @@
         }
 
         // Test a specific endpoint
-        async function testEndpoint(endpointKey, endpoint, apiKey, projectId = null) {
-            addDiagnosticLog(`Testing ${endpoint.name}...`, 'info');
+        async function testEndpoint(endpointKey, endpoint, apiKey, projectId = null, versionId = 'production') {
+            addDiagnosticLog(`Testing ${endpoint.name} with version: ${versionId}...`, 'info');
             
             const resultsDiv = document.getElementById('endpointResults');
             const testDiv = document.createElement('div');
             testDiv.className = 'endpoint-test testing';
             testDiv.id = `endpoint-${endpointKey}`;
             testDiv.innerHTML = `
-                <strong>🔄 ${endpoint.name}</strong><br>
+                <strong>🔄 ${endpoint.name} (${versionId})</strong><br>
                 <div class="endpoint-url">Testing...</div>
             `;
             resultsDiv.appendChild(testDiv);
@@ -647,7 +658,8 @@
                 testDiv.querySelector('.endpoint-url').textContent = url;
                 
                 addDiagnosticLog(`Request URL: ${url}`, 'info');
-                addDiagnosticLog(`Headers:`, 'info', endpoint.headers(apiKey));
+                const headers = endpoint.headers(apiKey, versionId);
+                addDiagnosticLog(`Headers:`, 'info', headers);
                 
                 const requestBody = {
                     action: {
@@ -660,7 +672,7 @@
                 const startTime = Date.now();
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: endpoint.headers(apiKey),
+                    headers: headers,
                     body: JSON.stringify(requestBody)
                 });
                 
@@ -685,7 +697,7 @@
                 if (response.ok) {
                     testDiv.className = 'endpoint-test success';
                     testDiv.innerHTML = `
-                        <strong>✅ ${endpoint.name}</strong><br>
+                        <strong>✅ ${endpoint.name} (${versionId})</strong><br>
                         <div class="endpoint-url">${url}</div>
                         <div style="margin-top: 8px; font-size: 12px; color: #155724;">
                             Status: ${response.status} | Time: ${responseTime}ms
@@ -696,7 +708,7 @@
                 } else {
                     testDiv.className = 'endpoint-test failed';
                     testDiv.innerHTML = `
-                        <strong>❌ ${endpoint.name}</strong><br>
+                        <strong>❌ ${endpoint.name} (${versionId})</strong><br>
                         <div class="endpoint-url">${url}</div>
                         <div style="margin-top: 8px; font-size: 12px; color: #721c24;">
                             Status: ${response.status} ${response.statusText}
@@ -748,11 +760,15 @@
                 addDiagnosticLog(`Using provided Project ID: ${projectId}`, 'info');
             }
             
+            // Get version ID
+            const versionId = document.getElementById('versionId').value;
+            addDiagnosticLog(`Testing with version: ${versionId}`, 'info');
+            
             // Test all endpoints
             const results = [];
             
             for (const [key, endpoint] of Object.entries(API_ENDPOINTS)) {
-                const result = await testEndpoint(key, endpoint, apiKey, projectId);
+                const result = await testEndpoint(key, endpoint, apiKey, projectId, versionId);
                 results.push({ key, ...result });
                 
                 // Small delay between tests
@@ -810,8 +826,9 @@
             const endpointKey = workingEndpoint ? workingEndpoint.key : 'v1';
             const endpoint = API_ENDPOINTS[endpointKey];
             const projectId = document.getElementById('projectId').value.trim() || extractProjectId(apiKey);
+            const versionId = document.getElementById('versionId').value;
             
-            const result = await testEndpoint(endpointKey, endpoint, apiKey, projectId);
+            const result = await testEndpoint(endpointKey, endpoint, apiKey, projectId, versionId);
             
             if (result.success) {
                 workingEndpoint = { key: endpointKey, ...result };
@@ -950,6 +967,7 @@
             const apiKey = document.getElementById('apiKey').value.trim();
             const endpoint = API_ENDPOINTS[workingEndpoint.key];
             const projectId = document.getElementById('projectId').value.trim();
+            const versionId = document.getElementById('versionId').value;
             
             try {
                 addDiagnosticLog('Launching conversation...', 'info');
@@ -960,7 +978,7 @@
                 
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: endpoint.headers(apiKey),
+                    headers: endpoint.headers(apiKey, versionId),
                     body: JSON.stringify({
                         action: { type: 'launch' }
                     })
@@ -983,6 +1001,7 @@
             const apiKey = document.getElementById('apiKey').value.trim();
             const endpoint = API_ENDPOINTS[workingEndpoint.key];
             const projectId = document.getElementById('projectId').value.trim();
+            const versionId = document.getElementById('versionId').value;
             const questionItem = document.getElementById(`question-${index}`);
             
             if (questionItem) {
@@ -1003,7 +1022,7 @@
                 
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: endpoint.headers(apiKey),
+                    headers: endpoint.headers(apiKey, versionId),
                     body: JSON.stringify({
                         action: {
                             type: 'text',
@@ -1270,9 +1289,9 @@
 
         // Initialize on page load
         window.addEventListener('load', () => {
-            addDiagnosticLog('=== TESTER v5.7 DIAGNOSTIC EDITION INITIALIZED ===', 'success');
+            addDiagnosticLog('=== TESTER v5.8 DIAGNOSTIC EDITION INITIALIZED ===', 'success');
             setStatus('💡 Enter API key and run diagnostic to begin', 'info');
-            addSystemMessage('Tester v5.7 Diagnostic Edition ready');
+            addSystemMessage('Tester v5.8 - Version Selector ready');
             addDiagnosticLog('Ready to test multiple API endpoints', 'info');
         });
 
