@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5.8 - Diagnostic Edition</title>
+    <title>Voiceflow Chatbot Tester v5.9 - Production Ready</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -383,8 +383,8 @@
 <body>
     <div class="header">
         <h1>🔬 Voiceflow Chatbot Tester</h1>
-        <p>Diagnostic Edition - Advanced API Testing & Debugging</p>
-        <span class="version-badge">v5.8 Diagnostic Edition - Version Selector</span>
+        <p>Production Testing - Verified Working Configuration</p>
+        <span class="version-badge">v5.9 Production Ready</span>
     </div>
 
     <div class="container">
@@ -396,8 +396,7 @@
                 <label for="apiKeySelect">🔑 Select API Key:</label>
                 <select id="apiKeySelect" onchange="loadSelectedApiKey()">
                     <option value="">-- Select API Key --</option>
-                    <option value="VF.DM.66df267d16a91c9f126fab7e.pZsTqAbO2vhQgVNa">Test Agent (Basic)</option>
-                    <option value="VF.DM.66df267d16a9116a91c9f126fab7e.pZsTqAbO2vhQgVNa">Production Agent</option>
+                    <option value="VF.DM.66df267d16a91c9f126fab7e.pZsTqAbO2vhQgVNa">Production Agent (Working)</option>
                     <option value="custom">Custom (enter below)</option>
                 </select>
             </div>
@@ -494,7 +493,7 @@
     </div>
 
     <script>
-        console.log('🔬 Voiceflow Tester v5.8 Diagnostic Edition - Version Selector');
+        console.log('🚀 Voiceflow Tester v5.9 Production Ready');
         
         // Load selected API key from dropdown
         function loadSelectedApiKey() {
@@ -1289,9 +1288,9 @@
 
         // Initialize on page load
         window.addEventListener('load', () => {
-            addDiagnosticLog('=== TESTER v5.8 DIAGNOSTIC EDITION INITIALIZED ===', 'success');
+            addDiagnosticLog('=== TESTER v5.9 PRODUCTION READY ===', 'success');
             setStatus('💡 Enter API key and run diagnostic to begin', 'info');
-            addSystemMessage('Tester v5.8 - Version Selector ready');
+            addSystemMessage('Tester v5.9 Production Ready');
             addDiagnosticLog('Ready to test multiple API endpoints', 'info');
         });
 
