@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v5.2 - Debug Edition</title>
+    <title>Voiceflow Chatbot Tester v5.1 - Debug Edition</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -248,6 +248,10 @@ how do i request a proposal waiver</textarea>
                 <input type="text" id="apiKey" value="VF.DM.66df267d16a9116a91c9f126fab7e.pZsTqAbO2vhQgVNa" style="font-family: monospace; font-size: 11px;">
                 <div style="font-size: 11px; color: #6c757d; margin: 5px 0;">Get from Voiceflow → Integrations page</div>
                 
+                <label>Project ID:</label>
+                <input type="text" id="projectId" value="66de313d6a0d94e1bd71c5ce" style="font-family: monospace; font-size: 11px;">
+                <div style="font-size: 11px; color: #6c757d; margin: 5px 0;">Get from Voiceflow → Agent Settings</div>
+                
                 <label>User ID:</label>
                 <input type="text" id="userId" value="mit-tester-debug" placeholder="Enter user ID">
                 
@@ -311,6 +315,7 @@ how do i request a proposal waiver</textarea>
         let currentQuestionIndex = 0;
         let testRunning = false;
         let qaResults = [];
+        let workingEndpointFormat = 0; // 0 or 1, stores which endpoint format works
 
         const VOICEFLOW_API_URL = 'https://general-runtime.voiceflow.com';
 
@@ -417,6 +422,7 @@ how do i request a proposal waiver</textarea>
             const apiKey = document.getElementById('apiKey').value.trim();
             const userId = document.getElementById('userId').value || 'test-user';
             const versionId = document.getElementById('versionId').value;
+            const projectId = document.getElementById('projectId').value.trim();
             
             if (!apiKey) {
                 updateStatus('Enter API Key first', 'error');
@@ -427,56 +433,67 @@ how do i request a proposal waiver</textarea>
             updateStatus('Testing connection...', 'warning');
             addSystemMessage('🔌 Testing API connection...');
             
-            try {
-                log('Sending test request to Voiceflow API', {
-                    url: `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
-                    userId,
-                    versionId
-                });
-                
-                const requestBody = {
-                    action: {
-                        type: 'launch'
+            // Try multiple endpoint formats
+            const endpoints = [
+                `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
+                `${VOICEFLOW_API_URL}/v2/project/${projectId}/user/${userId}/interact`
+            ];
+            
+            for (let i = 0; i < endpoints.length; i++) {
+                const url = endpoints[i];
+                try {
+                    log(`Attempt ${i + 1}: Testing endpoint`, { url, versionId });
+                    
+                    const requestBody = {
+                        action: {
+                            type: 'launch'
+                        }
+                    };
+                    
+                    log('Request body:', requestBody);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': apiKey,
+                            'versionID': versionId
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+                    
+                    log(`Attempt ${i + 1} response:`, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        ok: response.ok
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        log('✅ SUCCESS with endpoint:', url);
+                        log('API Response data:', data);
+                        
+                        workingEndpointFormat = i; // Save which format worked
+                        
+                        updateStatus(`✅ Connection successful! (Using endpoint ${i + 1})`, 'success');
+                        addSystemMessage(`✅ API connection successful! Endpoint: ${url.split('/').slice(3).join('/')}`);
+                        alert(`Connection successful!\n\nEndpoint: ${url.split('/').slice(3).join('/')}`);
+                        return;
                     }
-                };
-                
-                log('Request body:', requestBody);
-                
-                const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}/interact`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': apiKey,
-                        'versionID': versionId
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                log('Response received:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    ok: response.ok
-                });
-                
-                if (!response.ok) {
+                    
+                    // If not ok, try to get error details but continue to next endpoint
                     const errorText = await response.text();
-                    log('Error response body:', errorText);
-                    throw new Error(`API ${response.status}: ${response.statusText}`);
+                    log(`Attempt ${i + 1} failed:`, errorText);
+                    
+                } catch (error) {
+                    log(`Attempt ${i + 1} error:`, error);
                 }
-                
-                const data = await response.json();
-                log('API Response data:', data);
-                
-                updateStatus('✅ Connection successful!', 'success');
-                addSystemMessage('✅ API connection successful! Ready to test.');
-                alert('Connection successful! You can now start testing.');
-                
-            } catch (error) {
-                log('Connection test failed:', error);
-                updateStatus(`Connection failed: ${error.message}`, 'error');
-                addSystemMessage(`❌ Connection failed: ${error.message}`);
-                alert(`Connection failed: ${error.message}\n\nCheck console (F12) for details.`);
             }
+            
+            // If we got here, all attempts failed
+            updateStatus('❌ All connection attempts failed', 'error');
+            addSystemMessage('❌ All connection attempts failed. Check console for details.');
+            alert('Connection failed with all endpoint formats.\n\nCheck console (F12) for details.\n\nPossible issues:\n- API key may be invalid\n- Project ID may be incorrect\n- Agent not published to production');
         }
 
         async function resetSession() {
@@ -618,6 +635,14 @@ how do i request a proposal waiver</textarea>
                 const userId = document.getElementById('userId').value || 'mit-tester-debug';
                 const apiKey = document.getElementById('apiKey').value.trim();
                 const versionId = document.getElementById('versionId').value;
+                const projectId = document.getElementById('projectId').value.trim();
+                
+                // Build URL based on which endpoint format worked in the connection test
+                const urls = [
+                    `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
+                    `${VOICEFLOW_API_URL}/v2/project/${projectId}/user/${userId}/interact`
+                ];
+                const url = urls[workingEndpointFormat];
                 
                 const requestBody = {
                     action: {
@@ -627,7 +652,7 @@ how do i request a proposal waiver</textarea>
                 };
                 
                 log('API Request:', {
-                    url: `${VOICEFLOW_API_URL}/state/user/${userId}/interact`,
+                    url: url,
                     method: 'POST',
                     body: requestBody,
                     headers: {
@@ -636,7 +661,7 @@ how do i request a proposal waiver</textarea>
                     }
                 });
                 
-                const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}/interact`, {
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
