@@ -835,7 +835,36 @@ window.fetch = async function(...args) {
                 }
             }, 2000);
         };
+        // Intercept Voiceflow's interact method to catch responses
+setTimeout(() => {
+    if (window.voiceflow && window.voiceflow.chat) {
+        const originalInteract = window.voiceflow.chat.interact;
         
+        window.voiceflow.chat.interact = async function(...args) {
+            console.log('🎤 Interact called with:', args);
+            
+            // Call original interact method
+            const result = await originalInteract.apply(this, args);
+            
+            console.log('📬 Interact response:', result);
+            
+            // Send response to parent window
+            if (window.parent && window.parent !== window && result) {
+                window.parent.postMessage({
+                    type: 'VOICEFLOW_API_RESPONSE',
+                    data: result,
+                    source: 'SDK_INTERCEPT',
+                    timestamp: new Date().toISOString()
+                }, '*');
+                console.log('✅ SDK response forwarded to parent');
+            }
+            
+            return result;
+        };
+        
+        console.log('✅ Voiceflow interact method intercepted');
+    }
+}, 4000);
         v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; 
         v.type = "text/javascript"; 
         s.parentNode.insertBefore(v, s);
@@ -925,6 +954,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
