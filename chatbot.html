@@ -687,17 +687,26 @@ window.fetch = async function(...args) {
         !urlString.includes('webchat-log') &&
         !urlString.includes('analytics')) {
         
-    console.log('📡 Voiceflow API call detected:', urlString);
+        console.log('📡 Voiceflow API call detected:', urlString);
+        console.log('📡 Full URL details:', {
+            url: urlString,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Array.from(response.headers.entries())
+        });
         
-        // Clone the response so we can read it twice
         const clonedResponse = response.clone();
         
         try {
-            // Check if response has content before trying to parse
             const text = await clonedResponse.text();
-            if (text && text.trim().length > 0) {
-                const data = JSON.parse(text);
-                console.log('📦 API Response data:', data);
+            console.log('📝 Raw response text length:', text.length);
+            console.log('📝 Raw response text preview:', text.substring(0, 500));
+        
+        if (text && text.trim().length > 0) {
+            const data = JSON.parse(text);
+            console.log('📦 API Response data:', data);
+            console.log('📦 Data type:', typeof data);
+            console.log('📦 Is array?', Array.isArray(data));
                 
                 // Send complete API response to parent window (the tester)
                 if (window.parent && window.parent !== window) {
@@ -906,6 +915,7 @@ async function initializePage() {
     </script>
 </body>
 </html>
+
 
 
 
