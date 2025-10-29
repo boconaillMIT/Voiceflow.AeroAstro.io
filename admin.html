@@ -171,6 +171,66 @@
         font-size: 0.95em;
     }
     
+    /* Tooltip styles */
+    .label-with-tooltip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+    }
+    
+    .tooltip-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        background: #003d5c;
+        color: white;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: help;
+        position: relative;
+    }
+    
+    .tooltip-text {
+        visibility: hidden;
+        width: 220px;
+        background-color: #2c3e50;
+        color: white;
+        text-align: center;
+        border-radius: 6px;
+        padding: 8px;
+        position: absolute;
+        z-index: 1001;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -110px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 0.85em;
+        font-weight: normal;
+        line-height: 1.4;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #2c3e50 transparent transparent transparent;
+    }
+    
+    .tooltip-icon:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+    
     input[type="text"],
     input[type="email"],
     textarea {
@@ -312,97 +372,106 @@
         100% { transform: rotate(360deg); }
     }
 
-        /* Action Buttons Dropdown */
-.action-cell {
-    position: relative;
-}
+    /* Action Buttons Dropdown */
+    .action-cell {
+        position: relative;
+    }
 
-.action-dropdown {
-    position: relative;
-    display: inline-block;
-}
+    .action-dropdown {
+        position: relative;
+        display: inline-block;
+    }
 
-.action-btn {
-    padding: 8px 16px;
-    background: #003d5c;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9em;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-}
+    .action-btn {
+        padding: 8px 16px;
+        background: #003d5c;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
 
-.action-btn:hover {
-    background: #002a40;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
+    .action-btn:hover {
+        background: #002a40;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
 
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    background: white;
-    min-width: 180px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-radius: 6px;
-    z-index: 1000;
-    overflow: hidden;
-    margin-top: 5px;
-}
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        bottom: 100%; /* Open upward by default to prevent clipping */
+        background: white;
+        min-width: 180px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 6px;
+        z-index: 1000;
+        overflow: visible;
+        margin-bottom: 5px;
+    }
 
-.action-dropdown:hover .dropdown-content,
-.dropdown-content:hover {
-    display: block;
-}
+    /* For rows at the top of the table, open downward instead */
+    tbody tr:nth-child(-n+2) .dropdown-content {
+        bottom: auto;
+        top: 100%;
+        margin-top: 5px;
+        margin-bottom: 0;
+    }
 
-.dropdown-item {
-    padding: 12px 16px;
-    border: none;
-    width: 100%;
-    text-align: left;
-    background: white;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+    .action-dropdown:hover .dropdown-content,
+    .dropdown-content:hover {
+        display: block;
+    }
 
-.dropdown-item:hover {
-    background: #f8f9fa;
-}
+    .dropdown-item {
+        padding: 12px 16px;
+        border: none;
+        width: 100%;
+        text-align: left;
+        background: white;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-.dropdown-item.grant {
-    color: #27ae60;
-}
+    .dropdown-item:hover {
+        background: #f8f9fa;
+    }
 
-.dropdown-item.grant:hover {
-    background: #d4edda;
-}
+    .dropdown-item.grant {
+        color: #27ae60;
+    }
 
-.dropdown-item.remove {
-    color: #e74c3c;
-}
+    .dropdown-item.grant:hover {
+        background: #d4edda;
+    }
 
-.dropdown-item.remove:hover {
-    background: #f8d7da;
-}
+    .dropdown-item.remove {
+        color: #e74c3c;
+    }
 
-.dropdown-item.delete {
-    color: #c0392b;
-    border-top: 1px solid #ecf0f1;
-}
+    .dropdown-item.remove:hover {
+        background: #f8d7da;
+    }
 
-.dropdown-item.delete:hover {
-    background: #f8d7da;
-}
+    .dropdown-item.delete {
+        color: #c0392b;
+        border-top: 1px solid #ecf0f1;
+    }
+
+    .dropdown-item.delete:hover {
+        background: #f8d7da;
+    }
 </style>
 </head>
 <body>
@@ -414,7 +483,7 @@
     <div class="quick-links">
                 <h4>Quick Links</h4>
                 <ul>
-                    <li><a href="https://aeroastrovfbot.netlify.app/advancedvoiceflowtester.html" target="_blank">Auto Tester</a></li>
+                    <li><a href="https://aeroastrovfbot.netlify.app/simple-tester.html" target="_blank">Auto Tester</a></li>
                     <li><a href="https://mit.quickbase.com/nav/main/action/myqb" target="_blank">QuickBase</a></li>
                     <li><a href="https://app.netlify.com/projects/aeroastrovfbot/deploys" target="_blank">Netlify Deploy</a></li>
                     <li><a href="https://us2.make.com/62284/scenarios/2987098/edit" target="_blank">Make.com Scenario</a></li>
@@ -454,35 +523,7 @@
                     <p>Loading...</p>
                 </div>
 
-                <!-- Add New User Form -->
-                <div class="section">
-                    <h3>Add New Exception User</h3>
-                    <form id="addUserForm">
-                        <div class="form-group">
-                            <label for="newKerberos">Kerberos ID:</label>
-                            <input type="text" id="newKerberos" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newDepartment">Department:</label>
-                            <input type="text" id="newDepartment" required>
-                        </div>
-                        <div class="form-group checkbox-group">
-                            <input type="checkbox" id="newIsException" checked>
-                            <label for="newIsException">Grant Exception Access</label>
-                        </div>
-                        <div class="form-group checkbox-group">
-                            <input type="checkbox" id="newIsAdmin">
-                            <label for="newIsAdmin">Grant Administrator Privileges</label>
-                        </div>
-                        <div class="form-group">
-                            <label for="newNotes">Notes (reason for access):</label>
-                            <textarea id="newNotes" placeholder="Enter reason for granting access..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-success">Add User</button>
-                    </form>
-                </div>
-
-                <!-- User List -->
+                <!-- User List (MOVED BEFORE Add New User) -->
                 <div class="section">
                     <h3>Current Users</h3>
                     <button class="btn" onclick="loadUsers()">Refresh User List</button>
@@ -503,6 +544,39 @@
                             <!-- User data will be loaded here -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Add New User Form (MOVED AFTER User List) -->
+                <div class="section">
+                    <h3>Add New Exception User</h3>
+                    <form id="addUserForm">
+                        <div class="form-group">
+                            <label for="newKerberos">Kerberos ID:</label>
+                            <input type="text" id="newKerberos" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newDepartment">Department:</label>
+                            <input type="text" id="newDepartment" required>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="newIsException" checked>
+                            <label for="newIsException" class="label-with-tooltip">
+                                Grant Exception Access
+                                <span class="tooltip-icon">?
+                                    <span class="tooltip-text">To grant access to non-AeroAstro users</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="newIsAdmin">
+                            <label for="newIsAdmin">Grant Administrator Privileges</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="newNotes">Notes (reason for access):</label>
+                            <textarea id="newNotes" placeholder="Enter reason for granting access..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success">Add User</button>
+                    </form>
                 </div>
             </div>
         </div>
