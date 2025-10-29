@@ -277,10 +277,16 @@ who supports sertac karaman?</textarea>
 
             <div class="section">
                 <h4>⚙️ API Configuration</h4>
-                <label>Project ID:</label>
-                <input type="text" id="projectId" value="66de313d6a0d94e1bd71c5ce" readonly>
+                <label>Voiceflow API Key:</label>
+                <input type="text" id="apiKey" placeholder="VF.DM.66df267d16a9116a91c9f126fab7e.pZsTqAbO2vhQgVNa" style="font-family: monospace; font-size: 11px;">
+                <div style="font-size: 11px; color: #6c757d; margin: 5px 0;">Get from Voiceflow → Integrations page</div>
                 <label>User ID:</label>
                 <input type="text" id="userId" value="mit-tester" placeholder="Enter user ID">
+                <label>Version ID:</label>
+                <select id="versionId">
+                    <option value="production">production</option>
+                    <option value="development">development</option>
+                </select>
                 <label>Delay between questions (ms):</label>
                 <input type="number" id="delayMs" value="1500" min="500" max="10000" step="100">
                 <label class="checkbox-label">
@@ -343,7 +349,6 @@ who supports sertac karaman?</textarea>
 
         // Voiceflow API configuration
         const VOICEFLOW_API_URL = 'https://general-runtime.voiceflow.com';
-        const VOICEFLOW_PROJECT_ID = '66de313d6a0d94e1bd71c5ce';
 
         function addDebugLog(message, data = null) {
             const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
@@ -517,14 +522,25 @@ who supports sertac karaman?</textarea>
 
         function checkReadyToTest() {
             const startBtn = document.getElementById('startBtn');
-            if (questionsList.length > 0) {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (questionsList.length > 0 && apiKey) {
                 startBtn.disabled = false;
                 updateStatus('Ready to start testing!', 'success');
+            } else if (questionsList.length > 0 && !apiKey) {
+                startBtn.disabled = true;
+                updateStatus('Enter your Voiceflow API Key to continue', 'warning');
             }
         }
 
         async function resetSession() {
             const userId = document.getElementById('userId').value || 'mit-tester';
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (!apiKey) {
+                addDebugLog('Cannot reset session - API key not provided');
+                return false;
+            }
             
             addDebugLog('Attempting to reset session', { userId });
             
@@ -532,7 +548,7 @@ who supports sertac karaman?</textarea>
                 const response = await fetch(`${VOICEFLOW_API_URL}/state/user/${userId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': VOICEFLOW_PROJECT_ID
+                        'Authorization': apiKey
                     }
                 });
                 
@@ -698,9 +714,15 @@ who supports sertac karaman?</textarea>
             try {
                 const startTime = Date.now();
                 const userId = document.getElementById('userId').value || 'mit-tester';
+                const apiKey = document.getElementById('apiKey').value.trim();
+                const versionId = document.getElementById('versionId').value;
+                
+                if (!apiKey) {
+                    throw new Error('API Key is required. Get it from Voiceflow → Integrations page');
+                }
                 
                 const requestBody = {
-                    action: {
+                    request: {
                         type: 'text',
                         payload: question
                     }
@@ -713,7 +735,8 @@ who supports sertac karaman?</textarea>
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': VOICEFLOW_PROJECT_ID
+                        'Authorization': apiKey,
+                        'versionID': versionId
                     },
                     body: JSON.stringify(requestBody)
                 });
@@ -919,9 +942,12 @@ who supports sertac karaman?</textarea>
         window.addEventListener('load', () => {
             addSystemMessage('🤖 Chatbot Tester v5 Ready');
             addSystemMessage('✨ New: Session reset, better parsing, adaptive delays');
-            addSystemMessage('Step 1: Load questions');
-            addSystemMessage('Step 2: (Optional) Configure settings');
+            addSystemMessage('Step 1: Enter your Voiceflow API Key (from Integrations page)');
+            addSystemMessage('Step 2: Load questions');
             addSystemMessage('Step 3: Start testing');
+            
+            // Add event listener to API key field
+            document.getElementById('apiKey').addEventListener('input', checkReadyToTest);
         });
     </script>
 </body>
