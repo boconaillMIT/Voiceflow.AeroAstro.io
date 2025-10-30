@@ -673,7 +673,8 @@
 
         let currentUser = 'admin'; // Set from auth if needed
         let currentRecord = null;
-
+        let allRecords = []; // Store loaded records
+        
         // QuickBase API wrapper
         async function makeQuickBaseRequest(method, endpoint, body) {
             const url = `https://api.quickbase.com/v1/${endpoint}`;
@@ -727,9 +728,10 @@
                     queryBody.where = whereClauses.join('AND');
                 }
                 
-                const response = await makeQuickBaseRequest('POST', 'records/query', queryBody);
-                displayQA(response.data);
-                updateStats(response.data);
+            const response = await makeQuickBaseRequest('POST', 'records/query', queryBody);
+            allRecords = response.data; // Store records
+            displayQA(allRecords);
+            updateStats(allRecords);
                 showMessage(`Loaded ${response.data.length} Q&A record(s)`, 'success');
             } catch (error) {
                 console.error('Load error:', error);
