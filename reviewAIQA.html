@@ -516,33 +516,45 @@
             text-align: center;
         }
 
-        .stats-bar {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 20px;
-            padding: 15px 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #27ae60;
-        }
-
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .stat-label {
-            font-size: 0.85em;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-value {
-            font-size: 1.5em;
-            font-weight: 600;
-            color: #2c3e50;
-        }
+    .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-item {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stat-item:nth-child(2) {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stat-item:nth-child(3) {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    
+    .stat-item:nth-child(4) {
+        background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+    }
+    
+    .stat-label {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+    
+    .stat-value {
+        font-size: 2.5em;
+        font-weight: 700;
+        margin-bottom: 5px;
+        color: white;
+    }
     </style>
 </head>
 <body>
@@ -770,16 +782,19 @@
         }
 
         // Update statistics
-        function updateStats(records) {
-            const total = records.length;
-            const pending = records.filter(r => r[FIELD_IDS.status]?.value === 'pending').length;
-            const correct = records.filter(r => r[FIELD_IDS.status]?.value === 'correct').length;
-            const incorrect = records.filter(r => r[FIELD_IDS.status]?.value === 'incorrect').length;
+        function updateStats() {
+            const total = allRecords.length;
+            const correct = allRecords.filter(r => r['12']?.value === 'Correct').length;
+            const incorrect = allRecords.filter(r => r['12']?.value === 'Incorrect').length;
+            const unreviewed = allRecords.filter(r => {
+                const status = r['12']?.value;
+                return !status || status === '' || status === 'pending' || status === 'needs_review' || status === 'NEEDS_REVIEW';
+            }).length;
             
-            document.getElementById('statTotal').textContent = total;
-            document.getElementById('statPending').textContent = pending;
-            document.getElementById('statCorrect').textContent = correct;
-            document.getElementById('statIncorrect').textContent = incorrect;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('correctCount').textContent = correct;
+            document.getElementById('incorrectCount').textContent = incorrect;
+            document.getElementById('unreviewedCount').textContent = unreviewed;
         }
 
         // View individual record
