@@ -742,46 +742,65 @@
         }
 
         // Display Q&A records in table
-        function displayQA(records) {
-            const tbody = document.getElementById('qaTableBody');
-            tbody.innerHTML = '';
+function displayQA(records) {
+    const tbody = document.getElementById('qaTableBody');
+    tbody.innerHTML = '';
+    
+    console.log('Total records to display:', records.length);
+    
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No Q&A records found</td></tr>';
+        return;
+    }
+    
+    records.forEach((record, index) => {
+        try {
+            const row = tbody.insertRow();
+            const date = new Date(record[FIELD_IDS.dateTime]?.value);
+            const question = record[FIELD_IDS.question]?.value || 'No question';
+            const answer = record[FIELD_IDS.answer]?.value || 'No answer';
+            const source = record[FIELD_IDS.source]?.value || 'unknown';
+            const status = record[FIELD_IDS.status]?.value || 'pending';
+            const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
+            const recordId = record[FIELD_IDS.recordId]?.value;
             
-            if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No Q&A records found</td></tr>';
-                return;
+            // Debug logging for problematic records
+            if (!recordId || !status) {
+                console.error('Problem with record at index', index, {
+                    recordId: recordId,
+                    status: status,
+                    question: question,
+                    fullRecord: record
+                });
             }
             
-            records.forEach(record => {
-                const row = tbody.insertRow();
-                const date = new Date(record[FIELD_IDS.dateTime]?.value);
-                const question = record[FIELD_IDS.question]?.value || 'No question';
-                const answer = record[FIELD_IDS.answer]?.value || 'No answer';
-                const source = record[FIELD_IDS.source]?.value || 'unknown';
-                const status = record[FIELD_IDS.status]?.value || 'pending';
-                const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
-                const recordId = record[FIELD_IDS.recordId].value;
-                
-                const answerPreview = answer.substring(0, 80) + (answer.length > 80 ? '...' : '');
-                const isDisabled = status !== 'pending' ? 'disabled' : '';
-                
-                row.innerHTML = `
-                    <td class="checkbox-col">
-                        <input type="checkbox" class="qa-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}>
-                    </td>
-                    <td>${date.toLocaleDateString()}<br><small>${date.toLocaleTimeString()}</small></td>
-                    <td><span class="badge badge-${source}">${source}</span></td>
-                    <td>${question}</td>
-                    <td class="preview">${answerPreview}</td>
-                    <td>${responseTime}ms</td>
-                    <td><span class="badge badge-${status}">${status}</span></td>
-                    <td>
-                        <button class="btn btn-primary btn-small" onclick="viewRecord(${recordId})">
-                            Review
-                        </button>
-                    </td>
-                `;
-            });
+            const answerPreview = answer.substring(0, 80) + (answer.length > 80 ? '...' : '');
+            const isDisabled = status !== 'pending' ? 'disabled' : '';
+            
+            row.innerHTML = `
+                <td class="checkbox-col">
+                    <input type="checkbox" class="qa-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}>
+                </td>
+                <td>${date.toLocaleDateString()}<br><small>${date.toLocaleTimeString()}</small></td>
+                <td><span class="badge badge-${source}">${source}</span></td>
+                <td>${question}</td>
+                <td class="preview">${answerPreview}</td>
+                <td>${responseTime}ms</td>
+                <td><span class="badge badge-${status}">${status}</span></td>
+                <td>
+                    <button class="btn btn-primary btn-small" onclick="viewRecord(${recordId})">
+                        Review
+                    </button>
+                </td>
+            `;
+        } catch (error) {
+            console.error('Error displaying record at index', index, error, record);
+            // Add a visible error row
+            const errorRow = tbody.insertRow();
+            errorRow.innerHTML = `<td colspan="8" style="color: red; padding: 10px;">Error displaying record: ${error.message}</td>`;
         }
+    });
+}
 
         // Update statistics
         function updateStats(records) {
