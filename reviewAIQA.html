@@ -471,7 +471,6 @@
                     method: 'POST',
                     headers: {
                         'QB-Realm-Hostname': QB_REALM,
-                        'User-Agent': 'ReviewQA',
                         'Authorization': `QB-USER-TOKEN ${QB_USER_TOKEN}`,
                         'Content-Type': 'application/json'
                     },
@@ -479,8 +478,7 @@
                         "from": QA_TABLE_ID,
                         "select": [3, 6, 7, 8, 9, 10, 11, 12, 13],
                         "where": query,
-                        "sortBy": [{"fieldId": 3, "order": "DESC"}],
-                        "options": {"skip": 0, "top": 0}
+                        "sortBy": [{"fieldId": 3, "order": "DESC"}]
                     })
                 });
                 
