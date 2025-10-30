@@ -772,7 +772,13 @@
         // Update statistics
         function updateStats(records) {
             const total = records.length;
-            const pending = records.filter(r => r[FIELD_IDS.status]?.value === 'pending').length;
+            
+            // Count pending as anything that's not explicitly marked correct/incorrect/needs_review
+            const pending = records.filter(r => {
+                const status = r[FIELD_IDS.status]?.value;
+                return !status || status === '' || status === 'pending';
+            }).length;
+            
             const correct = records.filter(r => r[FIELD_IDS.status]?.value === 'correct').length;
             const incorrect = records.filter(r => r[FIELD_IDS.status]?.value === 'incorrect').length;
             
