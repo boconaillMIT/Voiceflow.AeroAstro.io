@@ -467,7 +467,7 @@
                     query = currentFilter.testRun ? `{11.EX.'${currentFilter.testRun}'}AND${statusQuery}` : statusQuery;
                 }
                 
-                const response = await fetch(`https://${QB_REALM}/db/${QA_TABLE_ID}`, {
+                const response = await fetch(`https://api.quickbase.com/v1/records/query`, {
                     method: 'POST',
                     headers: {
                         'QB-Realm-Hostname': QB_REALM,
@@ -621,7 +621,7 @@
                     }]
                 };
                 
-                const response = await fetch(`https://${QB_REALM}/db/${QA_TABLE_ID}`, {
+                const response = await fetch(`https://api.quickbase.com/v1/records`, {
                     method: 'POST',
                     headers: {
                         'QB-Realm-Hostname': QB_REALM,
