@@ -395,8 +395,7 @@
             <div class="input-group">
                 <label for="apiKeySelect">🔑 Select API Key:</label>
                 <select id="apiKeySelect" onchange="loadSelectedApiKey()">
-                    <option value="">-- Select API Key --</option>
-                    <option value="VF.DM.66df267d16a91c9f126fab7e.pZsTqAbO2vhQgVNa">Production Agent (Working)</option>
+                    <option value="VF.DM.66df267d16a91c9f126fab7e.pZsTqAbO2vhQgVNa" selected>Production Agent (Working)</option>
                     <option value="custom">Custom (enter below)</option>
                 </select>
             </div>
@@ -457,16 +456,26 @@
 
             <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
 
-            <button onclick="runFullDiagnostic()" class="purple">🔬 Run Full Diagnostic</button>
-            <button onclick="testConnection()" class="orange">🔌 Quick Connection Test</button>
+            <button onclick="runFullDiagnostic()" class="purple">🔬 Run Full Diagnostic (Optional)</button>
+            <button onclick="testConnection()" class="orange">🔌 Quick Connection Test (Optional)</button>
 
             <div id="statusDiv" class="status info">
-                💡 Enter API key and run diagnostic to find working endpoint
+                💡 Load questions below and click Start Test!
             </div>
 
             <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
 
             <h3>📝 Test Questions</h3>
+            
+            <div class="input-group">
+                <label>
+                    <input type="checkbox" id="turnOffSources" checked style="width: auto; margin-right: 8px;" />
+                    Turn off sources? (sends "turn off sources" first)
+                </label>
+                <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                    Triggers Voiceflow intent before asking your questions
+                </small>
+            </div>
             
             <div class="input-group">
                 <label for="questions">Enter questions (one per line):</label>
@@ -1158,21 +1167,27 @@
             const apiKey = document.getElementById('apiKey').value.trim();
             const hasQuestions = questions.length > 0;
             const hasApiKey = apiKey.length > 0;
-            const hasWorkingEndpoint = workingEndpoint !== null;
             
             const startBtn = document.getElementById('startBtn');
-            startBtn.disabled = !(hasQuestions && hasApiKey && hasWorkingEndpoint);
+            startBtn.disabled = !(hasQuestions && hasApiKey);
             
-            if (hasQuestions && hasApiKey && hasWorkingEndpoint) {
+            if (hasQuestions && hasApiKey) {
                 setStatus('✅ Ready to start testing!', 'success');
-            } else if (hasQuestions && hasApiKey && !hasWorkingEndpoint) {
-                setStatus('⚠️ Run diagnostic to find working endpoint', 'warning');
             }
         }
 
         // Start testing
         async function startTest() {
-            if (isTesting || !workingEndpoint) return;
+            if (isTesting) return;
+            
+            // Auto-detect working endpoint if not set
+            if (!workingEndpoint) {
+                addDiagnosticLog('No endpoint set - using V1 State API by default', 'info');
+                workingEndpoint = {
+                    key: 'v1',
+                    endpoint: 'v1'
+                };
+            }
             
             isTesting = true;
             currentQuestionIndex = 0;
@@ -1190,6 +1205,15 @@
             
             // Launch conversation
             await launchConversation();
+            
+            // Check if "turn off sources" should be sent first
+            const turnOffSources = document.getElementById('turnOffSources').checked;
+            if (turnOffSources) {
+                addDiagnosticLog('Sending "turn off sources" command...', 'info');
+                addSystemMessage('Triggering: turn off sources');
+                await askQuestionSilent('turn off sources');
+                await sleep(1000); // Wait before next question
+            }
             
             // Process questions
             for (let i = 0; i < questions.length; i++) {
@@ -1244,6 +1268,42 @@
                 }
             } catch (error) {
                 addDiagnosticLog(`Launch error: ${error.message}`, 'error');
+            }
+        }
+
+        // Ask a question silently (no UI update, no QB logging)
+        async function askQuestionSilent(question) {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const endpoint = API_ENDPOINTS[workingEndpoint.key];
+            const projectId = document.getElementById('projectId').value.trim();
+            const versionId = document.getElementById('versionId').value;
+            
+            try {
+                addDiagnosticLog(`Silent command: ${question}`, 'info');
+                
+                const url = endpoint.requiresProjectId 
+                    ? endpoint.buildUrl(currentUserId, projectId)
+                    : endpoint.buildUrl(currentUserId);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: endpoint.headers(apiKey, versionId),
+                    body: JSON.stringify({
+                        action: {
+                            type: 'text',
+                            payload: question
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addDiagnosticLog(`Silent command successful`, 'success');
+                } else {
+                    addDiagnosticLog(`Silent command warning: ${response.status}`, 'warning');
+                }
+            } catch (error) {
+                addDiagnosticLog(`Silent command error: ${error.message}`, 'error');
             }
         }
 
@@ -1564,9 +1624,12 @@
         // Initialize on page load
         window.addEventListener('load', () => {
             addDiagnosticLog('=== TESTER v7.0 - QUICKBASE INTEGRATION ===', 'success');
-            setStatus('💡 Enter API key and run diagnostic to begin', 'info');
+            setStatus('💡 Ready to load questions and start testing!', 'info');
             addSystemMessage('Tester v7.0 - QuickBase Integration Ready');
             addDiagnosticLog('Ready to test and log to QuickBase', 'info');
+            
+            // Auto-load default API key
+            loadSelectedApiKey();
             
             // Check QB config
             const qbEnabled = document.getElementById('qbEnabled').checked;
