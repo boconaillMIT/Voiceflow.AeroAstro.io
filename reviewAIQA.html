@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Q&A Test Results - AeroAstro Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(to bottom, #001a2e 0%, #003d5c 50%, #4a90b8 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(to right, #003d5c 0%, #1e5a7a 50%, #4a90b8 100%);
+            color: white;
+            padding: 30px 40px;
+            margin: -20px -20px 30px -20px;
+            border-bottom: 4px solid #003d5c;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header::before {
+            content: '✈';
+            position: absolute;
+            top: 50%;
+            right: 60px;
+            transform: translateY(-50%) rotate(-45deg);
+            font-size: 60px;
+            color: rgba(255,255,255,0.2);
+            font-weight: 300;
+        }
+        
+        h1 {
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.95;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #003d5c;
+            flex-wrap: wrap;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.95em;
+            white-space: nowrap;
+        }
+        
+        select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+        
+        select:hover {
+            border-color: #003d5c;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #003d5c;
+            box-shadow: 0 0 0 3px rgba(0, 61, 92, 0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background: #003d5c;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #002a40;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #003d5c 0%, #1e5a7a 50%, #4a90b8 100%);
+            color: white;
+        }
+        
+        th {
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #ecf0f1;
+            transition: all 0.2s ease;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        td {
+            padding: 14px 12px;
+            font-size: 0.95em;
+        }
+        
+        .preview {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: inline-block;
+        }
+        
+        .badge-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-correct {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-incorrect {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-needs_review {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 3% auto;
+            padding: 0;
+            width: 90%;
+            max-width: 1000px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 3px solid #003d5c;
+        }
+        
+        @keyframes slideDown {
+            from { 
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-content h2 {
+            background: linear-gradient(135deg, #003d5c 0%, #1e5a7a 50%, #4a90b8 100%);
+            color: white;
+            padding: 25px 30px;
+            margin: 0;
+            border-radius: 10px 10px 0 0;
+            font-size: 1.6em;
+            font-weight: 600;
+        }
+        
+        .submission-details {
+            padding: 30px;
+        }
+        
+        .detail-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .detail-row:last-of-type {
+            border-bottom: none;
+        }
+        
+        .detail-col strong {
+            display: block;
+            color: #003d5c;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .detail-col-full {
+            grid-column: 1 / -1;
+        }
+        
+        .detail-col-full strong {
+            display: block;
+            color: #003d5c;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .question-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #003d5c;
+            border-radius: 4px;
+            font-size: 1.1em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .answer-edit {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95em;
+            line-height: 1.6;
+            resize: vertical;
+            min-height: 200px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .answer-edit:focus {
+            outline: none;
+            border-color: #003d5c;
+            box-shadow: 0 0 0 3px rgba(0, 61, 92, 0.1);
+        }
+
+        .notes-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9em;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .notes-textarea:focus {
+            outline: none;
+            border-color: #003d5c;
+            box-shadow: 0 0 0 3px rgba(0, 61, 92, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #ecf0f1;
+        }
+        
+        .close {
+            color: white;
+            float: right;
+            font-size: 32px;
+            font-weight: 300;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+        
+        .close:hover {
+            opacity: 1;
+        }
+        
+        /* Loading Spinner */
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #003d5c;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Status Message */
+        #statusMessage {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            display: none;
+            animation: slideIn 0.3s ease;
+            font-weight: 500;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .bulk-actions {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .bulk-actions-text {
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .checkbox-col {
+            width: 40px;
+            text-align: center;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Review Q&A Test Results</h1>
+            <p class="subtitle">Review, validate, and correct chatbot question-answer pairs from automated testing</p>
+        </div>
+
+        <div id="statusMessage"></div>
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Loading Q&A records...</p>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-label">Total Records</span>
+                <span class="stat-value" id="statTotal">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Pending Review</span>
+                <span class="stat-value" id="statPending">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Correct</span>
+                <span class="stat-value" id="statCorrect">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Incorrect</span>
+                <span class="stat-value" id="statIncorrect">0</span>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="controls">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label>Status Filter:</label>
+                <select id="statusFilter" onchange="loadQA()">
+                    <option value="pending">Pending Only</option>
+                    <option value="all">All Records</option>
+                    <option value="correct">Correct</option>
+                    <option value="incorrect">Incorrect</option>
+                    <option value="needs_review">Needs Review</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label>Source Filter:</label>
+                <select id="sourceFilter" onchange="loadQA()">
+                    <option value="all">All Sources</option>
+                    <option value="tester">Tester</option>
+                    <option value="production">Production</option>
+                    <option value="user_feedback">User Feedback</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="loadQA()">🔄 Refresh</button>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div id="bulkActionsBar" class="bulk-actions">
+            <span class="bulk-actions-text"><span id="selectedCount">0</span> selected</span>
+            <button class="btn btn-success" onclick="bulkMarkCorrect()">✓ Mark as Correct</button>
+            <button class="btn btn-danger" onclick="bulkMarkIncorrect()">✗ Mark as Incorrect</button>
+            <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
+        </div>
+
+        <!-- Q&A Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th class="checkbox-col"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" title="Select All"></th>
+                    <th>Date</th>
+                    <th>Source</th>
+                    <th>Question</th>
+                    <th>Answer Preview</th>
+                    <th>Response Time</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="qaTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Review Q&A Record</h2>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const QUICKBASE_CONFIG = {
+            realm: 'mit.quickbase.com',
+            userToken: 'b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h',
+            tableId: 'bvi4py32v'
+        };
+
+        const FIELD_IDS = {
+            recordId: 3,
+            question: 6,
+            answer: 7,
+            source: 8,
+            status: 9,
+            dateTime: 10,
+            responseTime: 11,
+            testRunId: 12,
+            flaggedBy: 13,
+            suggestedCorrection: 14,
+            adminNotes: 15,
+            reviewed: 16
+        };
+
+        let currentUser = 'admin'; // Set from auth if needed
+        let currentRecord = null;
+
+        // QuickBase API wrapper
+        async function makeQuickBaseRequest(method, endpoint, body) {
+            const url = `https://api.quickbase.com/v1/${endpoint}`;
+            const headers = {
+                'QB-Realm-Hostname': QUICKBASE_CONFIG.realm,
+                'Authorization': `QB-USER-TOKEN ${QUICKBASE_CONFIG.userToken}`,
+                'Content-Type': 'application/json'
+            };
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: headers,
+                body: body ? JSON.stringify(body) : null
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`QuickBase error: ${response.status} - ${errorText}`);
+            }
+            
+            return await response.json();
+        }
+
+        // Load Q&A records
+        async function loadQA() {
+            showLoading(true);
+            try {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const sourceFilter = document.getElementById('sourceFilter').value;
+                
+                const queryBody = {
+                    from: QUICKBASE_CONFIG.tableId,
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                    options: {
+                        orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
+                    }
+                };
+                
+                // Build where clause
+                let whereClauses = [];
+                
+                if (statusFilter !== 'all') {
+                    whereClauses.push(`{${FIELD_IDS.status}.EX.'${statusFilter}'}`);
+                }
+                
+                if (sourceFilter !== 'all') {
+                    whereClauses.push(`{${FIELD_IDS.source}.EX.'${sourceFilter}'}`);
+                }
+                
+                if (whereClauses.length > 0) {
+                    queryBody.where = whereClauses.join('AND');
+                }
+                
+                const response = await makeQuickBaseRequest('POST', 'records/query', queryBody);
+                displayQA(response.data);
+                updateStats(response.data);
+                showMessage(`Loaded ${response.data.length} Q&A record(s)`, 'success');
+            } catch (error) {
+                console.error('Load error:', error);
+                showMessage('Error loading Q&A records: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display Q&A records in table
+        function displayQA(records) {
+            const tbody = document.getElementById('qaTableBody');
+            tbody.innerHTML = '';
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No Q&A records found</td></tr>';
+                return;
+            }
+            
+            records.forEach(record => {
+                const row = tbody.insertRow();
+                const date = new Date(record[FIELD_IDS.dateTime]?.value);
+                const question = record[FIELD_IDS.question]?.value || 'No question';
+                const answer = record[FIELD_IDS.answer]?.value || 'No answer';
+                const source = record[FIELD_IDS.source]?.value || 'unknown';
+                const status = record[FIELD_IDS.status]?.value || 'pending';
+                const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
+                const recordId = record[FIELD_IDS.recordId].value;
+                
+                const answerPreview = answer.substring(0, 80) + (answer.length > 80 ? '...' : '');
+                const isDisabled = status !== 'pending' ? 'disabled' : '';
+                
+                row.innerHTML = `
+                    <td class="checkbox-col">
+                        <input type="checkbox" class="qa-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}>
+                    </td>
+                    <td>${date.toLocaleDateString()}<br><small>${date.toLocaleTimeString()}</small></td>
+                    <td><span class="badge badge-${source}">${source}</span></td>
+                    <td>${question}</td>
+                    <td class="preview">${answerPreview}</td>
+                    <td>${responseTime}ms</td>
+                    <td><span class="badge badge-${status}">${status}</span></td>
+                    <td>
+                        <button class="btn btn-primary btn-small" onclick="viewRecord(${recordId})">
+                            Review
+                        </button>
+                    </td>
+                `;
+            });
+        }
+
+        // Update statistics
+        function updateStats(records) {
+            const total = records.length;
+            const pending = records.filter(r => r[FIELD_IDS.status]?.value === 'pending').length;
+            const correct = records.filter(r => r[FIELD_IDS.status]?.value === 'correct').length;
+            const incorrect = records.filter(r => r[FIELD_IDS.status]?.value === 'incorrect').length;
+            
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statCorrect').textContent = correct;
+            document.getElementById('statIncorrect').textContent = incorrect;
+        }
+
+        // View individual record
+        async function viewRecord(recordId) {
+            try {
+                showLoading(true);
+                const response = await makeQuickBaseRequest('POST', 'records/query', {
+                    from: QUICKBASE_CONFIG.tableId,
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                    where: `{${FIELD_IDS.recordId}.EX.${recordId}}`
+                });
+
+                if (response.data.length === 0) {
+                    showMessage('Record not found', 'error');
+                    return;
+                }
+
+                currentRecord = response.data[0];
+                displayRecordDetails(currentRecord);
+                document.getElementById('reviewModal').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error loading record: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display record details in modal
+        function displayRecordDetails(record) {
+            const date = new Date(record[FIELD_IDS.dateTime]?.value);
+            const question = record[FIELD_IDS.question]?.value || 'No question';
+            const answer = record[FIELD_IDS.answer]?.value || 'No answer';
+            const source = record[FIELD_IDS.source]?.value || 'unknown';
+            const status = record[FIELD_IDS.status]?.value || 'pending';
+            const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
+            const testRunId = record[FIELD_IDS.testRunId]?.value || 'N/A';
+            const flaggedBy = record[FIELD_IDS.flaggedBy]?.value || 'N/A';
+            const suggestedCorrection = record[FIELD_IDS.suggestedCorrection]?.value || '';
+            const adminNotes = record[FIELD_IDS.adminNotes]?.value || '';
+            const recordId = record[FIELD_IDS.recordId].value;
+
+            const detailsHtml = `
+                <div class="submission-details">
+                    <div class="detail-row">
+                        <div class="detail-col">
+                            <strong>Date:</strong>
+                            ${date.toLocaleDateString()}<br>
+                            ${date.toLocaleTimeString()}
+                        </div>
+                        <div class="detail-col">
+                            <strong>Source:</strong>
+                            <span class="badge badge-${source}">${source}</span>
+                        </div>
+                        <div class="detail-col">
+                            <strong>Response Time:</strong>
+                            ${responseTime}ms
+                        </div>
+                        <div class="detail-col">
+                            <strong>Status:</strong>
+                            <span class="badge badge-${status}">${status}</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-col">
+                            <strong>Test Run ID:</strong>
+                            ${testRunId}
+                        </div>
+                        <div class="detail-col">
+                            <strong>Flagged By:</strong>
+                            ${flaggedBy}
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-col-full">
+                            <strong>Question:</strong>
+                            <div class="question-display">${question}</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-col-full">
+                            <strong>Answer: <em style="color: #666; font-size: 0.9em; margin-left: 10px; font-weight: normal;">(editable - make changes before marking as correct)</em></strong>
+                            <textarea id="answerEdit" class="answer-edit">${answer}</textarea>
+                        </div>
+                    </div>
+
+                    ${suggestedCorrection ? `
+                    <div class="detail-row">
+                        <div class="detail-col-full">
+                            <strong>Suggested Correction:</strong>
+                            <div style="background: #fff3cd; padding: 12px; border-radius: 4px; margin-top: 5px;">
+                                ${suggestedCorrection}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="detail-row">
+                        <div class="detail-col-full">
+                            <strong>Admin Notes:</strong>
+                            <textarea id="adminNotesEdit" class="notes-textarea" placeholder="Add notes about this Q&A (optional)...">${adminNotes}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-success" onclick="markAsCorrect(${recordId})">
+                            ✓ Mark as Correct
+                        </button>
+                        <button class="btn btn-danger" onclick="markAsIncorrect(${recordId})">
+                            ✗ Mark as Incorrect
+                        </button>
+                        <button class="btn btn-secondary" onclick="markNeedsReview(${recordId})">
+                            ⚠ Needs Review
+                        </button>
+                        <button class="btn" onclick="closeModal()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('modalBody').innerHTML = detailsHtml;
+        }
+
+        // Mark as correct
+        async function markAsCorrect(recordId) {
+            const editedAnswer = document.getElementById('answerEdit').value;
+            const adminNotes = document.getElementById('adminNotesEdit').value;
+
+            try {
+                showLoading(true);
+                
+                await makeQuickBaseRequest('POST', 'records', {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        [FIELD_IDS.recordId]: { value: recordId },
+                        [FIELD_IDS.answer]: { value: editedAnswer },
+                        [FIELD_IDS.status]: { value: 'correct' },
+                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.reviewed]: { value: true }
+                    }]
+                });
+
+                showMessage('Marked as correct!', 'success');
+                closeModal();
+                loadQA();
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error updating record: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Mark as incorrect
+        async function markAsIncorrect(recordId) {
+            const adminNotes = document.getElementById('adminNotesEdit').value;
+
+            if (!confirm('Mark this Q&A as incorrect?')) {
+                return;
+            }
+
+            try {
+                showLoading(true);
+                
+                await makeQuickBaseRequest('POST', 'records', {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        [FIELD_IDS.recordId]: { value: recordId },
+                        [FIELD_IDS.status]: { value: 'incorrect' },
+                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.reviewed]: { value: true }
+                    }]
+                });
+
+                showMessage('Marked as incorrect!', 'success');
+                closeModal();
+                loadQA();
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error updating record: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Mark as needs review
+        async function markNeedsReview(recordId) {
+            const adminNotes = document.getElementById('adminNotesEdit').value;
+
+            try {
+                showLoading(true);
+                
+                await makeQuickBaseRequest('POST', 'records', {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        [FIELD_IDS.recordId]: { value: recordId },
+                        [FIELD_IDS.status]: { value: 'needs_review' },
+                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.reviewed]: { value: false }
+                    }]
+                });
+
+                showMessage('Marked as needs review!', 'info');
+                closeModal();
+                loadQA();
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error updating record: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Bulk actions
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.qa-checkbox:not([disabled])');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBulkActions();
+        }
+
+        function updateBulkActions() {
+            const checkboxes = document.querySelectorAll('.qa-checkbox:checked');
+            const count = checkboxes.length;
+            const bulkBar = document.getElementById('bulkActionsBar');
+            const selectAll = document.getElementById('selectAll');
+            
+            document.getElementById('selectedCount').textContent = count;
+            
+            if (count > 0) {
+                bulkBar.style.display = 'flex';
+            } else {
+                bulkBar.style.display = 'none';
+                selectAll.checked = false;
+            }
+        }
+
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.qa-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            document.getElementById('selectAll').checked = false;
+            updateBulkActions();
+        }
+
+        function getSelectedRecordIds() {
+            const checkboxes = document.querySelectorAll('.qa-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.getAttribute('data-record-id'));
+        }
+
+        async function bulkMarkCorrect() {
+            const recordIds = getSelectedRecordIds();
+            if (recordIds.length === 0) {
+                showMessage('No records selected', 'error');
+                return;
+            }
+
+            if (!confirm(`Mark ${recordIds.length} record(s) as correct?`)) {
+                return;
+            }
+
+            showLoading(true);
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const recordId of recordIds) {
+                try {
+                    await makeQuickBaseRequest('POST', 'records', {
+                        to: QUICKBASE_CONFIG.tableId,
+                        data: [{
+                            [FIELD_IDS.recordId]: { value: recordId },
+                            [FIELD_IDS.status]: { value: 'correct' },
+                            [FIELD_IDS.reviewed]: { value: true }
+                        }]
+                    });
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error marking ${recordId}:`, error);
+                    errorCount++;
+                }
+            }
+
+            showLoading(false);
+            showMessage(`Marked correct: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error');
+            clearSelection();
+            loadQA();
+        }
+
+        async function bulkMarkIncorrect() {
+            const recordIds = getSelectedRecordIds();
+            if (recordIds.length === 0) {
+                showMessage('No records selected', 'error');
+                return;
+            }
+
+            if (!confirm(`Mark ${recordIds.length} record(s) as incorrect?`)) {
+                return;
+            }
+
+            showLoading(true);
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const recordId of recordIds) {
+                try {
+                    await makeQuickBaseRequest('POST', 'records', {
+                        to: QUICKBASE_CONFIG.tableId,
+                        data: [{
+                            [FIELD_IDS.recordId]: { value: recordId },
+                            [FIELD_IDS.status]: { value: 'incorrect' },
+                            [FIELD_IDS.reviewed]: { value: true }
+                        }]
+                    });
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error marking ${recordId}:`, error);
+                    errorCount++;
+                }
+            }
+
+            showLoading(false);
+            showMessage(`Marked incorrect: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error');
+            clearSelection();
+            loadQA();
+        }
+
+        // Utility functions
+        function closeModal() {
+            document.getElementById('reviewModal').style.display = 'none';
+            currentRecord = null;
+        }
+
+        function showMessage(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = message;
+            statusMessage.className = `status-${type}`;
+            statusMessage.style.display = 'block';
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('reviewModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadQA();
+            // Hide bulk actions bar initially
+            document.getElementById('bulkActionsBar').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
