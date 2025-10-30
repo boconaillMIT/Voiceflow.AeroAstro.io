@@ -784,19 +784,19 @@
         }
 
         // Update statistics
-        function updateStats() {
-            const total = allRecords.length;
-            const correct = allRecords.filter(r => r['12']?.value === 'Correct').length;
-            const incorrect = allRecords.filter(r => r['12']?.value === 'Incorrect').length;
-            const unreviewed = allRecords.filter(r => {
-                const status = r['12']?.value;
-                return !status || status === '' || status === 'pending' || status === 'needs_review' || status === 'NEEDS_REVIEW';
+        function updateStats(records) {
+            const total = records.length;
+            const correct = records.filter(r => r[FIELD_IDS.status]?.value === 'correct').length;
+            const incorrect = records.filter(r => r[FIELD_IDS.status]?.value === 'incorrect').length;
+            const unreviewed = records.filter(r => {
+                const status = r[FIELD_IDS.status]?.value;
+                return !status || status === '' || status === 'pending' || status === 'needs_review';
             }).length;
             
-            document.getElementById('totalCount').textContent = total;
-            document.getElementById('correctCount').textContent = correct;
-            document.getElementById('incorrectCount').textContent = incorrect;
-            document.getElementById('unreviewedCount').textContent = unreviewed;
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statCorrect').textContent = correct;
+            document.getElementById('statIncorrect').textContent = incorrect;
+            document.getElementById('statPending').textContent = unreviewed;
         }
 
         // View individual record
