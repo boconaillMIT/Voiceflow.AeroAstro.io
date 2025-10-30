@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voiceflow Chatbot Tester v6.0 - Final</title>
+    <title>Voiceflow Chatbot Tester v7.0 - QuickBase Integration</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -383,8 +383,8 @@
 <body>
     <div class="header">
         <h1>🔬 Voiceflow Chatbot Tester</h1>
-        <p>Production Testing - Verified Working Configuration</p>
-        <span class="version-badge">v6.0 Final - Complete Testing Suite</span>
+        <p>Automated Testing with QuickBase Logging</p>
+        <span class="version-badge">v7.0 QuickBase Integration</span>
     </div>
 
     <div class="container">
@@ -421,6 +421,41 @@
                 </select>
                 <small style="color: #666; font-size: 12px;">Try Development if Production fails</small>
             </div>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+            <h3>📊 QuickBase Configuration</h3>
+            
+            <div class="input-group">
+                <label for="qbEnabled">Enable QuickBase Logging:</label>
+                <input type="checkbox" id="qbEnabled" checked style="width: auto; margin: 10px 0;" />
+                <small style="color: #666; font-size: 12px;">Log all Q&As to QuickBase database</small>
+            </div>
+
+            <div class="input-group">
+                <label for="qbRealm">QB Realm:</label>
+                <input type="text" id="qbRealm" value="mit.quickbase.com" />
+            </div>
+
+            <div class="input-group">
+                <label for="qbToken">QB User Token:</label>
+                <input type="text" id="qbToken" value="b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h" />
+                <small style="color: #666; font-size: 12px;">From: My Preferences → Manage User Tokens</small>
+            </div>
+
+            <div class="input-group">
+                <label for="qbTableId">QB Table ID:</label>
+                <input type="text" id="qbTableId" value="bvi4py32v" />
+                <small style="color: #666; font-size: 12px;">From table URL: /db/bxxxxxxxx</small>
+            </div>
+
+            <div id="qbStatus" class="status info" style="font-size: 12px;">
+                📊 QuickBase ready - will log after each Q&A
+            </div>
+
+            <button onclick="testQuickBaseConnection()" class="gray" style="font-size: 12px;">🧪 Test QB Connection</button>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
 
             <button onclick="runFullDiagnostic()" class="purple">🔬 Run Full Diagnostic</button>
             <button onclick="testConnection()" class="orange">🔌 Quick Connection Test</button>
@@ -511,7 +546,7 @@
     </div>
 
     <script>
-        console.log('🚀 Voiceflow Tester v6.0 Final - Complete Testing Suite');
+        console.log('🚀 Voiceflow Tester v7.0 - QuickBase Integration');
         
         // Load selected API key from dropdown
         function loadSelectedApiKey() {
@@ -582,6 +617,123 @@
                 })
             }
         };
+
+        // QuickBase Integration
+        async function writeToQuickBase(question, answer, metadata = {}) {
+            // Check if QB logging is enabled
+            if (!document.getElementById('qbEnabled').checked) {
+                addDiagnosticLog('QuickBase logging disabled - skipping', 'info');
+                return { success: true, skipped: true };
+            }
+
+            const realm = document.getElementById('qbRealm').value.trim();
+            const token = document.getElementById('qbToken').value.trim();
+            const tableId = document.getElementById('qbTableId').value.trim();
+
+            if (!realm || !token || !tableId) {
+                addDiagnosticLog('QuickBase config incomplete - skipping write', 'warning');
+                return { success: false, error: 'Incomplete config' };
+            }
+
+            // Generate test run ID if not provided
+            const testRunId = metadata.testRunId || `test_${new Date().toISOString().split('T')[0]}_${Date.now()}`;
+
+            // Build QuickBase API request
+            const qbUrl = `https://api.quickbase.com/v1/records`;
+            const qbHeaders = {
+                'QB-Realm-Hostname': realm,
+                'Authorization': `QB-USER-TOKEN ${token}`,
+                'Content-Type': 'application/json'
+            };
+
+            const qbBody = {
+                "to": tableId,
+                "data": [
+                    {
+                        "6": {"value": question},           // question field
+                        "7": {"value": answer},            // answer field
+                        "8": {"value": metadata.source || "tester"},  // source field
+                        "9": {"value": "pending"},         // status field
+                        "10": {"value": new Date().toISOString()},  // date_time field
+                        "11": {"value": metadata.responseTime || 0}, // response_time_ms field
+                        "12": {"value": testRunId},        // test_run_id field
+                        "13": {"value": metadata.flaggedBy || ""}, // flagged_by field
+                        "14": {"value": metadata.suggestedCorrection || ""}, // suggested_correction field
+                        "15": {"value": metadata.adminNotes || ""}, // admin_notes field
+                        "16": {"value": false}             // reviewed field
+                    }
+                ],
+                "fieldsToReturn": [3]  // Return record ID
+            };
+
+            addDiagnosticLog('Writing to QuickBase...', 'info', {
+                table: tableId,
+                question: question.substring(0, 50) + '...',
+                answer: answer.substring(0, 50) + '...'
+            });
+
+            try {
+                const response = await fetch(qbUrl, {
+                    method: 'POST',
+                    headers: qbHeaders,
+                    body: JSON.stringify(qbBody)
+                });
+
+                const responseData = await response.json();
+
+                if (response.ok) {
+                    const recordId = responseData.data?.[0]?.[3]?.value || 'unknown';
+                    addDiagnosticLog(`✅ QuickBase write successful - Record ID: ${recordId}`, 'success');
+                    updateQBStatus(`✅ Last write: ${new Date().toLocaleTimeString()}`, 'success');
+                    return { success: true, recordId, data: responseData };
+                } else {
+                    addDiagnosticLog(`❌ QuickBase write failed: ${response.status}`, 'error', responseData);
+                    updateQBStatus(`❌ Write failed: ${response.status}`, 'error');
+                    return { success: false, status: response.status, error: responseData };
+                }
+            } catch (error) {
+                addDiagnosticLog(`❌ QuickBase error: ${error.message}`, 'error');
+                updateQBStatus(`❌ Error: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Update QuickBase status display
+        function updateQBStatus(message, type = 'info') {
+            const qbStatus = document.getElementById('qbStatus');
+            qbStatus.className = `status ${type}`;
+            qbStatus.textContent = message;
+        }
+
+        // Test QuickBase connection
+        async function testQuickBaseConnection() {
+            addDiagnosticLog('Testing QuickBase connection...', 'info');
+            updateQBStatus('🔄 Testing connection...', 'info');
+            
+            const testQuestion = "Test question from tester";
+            const testAnswer = `Test answer - ${new Date().toLocaleString()}`;
+            
+            const result = await writeToQuickBase(testQuestion, testAnswer, {
+                source: 'tester',
+                responseTime: 0,
+                adminNotes: 'This is a test record - safe to delete'
+            });
+            
+            if (result.success) {
+                if (result.skipped) {
+                    updateQBStatus('⚠️ QB logging is disabled', 'warning');
+                    setStatus('QuickBase logging is disabled - enable it to test', 'warning');
+                } else {
+                    updateQBStatus(`✅ Connection successful! Record ID: ${result.recordId}`, 'success');
+                    setStatus('✅ QuickBase connection verified!', 'success');
+                    addSystemMessage('QuickBase test record created successfully');
+                }
+            } else {
+                updateQBStatus(`❌ Connection failed: ${result.error}`, 'error');
+                setStatus(`❌ QuickBase connection failed: ${result.error}`, 'error');
+                addSystemMessage('QuickBase connection test failed', true);
+            }
+        }
 
         // Diagnostic logging
         function addDiagnosticLog(message, type = 'info', data = null) {
@@ -1149,6 +1301,13 @@
                     
                     qaResults.push(result);
                     
+                    // Write to QuickBase
+                    await writeToQuickBase(question, answer, {
+                        responseTime: responseTime,
+                        source: 'tester',
+                        testRunId: `test_${Date.now()}`
+                    });
+                    
                     // Update UI
                     updateAnswerInTranscript(index, answer, responseTime);
                     
@@ -1174,6 +1333,14 @@
                         responseTime,
                         error: true
                     });
+                    
+                    // Write error to QuickBase
+                    await writeToQuickBase(question, errorMsg, {
+                        responseTime: responseTime,
+                        source: 'tester',
+                        testRunId: `test_${Date.now()}`,
+                        adminNotes: `API Error: ${response.status}`
+                    });
                 }
             } catch (error) {
                 addDiagnosticLog(`Exception Q${index + 1}: ${error.message}`, 'error', error);
@@ -1190,6 +1357,14 @@
                     answer: errorMsg,
                     responseTime: Date.now() - startTime,
                     error: true
+                });
+                
+                // Write exception to QuickBase
+                await writeToQuickBase(question, errorMsg, {
+                    responseTime: Date.now() - startTime,
+                    source: 'tester',
+                    testRunId: `test_${Date.now()}`,
+                    adminNotes: `Exception: ${error.message}`
                 });
             }
             
@@ -1388,10 +1563,24 @@
 
         // Initialize on page load
         window.addEventListener('load', () => {
-            addDiagnosticLog('=== TESTER v6.0 FINAL - COMPLETE TESTING SUITE ===', 'success');
+            addDiagnosticLog('=== TESTER v7.0 - QUICKBASE INTEGRATION ===', 'success');
             setStatus('💡 Enter API key and run diagnostic to begin', 'info');
-            addSystemMessage('Tester v6.0 Final - Complete Testing Suite Ready');
-            addDiagnosticLog('Ready to test multiple API endpoints', 'info');
+            addSystemMessage('Tester v7.0 - QuickBase Integration Ready');
+            addDiagnosticLog('Ready to test and log to QuickBase', 'info');
+            
+            // Check QB config
+            const qbEnabled = document.getElementById('qbEnabled').checked;
+            const qbRealm = document.getElementById('qbRealm').value.trim();
+            const qbToken = document.getElementById('qbToken').value.trim();
+            const qbTableId = document.getElementById('qbTableId').value.trim();
+            
+            if (qbEnabled && qbRealm && qbToken && qbTableId) {
+                addDiagnosticLog('QuickBase configuration detected', 'success');
+                updateQBStatus('📊 QuickBase ready - will log after each Q&A', 'success');
+            } else if (qbEnabled) {
+                addDiagnosticLog('QuickBase enabled but incomplete config', 'warning');
+                updateQBStatus('⚠️ QuickBase config incomplete', 'warning');
+            }
         });
 
         // API key input listener
