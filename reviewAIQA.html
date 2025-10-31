@@ -740,7 +740,12 @@
                 showLoading(false);
             }
         }
-
+// Add this function BEFORE displayQA()
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
         // Display Q&A records in table
 function displayQA(records) {
     const tbody = document.getElementById('qaTableBody');
@@ -757,8 +762,8 @@ function displayQA(records) {
         try {
             const row = tbody.insertRow();
             const date = new Date(record[FIELD_IDS.dateTime]?.value);
-            const question = record[FIELD_IDS.question]?.value || 'No question';
-            const answer = record[FIELD_IDS.answer]?.value || 'No answer';
+            const question = escapeHtml(record[FIELD_IDS.question]?.value || 'No question');
+            const answer = escapeHtml(record[FIELD_IDS.answer]?.value || 'No answer');
             const source = record[FIELD_IDS.source]?.value || 'unknown';
             const status = record[FIELD_IDS.status]?.value || 'pending';
             const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
