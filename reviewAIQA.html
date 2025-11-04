@@ -613,7 +613,11 @@
             </div>
             <button class="btn btn-primary" onclick="loadQA()">🔄 Refresh</button>
         </div>
-
+        
+        <button class="btn btn-success" onclick="openCreateModal()" style="margin-left: 15px;">
+            ➕ Create New Q&A
+        </button>
+        
         <!-- Bulk Actions -->
         <div id="bulkActionsBar" class="bulk-actions">
             <span class="bulk-actions-text"><span id="selectedCount">0</span> selected</span>
@@ -648,7 +652,67 @@
             <div id="modalBody"></div>
         </div>
     </div>
-
+    <!-- Create Q&A Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCreateModal()">&times;</span>
+            <h2>Create New Q&A Pair</h2>
+            
+            <div class="submission-details">
+                <div class="detail-row">
+                    <div class="detail-col-full">
+                        <strong>Question:</strong>
+                        <input type="text" id="newQuestion" class="answer-edit" 
+                               placeholder="Enter question..." style="min-height: 60px; width: 100%; padding: 10px;">
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-col-full">
+                        <strong>Answer:</strong>
+                        <textarea id="newAnswer" class="answer-edit" rows="8"
+                                  placeholder="Enter answer..." style="width: 100%; padding: 10px;"></textarea>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-col">
+                        <strong>Source:</strong>
+                        <select id="newSource" style="padding: 10px; border-radius: 6px; width: 100%; border: 1px solid #ddd;">
+                            <option value="manual">Manual Entry</option>
+                            <option value="tester">Tester</option>
+                            <option value="production">Production</option>
+                        </select>
+                    </div>
+                    <div class="detail-col">
+                        <strong>Status:</strong>
+                        <select id="newStatus" style="padding: 10px; border-radius: 6px; width: 100%; border: 1px solid #ddd;">
+                            <option value="correct">Correct</option>
+                            <option value="pending">Pending Review</option>
+                            <option value="needs_review">Needs Review</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-col-full">
+                        <strong>Admin Notes (Optional):</strong>
+                        <textarea id="newNotes" class="notes-textarea" rows="3"
+                                  placeholder="Optional notes about this Q&A..." style="width: 100%; padding: 10px;"></textarea>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-success" onclick="createNewQA()">
+                        ✓ Create Q&A
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeCreateModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
         const QUICKBASE_CONFIG = {
             realm: 'mit.quickbase.com',
@@ -668,9 +732,15 @@
             flaggedBy: 13,
             suggestedCorrection: 14,
             adminNotes: 15,
-            reviewed: 16
+            reviewed: 16,
+            useCount: 17,
+            normalizedQuestion: 18
         };
-
+        // Webhook URLs
+        const WEBHOOKS = {
+            logQA: 'https://hook.us2.make.com/twbzqu650b6hdt2dckxi7luu09qkuivj'
+        };
+        
         let currentUser = 'admin'; // Set from auth if needed
         let currentRecord = null;
         let allRecords = []; // Store loaded records
@@ -740,12 +810,107 @@
                 showLoading(false);
             }
         }
-// Add this function BEFORE displayQA()
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+
+        // Open create modal
+        function openCreateModal() {
+            document.getElementById('createModal').style.display = 'block';
+            // Clear fields
+            document.getElementById('newQuestion').value = '';
+            document.getElementById('newAnswer').value = '';
+            document.getElementById('newSource').value = 'manual';
+            document.getElementById('newStatus').value = 'correct';
+            document.getElementById('newNotes').value = '';
+        }
+        
+        // Close create modal
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const createModal = document.getElementById('createModal');
+            if (event.target == createModal) {
+                closeCreateModal();
+            }
+        }
+        
+        // Create new Q&A via webhook
+        async function createNewQA() {
+            const question = document.getElementById('newQuestion').value.trim();
+            const answer = document.getElementById('newAnswer').value.trim();
+            const source = document.getElementById('newSource').value;
+            const status = document.getElementById('newStatus').value;
+            const notes = document.getElementById('newNotes').value.trim();
+            
+            // Validation
+            if (!question) {
+                showMessage('Question is required', 'error');
+                document.getElementById('newQuestion').focus();
+                return;
+            }
+            if (!answer) {
+                showMessage('Answer is required', 'error');
+                document.getElementById('newAnswer').focus();
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                // Call webhook to log Q&A
+                const response = await fetch(WEBHOOKS.logQA, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        question: question,
+                        answer: answer,
+                        source: source,
+                        status: status,
+                        responseTime: 0,
+                        testRunId: '',
+                        adminNotes: notes
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.action === 'incremented') {
+                        showMessage(`Q&A already exists! Use count incremented to ${result.useCount}.`, 'warning');
+                    } else {
+                        showMessage(`Q&A created successfully! Record ID: ${result.recordId}`, 'success');
+                    }
+                    closeCreateModal();
+                    loadQA(); // Reload the list
+                } else {
+                    throw new Error(result.message || 'Failed to create Q&A');
+                }
+                
+            } catch (error) {
+                console.error('Error creating Q&A:', error);
+                showMessage('Error creating Q&A: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Show message helper (if not already exists)
+        function showMessage(message, type) {
+            // Check if showMessage already exists in your code
+            // If not, add this simple version:
+            alert(message);
+            // Or implement a nicer toast notification
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // Display Q&A records in table
         function displayQA(records) {
