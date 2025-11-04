@@ -926,7 +926,12 @@
                 const row = tbody.insertRow();
                 const date = new Date(record[FIELD_IDS.dateTime]?.value);
                 const question = record[FIELD_IDS.question]?.value || 'No question';
-                const answer = record[FIELD_IDS.answer]?.value || 'No answer';
+                let answer = record[FIELD_IDS.answer]?.value || 'No answer';
+                try {
+                    answer = atob(answer);
+                } catch (e) {
+                    console.warn('Invalid base64 for record', record, e);
+                }
                 const source = record[FIELD_IDS.source]?.value || 'unknown';
                 const status = record[FIELD_IDS.status]?.value || 'pending';
                 const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
