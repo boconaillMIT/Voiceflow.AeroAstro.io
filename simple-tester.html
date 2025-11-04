@@ -1466,7 +1466,14 @@
             
             if (answerDiv) {
                 answerDiv.className = `qa-answer ${isError ? 'error' : ''}`;
-                answerDiv.textContent = answer;
+                // Decode base64 if it looks like base64
+                try {
+                    const decodedAnswer = atob(answer);
+                    answerDiv.textContent = decodedAnswer;
+                } catch (e) {
+                    // If decode fails, just show as-is (might be error message)
+                    answerDiv.textContent = answer;
+                }
                 
                 // Add metadata
                 const metaDiv = document.createElement('div');
