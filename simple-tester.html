@@ -556,7 +556,9 @@
 
     <script>
         console.log('🚀 Voiceflow Tester v7.0 - QuickBase Integration');
-        
+           const WEBHOOKS = {
+                logQA: 'https://hook.us2.make.com/twbzqu650b6hdt2dckxi7luu09qkuivj'
+        }; 
         // Load selected API key from dropdown
         function loadSelectedApiKey() {
             const select = document.getElementById('apiKeySelect');
@@ -634,76 +636,60 @@
                 addDiagnosticLog('QuickBase logging disabled - skipping', 'info');
                 return { success: true, skipped: true };
             }
-
-            const realm = document.getElementById('qbRealm').value.trim();
-            const token = document.getElementById('qbToken').value.trim();
-            const tableId = document.getElementById('qbTableId').value.trim();
-
-            if (!realm || !token || !tableId) {
-                addDiagnosticLog('QuickBase config incomplete - skipping write', 'warning');
-                return { success: false, error: 'Incomplete config' };
-            }
-
-            // Generate test run ID if not provided
-            const testRunId = metadata.testRunId || `test_${new Date().toISOString().split('T')[0]}_${Date.now()}`;
-
-            // Build QuickBase API request
-            const qbUrl = `https://api.quickbase.com/v1/records`;
-            const qbHeaders = {
-                'QB-Realm-Hostname': realm,
-                'Authorization': `QB-USER-TOKEN ${token}`,
-                'Content-Type': 'application/json'
-            };
-
-            const qbBody = {
-                "to": tableId,
-                "data": [
-                    {
-                        "6": {"value": question},           // question field
-                        "7": {"value": answer},            // answer field
-                        "8": {"value": metadata.source || "tester"},  // source field
-                        "9": {"value": "pending"},         // status field
-                        "10": {"value": new Date().toISOString()},  // date_time field
-                        "11": {"value": metadata.responseTime || 0}, // response_time_ms field
-                        "12": {"value": testRunId},        // test_run_id field
-                        "13": {"value": metadata.flaggedBy || ""}, // flagged_by field
-                        "14": {"value": metadata.suggestedCorrection || ""}, // suggested_correction field
-                        "15": {"value": metadata.adminNotes || ""}, // admin_notes field
-                        "16": {"value": false}             // reviewed field
-                    }
-                ],
-                "fieldsToReturn": [3]  // Return record ID
-            };
-
-            addDiagnosticLog('Writing to QuickBase...', 'info', {
-                table: tableId,
-                question: question.substring(0, 50) + '...',
-                answer: answer.substring(0, 50) + '...'
-            });
-
+        
             try {
-                const response = await fetch(qbUrl, {
-                    method: 'POST',
-                    headers: qbHeaders,
-                    body: JSON.stringify(qbBody)
+                addDiagnosticLog('Logging to QuickBase via webhook...', 'info', {
+                    question: question.substring(0, 50) + '...',
+                    answer: answer.substring(0, 50) + '...'
                 });
-
-                const responseData = await response.json();
-
-                if (response.ok) {
-                    const recordId = responseData.data?.[0]?.[3]?.value || 'unknown';
-                    addDiagnosticLog(`✅ QuickBase write successful - Record ID: ${recordId}`, 'success');
-                    updateQBStatus(`✅ Last write: ${new Date().toLocaleTimeString()}`, 'success');
-                    return { success: true, recordId, data: responseData };
-                } else {
-                    addDiagnosticLog(`❌ QuickBase write failed: ${response.status}`, 'error', responseData);
-                    updateQBStatus(`❌ Write failed: ${response.status}`, 'error');
-                    return { success: false, status: response.status, error: responseData };
+        
+                const response = await fetch(WEBHOOKS.logQA, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        answer: answer,
+                        source: 'tester',
+                        status: 'pending',
+                        responseTime: metadata.responseTime || 0,
+                        testRunId: metadata.testRunId || `test_${Date.now()}`,
+                        adminNotes: metadata.adminNotes || ''
+                    })
+                });
+        
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
+        
+                const result = await response.json();
+                
+                if (result.success) {
+                    const actionMsg = result.action === 'incremented' 
+                        ? `incremented to ${result.useCount}` 
+                        : 'created';
+                    
+                    addDiagnosticLog(`✅ QuickBase ${actionMsg} - Record ${result.recordId}`, 'success');
+                    updateQBStatus(`✅ Last write: ${new Date().toLocaleTimeString()} (${result.action})`, 'success');
+                    
+                    return {
+                        success: true,
+                        recordId: result.recordId,
+                        action: result.action,
+                        useCount: result.useCount
+                    };
+                } else {
+                    throw new Error(result.message || 'Unknown error');
+                }
+        
             } catch (error) {
                 addDiagnosticLog(`❌ QuickBase error: ${error.message}`, 'error');
                 updateQBStatus(`❌ Error: ${error.message}`, 'error');
-                return { success: false, error: error.message };
+                return {
+                    success: false,
+                    error: error.message
+                };
             }
         }
 
@@ -1631,18 +1617,16 @@
             // Auto-load default API key
             loadSelectedApiKey();
             
+
             // Check QB config
             const qbEnabled = document.getElementById('qbEnabled').checked;
-            const qbRealm = document.getElementById('qbRealm').value.trim();
-            const qbToken = document.getElementById('qbToken').value.trim();
-            const qbTableId = document.getElementById('qbTableId').value.trim();
             
-            if (qbEnabled && qbRealm && qbToken && qbTableId) {
-                addDiagnosticLog('QuickBase configuration detected', 'success');
-                updateQBStatus('📊 QuickBase ready - will log after each Q&A', 'success');
-            } else if (qbEnabled) {
-                addDiagnosticLog('QuickBase enabled but incomplete config', 'warning');
-                updateQBStatus('⚠️ QuickBase config incomplete', 'warning');
+            if (qbEnabled) {
+                addDiagnosticLog('QuickBase logging enabled (via webhook)', 'success');
+                updateQBStatus('📊 QuickBase ready - will log via webhook', 'success');
+            } else {
+                addDiagnosticLog('QuickBase logging disabled', 'info');
+                updateQBStatus('⚠️ QuickBase logging disabled', 'warning');
             }
         });
 
