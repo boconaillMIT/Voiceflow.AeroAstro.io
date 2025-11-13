@@ -614,9 +614,14 @@
             <button class="btn btn-primary" onclick="loadQA()">🔄 Refresh</button>
         </div>
         
-        <button class="btn btn-success" onclick="openCreateModal()" style="margin-left: 15px;">
-            ➕ Create New Q&A
-        </button>
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+            <button class="btn btn-success" onclick="openCreateModal()">
+                ➕ Create New Q&A
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='https://aeroastrovfbot.netlify.app/reviewai'">
+                📝 Review AI KB Submissions
+            </button>
+        </div>
         
         <!-- Bulk Actions -->
         <div id="bulkActionsBar" class="bulk-actions">
@@ -827,13 +832,38 @@
             document.getElementById('createModal').style.display = 'none';
         }
         
-        // Close modal when clicking outside
+        // Close modal on outside click
         window.onclick = function(event) {
+            const reviewModal = document.getElementById('reviewModal');
             const createModal = document.getElementById('createModal');
+            
+            if (event.target == reviewModal) {
+                closeModal();
+            }
             if (event.target == createModal) {
                 closeCreateModal();
             }
         }
+        
+        // Prevent clicks inside textareas from closing modal
+        document.addEventListener('DOMContentLoaded', function() {
+            loadQA();
+            // Hide bulk actions bar initially
+            document.getElementById('bulkActionsBar').style.display = 'none';
+            
+            // Add event listeners to prevent modal close when editing
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('answer-edit') || 
+                    e.target.classList.contains('notes-textarea') ||
+                    e.target.id === 'answerEdit' ||
+                    e.target.id === 'adminNotesEdit' ||
+                    e.target.id === 'newQuestion' ||
+                    e.target.id === 'newAnswer' ||
+                    e.target.id === 'newNotes') {
+                    e.stopPropagation();
+                }
+            });
+        });
         
         // Create new Q&A via webhook
         async function createNewQA() {
