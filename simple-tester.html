@@ -648,16 +648,19 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        question: question,
-                        answer: answer,
-                        source: 'tester',
-                        status: 'pending',
-                        responseTime: metadata.responseTime || 0,
-                        testRunId: metadata.testRunId || `test_${Date.now()}`,
-                        adminNotes: metadata.adminNotes || ''
-                    })
-                });
+                body: JSON.stringify({
+                    question: question,
+                    answer: answer,
+                    answer_normalized: answer.toLowerCase()
+                        .replace(/[^a-z0-9\s]/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim(),
+                    source: 'tester',
+                    status: 'pending',
+                    responseTime: metadata.responseTime || 0,
+                    testRunId: metadata.testRunId || `test_${Date.now()}`,
+                    adminNotes: metadata.adminNotes || ''
+                })
         
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1422,7 +1425,7 @@
             if (!data || !Array.isArray(data)) {
                 return 'No response';
             }
-
+        
             let texts = [];
             
             for (const item of data) {
@@ -1432,8 +1435,14 @@
                     texts.push(item.payload.message);
                 }
             }
-
-            return texts.length > 0 ? texts.join('\n\n') : 'No response';
+        
+            let result = texts.length > 0 ? texts.join('\n\n') : 'No response';
+            
+            // Filter out the "What can I help you with?" prompt
+            result = result.replace(/What can I help you with\?[\s\S]*$/i, '').trim();
+            result = result.replace(/What else can I help.*$/i, '').trim();
+            
+            return result || 'No response';
         }
 
         // Add question to transcript
