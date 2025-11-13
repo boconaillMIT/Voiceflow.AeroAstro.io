@@ -651,10 +651,7 @@
                 body: JSON.stringify({
                     question: question,
                     answer: answer,
-                    answer_normalized: answer.toLowerCase()
-                        .replace(/[^a-z0-9\s]/g, ' ')
-                        .replace(/\s+/g, ' ')
-                        .trim(),
+                    answer_normalized: answer.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(),
                     source: 'tester',
                     status: 'pending',
                     responseTime: metadata.responseTime || 0,
