@@ -648,19 +648,20 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                body: JSON.stringify({
-                    question: question,
-                    answer: answer,
-                    answer_normalized: answer.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(),
-                    source: 'tester',
-                    status: 'pending',
-                    responseTime: metadata.responseTime || 0,
-                    testRunId: metadata.testRunId || `test_${Date.now()}`,
-                    adminNotes: metadata.adminNotes || ''
-                })
+                    body: JSON.stringify({
+                        question: question,
+                        answer: answer,
+                        answer_normalized: answer.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(),
+                        source: 'tester',
+                        status: 'pending',
+                        responseTime: metadata.responseTime || 0,
+                        testRunId: metadata.testRunId || `test_${Date.now()}`,
+                        adminNotes: metadata.adminNotes || ''
+                    })
+                });  // ← ADD THIS LINE (closing the fetch call)
         
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);  // ← FIX THIS LINE (add parenthesis)
                 }
         
                 const result = await response.json();
