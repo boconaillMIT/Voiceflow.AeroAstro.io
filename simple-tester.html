@@ -1473,22 +1473,16 @@
             
             if (answerDiv) {
                 answerDiv.className = `qa-answer ${isError ? 'error' : ''}`;
-                // Decode base64 if it looks like base64
-                try {
-                    const decodedAnswer = atob(answer);
-                    answerDiv.textContent = decodedAnswer;
-                } catch (e) {
-                    // If decode fails, just show as-is (might be error message)
-                    answerDiv.textContent = answer;
-                }
-                
-                // Add metadata
-                const metaDiv = document.createElement('div');
-                metaDiv.className = 'qa-metadata';
-                metaDiv.innerHTML = `
-                    <span>⏱️ ${(responseTime / 1000).toFixed(2)}s</span>
-                    <span>🕐 ${new Date().toLocaleTimeString()}</span>
-                `;
+                // Answer is already plain text from Voiceflow - just display it
+                answerDiv.textContent = answer;
+                        
+                        // Add metadata
+                        const metaDiv = document.createElement('div');
+                        metaDiv.className = 'qa-metadata';
+                        metaDiv.innerHTML = `
+                            <span>⏱️ ${(responseTime / 1000).toFixed(2)}s</span>
+                            <span>🕐 ${new Date().toLocaleTimeString()}</span>
+                        `;
                 
                 const qaDiv = document.getElementById(`qa-${index}`);
                 if (qaDiv) {
