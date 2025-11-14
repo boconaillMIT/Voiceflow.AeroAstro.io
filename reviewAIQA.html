@@ -1132,19 +1132,16 @@ function sortTable(column) {
             const date = new Date(record[FIELD_IDS.dateTime]?.value);
             const question = record[FIELD_IDS.question]?.value || 'No question';
             
-            // Try field 22 (rich text) first
-            let answer = record[22]?.value || '';
-            
-            // If field 22 is empty, decode field 7 (base64)
-            if (!answer || answer.trim() === '') {
-                const base64Answer = record[FIELD_IDS.answer]?.value || 'No answer';
-                try {
-                    answer = atob(base64Answer);
-                } catch (e) {
-                    console.warn('Invalid base64 for field 7', e);
-                    answer = base64Answer;  // Show as-is if decode fails
-                }
-            }
+        // Try field 22 (rich text) first, then field 7
+        let answer = record[22]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
+        
+        // Both fields store base64, so decode it
+        try {
+            answer = atob(answer);
+        } catch (e) {
+            console.warn('Invalid base64 for answer field', e);
+            // Keep original if decode fails
+        }
             const source = record[FIELD_IDS.source]?.value || 'unknown';
             const status = record[FIELD_IDS.status]?.value || 'pending';
             const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
