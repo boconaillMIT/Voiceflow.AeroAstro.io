@@ -203,6 +203,28 @@
             font-size: 0.9em;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        
+        th:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+        }
+        
+        th.sort-asc::after {
+            content: ' ▲';
+            opacity: 1;
+        }
+        
+        th.sort-desc::after {
+            content: ' ▼';
+            opacity: 1;
         }
         
         tbody tr {
@@ -636,12 +658,12 @@
             <thead>
                 <tr>
                     <th class="checkbox-col"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" title="Select All"></th>
-                    <th>Date</th>
-                    <th>Source</th>
-                    <th>Question</th>
+                    <th class="sortable" onclick="sortTable('date')">Date</th>
+                    <th class="sortable" onclick="sortTable('source')">Source</th>
+                    <th class="sortable" onclick="sortTable('question')">Question</th>
                     <th>Answer Preview</th>
-                    <th>Response Time</th>
-                    <th>Status</th>
+                    <th class="sortable" onclick="sortTable('responseTime')">Response Time</th>
+                    <th class="sortable" onclick="sortTable('status')">Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -739,7 +761,8 @@
             adminNotes: 15,
             reviewed: 16,
             useCount: 17,
-            normalizedQuestion: 18
+            normalizedQuestion: 18,
+            answer_full: 22
         };
         // Webhook URLs
         const WEBHOOKS = {
@@ -749,6 +772,7 @@
         let currentUser = 'admin'; // Set from auth if needed
         let currentRecord = null;
         let allRecords = []; // Store loaded records
+        let currentSort = { column: 'date', order: 'desc' };
         
         // QuickBase API wrapper
         async function makeQuickBaseRequest(method, endpoint, body) {
@@ -782,7 +806,7 @@
                 
                 const queryBody = {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22],
                     options: {
                         orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
                     }
@@ -864,7 +888,71 @@
                 }
             });
         });
+        // Sort table by column
+function sortTable(column) {
+    // Toggle sort order if clicking same column
+    if (currentSort.column === column) {
+        currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.order = 'asc';
+    }
+    
+    // Sort the records
+    const sorted = [...allRecords].sort((a, b) => {
+        let valA, valB;
         
+        switch(column) {
+            case 'date':
+                valA = new Date(a[FIELD_IDS.dateTime]?.value);
+                valB = new Date(b[FIELD_IDS.dateTime]?.value);
+                break;
+            case 'source':
+                valA = (a[FIELD_IDS.source]?.value || '').toLowerCase();
+                valB = (b[FIELD_IDS.source]?.value || '').toLowerCase();
+                break;
+            case 'question':
+                valA = (a[FIELD_IDS.question]?.value || '').toLowerCase();
+                valB = (b[FIELD_IDS.question]?.value || '').toLowerCase();
+                break;
+            case 'responseTime':
+                valA = a[FIELD_IDS.responseTime]?.value || 0;
+                valB = b[FIELD_IDS.responseTime]?.value || 0;
+                break;
+            case 'status':
+                valA = (a[FIELD_IDS.status]?.value || '').toLowerCase();
+                valB = (b[FIELD_IDS.status]?.value || '').toLowerCase();
+                break;
+            default:
+                return 0;
+        }
+        
+        if (valA < valB) return currentSort.order === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSort.order === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    // Update header styling
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    const columnMap = {
+        'date': 1,
+        'source': 2,
+        'question': 3,
+        'responseTime': 5,
+        'status': 6
+    };
+    
+    const headerIndex = columnMap[column];
+    if (headerIndex !== undefined) {
+        const header = document.querySelector(`thead tr`).children[headerIndex];
+        header.classList.add(`sort-${currentSort.order}`);
+    }
+    
+    displayQA(sorted);
+}
         // Create new Q&A via webhook
         async function createNewQA() {
             const question = document.getElementById('newQuestion').value.trim();
@@ -956,7 +1044,8 @@
                 const row = tbody.insertRow();
                 const date = new Date(record[FIELD_IDS.dateTime]?.value);
                 const question = record[FIELD_IDS.question]?.value || 'No question';
-                let answer = record[FIELD_IDS.answer]?.value || 'No answer';
+                // Use answer_full (field 22) if available, fallback to answer (field 7)
+                let answer = record[FIELD_IDS.answer_full]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
                 try {
                     answer = atob(answer);
                 } catch (e) {
@@ -1150,11 +1239,14 @@
             try {
                 showLoading(true);
                 
+                // Base64 encode the answer
+                const encodedAnswer = btoa(editedAnswer);
+                
                 await makeQuickBaseRequest('POST', 'records', {
                     to: QUICKBASE_CONFIG.tableId,
                     data: [{
                         [FIELD_IDS.recordId]: { value: recordId },
-                        [FIELD_IDS.answer]: { value: editedAnswer },
+                        [FIELD_IDS.answer_full]: { value: encodedAnswer },
                         [FIELD_IDS.status]: { value: 'correct' },
                         [FIELD_IDS.adminNotes]: { value: adminNotes },
                         [FIELD_IDS.reviewed]: { value: true }
