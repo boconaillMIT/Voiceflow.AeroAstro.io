@@ -1242,20 +1242,25 @@ function sortTable(column) {
         // Mark as correct
         async function markAsCorrect(recordId) {
             const editedAnswer = document.getElementById('answerEdit').value;
-            const base64Answer = btoa(editedAnswer);
+            const adminNotes = document.getElementById('adminNotesEdit').value;
             
-            await makeQuickBaseRequest('POST', 'records', {
-                to: QUICKBASE_CONFIG.tableId,
-                data: [{
-                    [FIELD_IDS.recordId]: { value: recordId },
-                    [FIELD_IDS.answer]: { value: base64Answer },     // Field 7: base64 (for cache matching)
-                    [22]: { value: editedAnswer },                    // Field 22: rich text (for display)
-                    [FIELD_IDS.status]: { value: 'correct' },
-                    [FIELD_IDS.adminNotes]: { value: adminNotes },
-                    [FIELD_IDS.reviewed]: { value: true }
-                }]
-            });
-
+            try {  // ← ADD THIS
+                showLoading(true);
+                
+                const base64Answer = btoa(editedAnswer);
+                
+                await makeQuickBaseRequest('POST', 'records', {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        [FIELD_IDS.recordId]: { value: recordId },
+                        [FIELD_IDS.answer]: { value: base64Answer },     // Field 7: base64 (for cache matching)
+                        [22]: { value: editedAnswer },                    // Field 22: rich text (for display)
+                        [FIELD_IDS.status]: { value: 'correct' },
+                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.reviewed]: { value: true }
+                    }]
+                });
+        
                 showMessage('Marked as correct!', 'success');
                 closeModal();
                 loadQA();
