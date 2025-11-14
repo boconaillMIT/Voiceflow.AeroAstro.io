@@ -1131,12 +1131,20 @@ function sortTable(column) {
         function displayRecordDetails(record) {
             const date = new Date(record[FIELD_IDS.dateTime]?.value);
             const question = record[FIELD_IDS.question]?.value || 'No question';
-                let answer = record[FIELD_IDS.answer]?.value || 'No answer';
+            
+            // Try field 22 (rich text) first
+            let answer = record[22]?.value || '';
+            
+            // If field 22 is empty, decode field 7 (base64)
+            if (!answer || answer.trim() === '') {
+                const base64Answer = record[FIELD_IDS.answer]?.value || 'No answer';
                 try {
-                    answer = atob(answer);
+                    answer = atob(base64Answer);
                 } catch (e) {
-                    console.warn('Invalid base64 for record', record, e);
+                    console.warn('Invalid base64 for field 7', e);
+                    answer = base64Answer;  // Show as-is if decode fails
                 }
+            }
             const source = record[FIELD_IDS.source]?.value || 'unknown';
             const status = record[FIELD_IDS.status]?.value || 'pending';
             const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
@@ -1234,24 +1242,19 @@ function sortTable(column) {
         // Mark as correct
         async function markAsCorrect(recordId) {
             const editedAnswer = document.getElementById('answerEdit').value;
-            const adminNotes = document.getElementById('adminNotesEdit').value;
-
-            try {
-                showLoading(true);
-                
-                // Base64 encode the answer
-                const encodedAnswer = btoa(editedAnswer);
-                
-                await makeQuickBaseRequest('POST', 'records', {
-                    to: QUICKBASE_CONFIG.tableId,
-                    data: [{
-                        [FIELD_IDS.recordId]: { value: recordId },
-                        [FIELD_IDS.answer_full]: { value: encodedAnswer },
-                        [FIELD_IDS.status]: { value: 'correct' },
-                        [FIELD_IDS.adminNotes]: { value: adminNotes },
-                        [FIELD_IDS.reviewed]: { value: true }
-                    }]
-                });
+            const base64Answer = btoa(editedAnswer);
+            
+            await makeQuickBaseRequest('POST', 'records', {
+                to: QUICKBASE_CONFIG.tableId,
+                data: [{
+                    [FIELD_IDS.recordId]: { value: recordId },
+                    [FIELD_IDS.answer]: { value: base64Answer },     // Field 7: base64 (for cache matching)
+                    [22]: { value: editedAnswer },                    // Field 22: rich text (for display)
+                    [FIELD_IDS.status]: { value: 'correct' },
+                    [FIELD_IDS.adminNotes]: { value: adminNotes },
+                    [FIELD_IDS.reviewed]: { value: true }
+                }]
+            });
 
                 showMessage('Marked as correct!', 'success');
                 closeModal();
