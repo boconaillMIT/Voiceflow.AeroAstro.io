@@ -1337,7 +1337,13 @@
                     
                     // Extract answer
                     const answer = extractAnswer(data);
-                    
+                    // DEBUG: Check what we're getting
+console.log('=== DEBUG ANSWER ===');
+console.log('Question:', question);
+console.log('Answer length:', answer.length);
+console.log('First 100 chars:', answer.substring(0, 100));
+console.log('Looks like base64?', /^[A-Za-z0-9+/=]+$/.test(answer.substring(0, 100)));
+addDiagnosticLog(`Answer preview: ${answer.substring(0, 100)}`, 'info');
                     // Store result
                     const result = {
                         question,
