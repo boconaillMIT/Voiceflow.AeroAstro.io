@@ -775,22 +775,23 @@
         let currentSort = { column: 'date', order: 'desc' };
         
                // Decode base64 with proper UTF-8 handling
-        function decodeBase64UTF8(base64String) {
+        function encodeBase64UTF8(text) {
             try {
-                // Decode base64 to binary string
-                const binaryString = atob(base64String);
+                // Encode text as UTF-8 bytes
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(text);
                 
-                // Convert binary string to byte array
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
+                // Convert bytes to binary string
+                let binaryString = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    binaryString += String.fromCharCode(bytes[i]);
                 }
                 
-                // Decode UTF-8 bytes to proper text
-                return new TextDecoder('utf-8').decode(bytes);
+                // Encode binary string to base64
+                return btoa(binaryString);
             } catch (e) {
-                console.warn('Base64 decode error:', e);
-                return base64String; // Return original if decode fails
+                console.error('Base64 encode error:', e);
+                return text; // Return original if encode fails
             }
         }
         
@@ -976,6 +977,25 @@ function sortTable(column) {
     
     displayQA(sorted);
 }
+        
+        // Check if a string looks like base64
+        function isBase64(str) {
+            if (!str || str.length === 0) return false;
+            if (typeof str !== 'string') return false;
+            
+            // Trim whitespace
+            str = str.trim();
+            
+            // Base64 strings should be multiples of 4 in length
+            if (str.length % 4 !== 0) return false;
+            
+            // Base64 only contains: A-Z, a-z, 0-9, +, /, and = (padding at end)
+            const base64Pattern = /^[A-Za-z0-9+/]+={0,2}$/;
+            
+            return base64Pattern.test(str);
+        }
+        
+        
         // Create new Q&A via webhook
         async function createNewQA() {
             const question = document.getElementById('newQuestion').value.trim();
@@ -1070,7 +1090,9 @@ function sortTable(column) {
                 // Use answer_full (field 22) if available, fallback to answer (field 7)
                 let answer = record[FIELD_IDS.answer_full]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
                 try {
-                    answer = decodeBase64UTF8(answer);
+                     if (isBase64(answer)) {
+                        answer = decodeBase64UTF8(answer);
+                    }
                 } catch (e) {
                     console.warn('Invalid base64 for record', record, e);
                 }
@@ -1157,7 +1179,11 @@ function sortTable(column) {
             
         // Try field 22 (rich text) first, then field 7
         let answer = record[22]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
-        answer = decodeBase64UTF8(answer);
+        
+        // Only decode if it looks like base64
+        if (isBase64(answer)) {
+            answer = decodeBase64UTF8(answer);
+        }
         // Both fields store base64, so decode it with proper UTF-8 handling
         try {
             // Decode base64 to binary string
@@ -1277,7 +1303,7 @@ function sortTable(column) {
             showLoading(true);
             
             // Encode answer to base64 for both fields
-            const base64Answer = btoa(editedAnswer);
+           onst base64Answer = encodeBase64UTF8(editedAnswer); 
             
             await makeQuickBaseRequest('POST', 'records', {
                 to: QUICKBASE_CONFIG.tableId,
