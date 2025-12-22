@@ -774,6 +774,26 @@
         let allRecords = []; // Store loaded records
         let currentSort = { column: 'date', order: 'desc' };
         
+               // Decode base64 with proper UTF-8 handling
+        function decodeBase64UTF8(base64String) {
+            try {
+                // Decode base64 to binary string
+                const binaryString = atob(base64String);
+                
+                // Convert binary string to byte array
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                // Decode UTF-8 bytes to proper text
+                return new TextDecoder('utf-8').decode(bytes);
+            } catch (e) {
+                console.warn('Base64 decode error:', e);
+                return base64String; // Return original if decode fails
+            }
+        }
+        
         // QuickBase API wrapper
         async function makeQuickBaseRequest(method, endpoint, body) {
             const url = `https://api.quickbase.com/v1/${endpoint}`;
@@ -888,6 +908,9 @@
                 }
             });
         });
+
+
+        
         // Sort table by column
 function sortTable(column) {
     // Toggle sort order if clicking same column
@@ -1047,7 +1070,7 @@ function sortTable(column) {
                 // Use answer_full (field 22) if available, fallback to answer (field 7)
                 let answer = record[FIELD_IDS.answer_full]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
                 try {
-                    answer = atob(answer);
+                    answer = decodeBase64UTF8(answer);
                 } catch (e) {
                     console.warn('Invalid base64 for record', record, e);
                 }
@@ -1134,7 +1157,7 @@ function sortTable(column) {
             
         // Try field 22 (rich text) first, then field 7
         let answer = record[22]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
-        
+        answer = decodeBase64UTF8(answer);
         // Both fields store base64, so decode it with proper UTF-8 handling
         try {
             // Decode base64 to binary string
