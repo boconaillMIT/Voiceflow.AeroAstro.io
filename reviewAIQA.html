@@ -773,8 +773,28 @@
         let currentRecord = null;
         let allRecords = []; // Store loaded records
         let currentSort = { column: 'date', order: 'desc' };
+
+// Decode base64 with proper UTF-8 handling
+function decodeBase64UTF8(base64String) {
+    try {
+        // Decode base64 to binary string
+        const binaryString = atob(base64String);
         
-               // Decode base64 with proper UTF-8 handling
+        // Convert binary string to byte array
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Decode UTF-8 bytes to proper text
+        return new TextDecoder('utf-8').decode(bytes);
+    } catch (e) {
+        console.warn('Base64 decode error:', e);
+        return base64String; // Return original if decode fails
+    }
+}
+        
+               // encode base64 with proper UTF-8 handling
         function encodeBase64UTF8(text) {
             try {
                 // Encode text as UTF-8 bytes
@@ -1173,34 +1193,20 @@ function sortTable(column) {
         }
 
         // Display record details in modal
+        // Display record details in modal
         function displayRecordDetails(record) {
             const date = new Date(record[FIELD_IDS.dateTime]?.value);
             const question = record[FIELD_IDS.question]?.value || 'No question';
             
-        // Try field 22 (rich text) first, then field 7
-        let answer = record[22]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
-        
-        // Only decode if it looks like base64
-        if (isBase64(answer)) {
-            answer = decodeBase64UTF8(answer);
-        }
-        // Both fields store base64, so decode it with proper UTF-8 handling
-        try {
-            // Decode base64 to binary string
-            const binaryString = atob(answer);
+            // Try field 22 (rich text) first, then field 7
+            let answer = record[22]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
             
-            // Convert binary string to UTF-8
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+            // Only decode if it looks like base64
+            if (isBase64(answer)) {
+                answer = decodeBase64UTF8(answer);
             }
+            // Otherwise use as-is (already plain text)
             
-            // Decode UTF-8 bytes to proper text
-            answer = new TextDecoder('utf-8').decode(bytes);
-        } catch (e) {
-            console.warn('Invalid base64 for answer field', e);
-            // Keep original if decode fails
-        }
             const source = record[FIELD_IDS.source]?.value || 'unknown';
             const status = record[FIELD_IDS.status]?.value || 'pending';
             const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
@@ -1209,8 +1215,8 @@ function sortTable(column) {
             const suggestedCorrection = record[FIELD_IDS.suggestedCorrection]?.value || '';
             const adminNotes = record[FIELD_IDS.adminNotes]?.value || '';
             const recordId = record[FIELD_IDS.recordId].value;
-
-            const detailsHtml = `
+        
+                      const detailsHtml = `
                 <div class="submission-details">
                     <div class="detail-row">
                         <div class="detail-col">
@@ -1303,7 +1309,7 @@ function sortTable(column) {
             showLoading(true);
             
             // Encode answer to base64 for both fields
-           onst base64Answer = encodeBase64UTF8(editedAnswer); 
+           const base64Answer = encodeBase64UTF8(editedAnswer); 
             
             await makeQuickBaseRequest('POST', 'records', {
                 to: QUICKBASE_CONFIG.tableId,
