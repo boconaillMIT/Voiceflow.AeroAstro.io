@@ -793,6 +793,76 @@ function decodeBase64UTF8(base64String) {
         return base64String; // Return original if decode fails
     }
 }
+
+// Normalize text for searching (matches Voiceflow normalization)
+function normalizeText(text) {
+    if (!text) return '';
+    
+    // Expand contractions
+    const contractions = {
+        "who's": "who is",
+        "what's": "what is",
+        "where's": "where is",
+        "how's": "how is",
+        "it's": "it is",
+        "that's": "that is",
+        "there's": "there is",
+        "here's": "here is",
+        "he's": "he is",
+        "she's": "she is",
+        "can't": "cannot",
+        "won't": "will not",
+        "don't": "do not",
+        "doesn't": "does not",
+        "didn't": "did not",
+        "isn't": "is not",
+        "aren't": "are not",
+        "wasn't": "was not",
+        "weren't": "were not",
+        "haven't": "have not",
+        "hasn't": "has not",
+        "hadn't": "had not",
+        "wouldn't": "would not",
+        "shouldn't": "should not",
+        "couldn't": "could not",
+        "i'm": "i am",
+        "you're": "you are",
+        "we're": "we are",
+        "they're": "they are",
+        "i've": "i have",
+        "you've": "you have",
+        "we've": "we have",
+        "they've": "they have",
+        "i'll": "i will",
+        "you'll": "you will",
+        "he'll": "he will",
+        "she'll": "she will",
+        "we'll": "we will",
+        "they'll": "they will"
+    };
+    
+    let normalized = text;
+    
+    // Expand contractions
+    for (const [contraction, expansion] of Object.entries(contractions)) {
+        const regex = new RegExp(contraction, 'gi');
+        normalized = normalized.replace(regex, expansion);
+    }
+    
+    // Remove possessives
+    normalized = normalized.replace(/'s\b/gi, '');
+    
+    // Lowercase, remove punctuation, collapse spaces
+    normalized = normalized
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    
+    return normalized;
+}
+
+
         
                // encode base64 with proper UTF-8 handling
         function encodeBase64UTF8(text) {
@@ -1017,68 +1087,78 @@ function sortTable(column) {
         
         
         // Create new Q&A via webhook
-        async function createNewQA() {
-            const question = document.getElementById('newQuestion').value.trim();
-            const answer = document.getElementById('newAnswer').value.trim();
-            const source = document.getElementById('newSource').value;
-            const status = document.getElementById('newStatus').value;
-            const notes = document.getElementById('newNotes').value.trim();
-            
-            // Validation
-            if (!question) {
-                showMessage('Question is required', 'error');
-                document.getElementById('newQuestion').focus();
-                return;
-            }
-            if (!answer) {
-                showMessage('Answer is required', 'error');
-                document.getElementById('newAnswer').focus();
-                return;
-            }
-            
-            try {
-                showLoading(true);
-                
-                // Call webhook to log Q&A
-                const response = await fetch(WEBHOOKS.logQA, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        question: question,
-                        answer: answer,
-                        source: source,
-                        status: status,
-                        responseTime: 0,
-                        testRunId: '',
-                        adminNotes: notes
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    if (result.action === 'incremented') {
-                        showMessage(`Q&A already exists! Use count incremented to ${result.useCount}.`, 'warning');
-                    } else {
-                        showMessage(`Q&A created successfully! Record ID: ${result.recordId}`, 'success');
-                    }
-                    closeCreateModal();
-                    loadQA(); // Reload the list
-                } else {
-                    throw new Error(result.message || 'Failed to create Q&A');
-                }
-                
-            } catch (error) {
-                console.error('Error creating Q&A:', error);
-                showMessage('Error creating Q&A: ' + error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
+async function createNewQA() {
+    const question = document.getElementById('newQuestion').value.trim();
+    const answer = document.getElementById('newAnswer').value.trim();
+    const source = document.getElementById('newSource').value;
+    const status = document.getElementById('newStatus').value;
+    const notes = document.getElementById('newNotes').value.trim();
+    
+    // Validation
+    if (!question) {
+        showMessage('Question is required', 'error');
+        document.getElementById('newQuestion').focus();
+        return;
+    }
+    if (!answer) {
+        showMessage('Answer is required', 'error');
+        document.getElementById('newAnswer').focus();
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        // Normalize question and answer
+        const normalizedQuestion = normalizeText(question);
+        const normalizedAnswer = normalizeText(answer);
+        
+        // Encode originals to base64 with UTF-8 support
+        const questionBase64 = encodeBase64UTF8(question);
+        const answerBase64 = encodeBase64UTF8(answer);
+        
+        // Call webhook to log Q&A
+        const response = await fetch(WEBHOOKS.logQA, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                question: questionBase64,                  // Base64
+                question_normalized: normalizedQuestion,   // Plain
+                answer: answerBase64,                      // Base64
+                answer_normalized: normalizedAnswer,       // Plain
+                source: source,
+                status: status,
+                responseTime: 0,
+                testRunId: 'manual',
+                adminNotes: notes
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            if (result.action === 'incremented') {
+                showMessage(`Q&A already exists! Use count incremented to ${result.useCount}.`, 'info');
+            } else {
+                showMessage(`Q&A created successfully! Record ID: ${result.recordId}`, 'success');
+            }
+            closeCreateModal();
+            loadQA();
+        } else {
+            throw new Error(result.message || 'Failed to create Q&A');
+        }
+        
+    } catch (error) {
+        console.error('Error creating Q&A:', error);
+        showMessage('Error creating Q&A: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
 
         // Show message helper (if not already exists)
         function showMessage(message, type) {
