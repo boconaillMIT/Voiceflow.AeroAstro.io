@@ -762,7 +762,8 @@
             reviewed: 16,
             useCount: 17,
             normalizedQuestion: 18,
-            answer_full: 22
+            answer_full: 22,
+            questionDecoded: 26  // ← ADD THIS
         };
         // Webhook URLs
         const WEBHOOKS = {
@@ -917,7 +918,7 @@ function normalizeText(text) {
                 
                 const queryBody = {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 26],
                     options: {
                         orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
                     }
@@ -1186,7 +1187,7 @@ async function createNewQA() {
             records.forEach(record => {
                 const row = tbody.insertRow();
                 const date = new Date(record[FIELD_IDS.dateTime]?.value);
-                const question = record[FIELD_IDS.question]?.value || 'No question';
+                const question = record[FIELD_IDS.questionDecoded]?.value || 'No question';
                 // Use answer_full (field 22) if available, fallback to answer (field 7)
                 let answer = record[FIELD_IDS.answer_full]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
                 try {
@@ -1252,7 +1253,7 @@ async function createNewQA() {
                 showLoading(true);
                 const response = await makeQuickBaseRequest('POST', 'records/query', {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,22],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 26],
                     where: `{${FIELD_IDS.recordId}.EX.${recordId}}`
                 });
 
@@ -1276,7 +1277,7 @@ async function createNewQA() {
         // Display record details in modal
         function displayRecordDetails(record) {
             const date = new Date(record[FIELD_IDS.dateTime]?.value);
-            const question = record[FIELD_IDS.question]?.value || 'No question';
+            const question = record[FIELD_IDS.questionDecoded]?.value || 'No question';
             
             // Try field 22 (rich text) first, then field 7
             let answer = record[22]?.value || record[FIELD_IDS.answer]?.value || 'No answer';
