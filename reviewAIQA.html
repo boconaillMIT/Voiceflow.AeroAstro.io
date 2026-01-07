@@ -1107,40 +1107,36 @@ async function createNewQA() {
         return;
     }
     
-    try {
-        showLoading(true);
-        
-        // Normalize question and answer
-        const normalizedQuestion = normalizeText(question);
-        const normalizedAnswer = normalizeText(answer);
-        
-        // Encode originals to base64 with UTF-8 support
-        const questionBase64 = encodeBase64UTF8(question);
-        const answerBase64 = encodeBase64UTF8(answer);
-         // Debug: Log what we're about to send
+try {
+    showLoading(true);
+    
+    // Normalize question and answer
+    const normalizedQuestion = normalizeText(question);
+    const normalizedAnswer = normalizeText(answer);
+    
+    // Debug logging
     console.log('=== reviewAIQA Debug ===');
     console.log('Original question:', question);
     console.log('Original answer:', answer);
-    console.log('Encoded question:', questionBase64);
-    console.log('Encoded answer:', answerBase64);
     console.log('Normalized question:', normalizedQuestion);
-    console.log('Normalized answer:', normalizedAnswer);   
-        // Call webhook to log Q&A
-        const response = await fetch(WEBHOOKS.logQA, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                question: questionBase64,                  // Base64
-                question_normalized: normalizedQuestion,   // Plain
-                answer: answerBase64,                      // Base64
-                answer_normalized: normalizedAnswer,       // Plain
-                source: source,
-                status: status,
-                responseTime: 0,
-                testRunId: 'manual',
-                adminNotes: notes
-            })
-        });
+    console.log('Normalized answer:', normalizedAnswer);
+    
+    // Call webhook to log Q&A
+    const response = await fetch(WEBHOOKS.logQA, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            question: question,                        // ✅ Plain text - Make.com will encode
+            question_normalized: normalizedQuestion,   // Plain
+            answer: answer,                            // ✅ Plain text - Make.com will encode
+            answer_normalized: normalizedAnswer,       // Plain
+            source: source,
+            status: status,
+            responseTime: 0,
+            testRunId: 'manual',
+            adminNotes: notes
+        })
+    });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
