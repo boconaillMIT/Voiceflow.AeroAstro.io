@@ -689,17 +689,17 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                body: JSON.stringify({
-                    question: encodeBase64UTF8(question),                  // Base64 ✅
-                    question_normalized: normalizeText(question),          // Plain ✅
-                    answer: answer,                                        // Plain text ✅ (Make.com will encode)
-                    answer_normalized: normalizeText(answer),              // Plain ✅
-                    source: 'tester',
-                    status: 'pending',
-                    responseTime: metadata.responseTime || 0,
-                    testRunId: metadata.testRunId || `test_${Date.now()}`,
-                    adminNotes: metadata.adminNotes || ''
-                })
+                    body: JSON.stringify({
+                        question: encodeBase64UTF8(question),                  // Base64 ✅
+                        question_normalized: normalizeText(question),          // Plain ✅
+                        answer: answer,                                        // Plain text ✅
+                        answer_normalized: normalizeText(answer),              // Plain ✅
+                        source: 'tester',
+                        status: 'pending',
+                        responseTime: metadata.responseTime || 0,
+                        testRunId: metadata.testRunId || `test_${Date.now()}`,
+                        adminNotes: metadata.adminNotes || ''
+                    })
                 });  // ← ADD THIS LINE (closing the fetch call)
         
                 if (!response.ok) {
