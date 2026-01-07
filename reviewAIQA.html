@@ -1117,7 +1117,14 @@ async function createNewQA() {
         // Encode originals to base64 with UTF-8 support
         const questionBase64 = encodeBase64UTF8(question);
         const answerBase64 = encodeBase64UTF8(answer);
-        
+         // Debug: Log what we're about to send
+    console.log('=== reviewAIQA Debug ===');
+    console.log('Original question:', question);
+    console.log('Original answer:', answer);
+    console.log('Encoded question:', questionBase64);
+    console.log('Encoded answer:', answerBase64);
+    console.log('Normalized question:', normalizedQuestion);
+    console.log('Normalized answer:', normalizedAnswer);   
         // Call webhook to log Q&A
         const response = await fetch(WEBHOOKS.logQA, {
             method: 'POST',
