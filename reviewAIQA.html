@@ -1114,9 +1114,13 @@ try {
     const normalizedQuestion = normalizeText(question);
     const normalizedAnswer = normalizeText(answer);
     
+    // Encode ONLY the question to base64
+    const questionBase64 = encodeBase64UTF8(question);
+    
     // Debug logging
     console.log('=== reviewAIQA Debug ===');
     console.log('Original question:', question);
+    console.log('Encoded question:', questionBase64);
     console.log('Original answer:', answer);
     console.log('Normalized question:', normalizedQuestion);
     console.log('Normalized answer:', normalizedAnswer);
@@ -1126,9 +1130,9 @@ try {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-            question: question,                        // ✅ Plain text - Make.com will encode
+            question: questionBase64,                  // ✅ Base64 (Make.com expects this)
             question_normalized: normalizedQuestion,   // Plain
-            answer: answer,                            // ✅ Plain text - Make.com will encode
+            answer: answer,                            // ✅ Plain text (Make.com will encode)
             answer_normalized: normalizedAnswer,       // Plain
             source: source,
             status: status,
