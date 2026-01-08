@@ -426,9 +426,13 @@
             <h3>📊 QuickBase Configuration</h3>
             
             <div class="input-group">
-                <label for="qbEnabled">Enable QuickBase Logging:</label>
-                <input type="checkbox" id="qbEnabled" checked style="width: auto; margin: 10px 0;" />
-                <small style="color: #666; font-size: 12px;">Log all Q&As to QuickBase database</small>
+                <label>
+                    <input type="checkbox" id="skipQBDuringTest" checked style="width: auto; margin-right: 8px;" />
+                    Skip QB logging during tests (Voiceflow logs instead)
+                </label>
+                <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                    Prevents duplicate entries - Voiceflow will log the Q&As
+                </small>
             </div>
 
             <div class="input-group">
@@ -1380,12 +1384,12 @@
                     // Extract answer
                     const answer = extractAnswer(data);
                     // DEBUG: Check what we're getting
-console.log('=== DEBUG ANSWER ===');
-console.log('Question:', question);
-console.log('Answer length:', answer.length);
-console.log('First 100 chars:', answer.substring(0, 100));
-console.log('Looks like base64?', /^[A-Za-z0-9+/=]+$/.test(answer.substring(0, 100)));
-addDiagnosticLog(`Answer preview: ${answer.substring(0, 100)}`, 'info');
+                    console.log('=== DEBUG ANSWER ===');
+                    console.log('Question:', question);
+                    console.log('Answer length:', answer.length);
+                    console.log('First 100 chars:', answer.substring(0, 100));
+                    console.log('Looks like base64?', /^[A-Za-z0-9+/=]+$/.test(answer.substring(0, 100)));
+                    addDiagnosticLog(`Answer preview: ${answer.substring(0, 100)}`, 'info');
                     // Store result
                     const result = {
                         question,
@@ -1396,12 +1400,16 @@ addDiagnosticLog(`Answer preview: ${answer.substring(0, 100)}`, 'info');
                     
                     qaResults.push(result);
                     
-                    // Write to QuickBase
-                    await writeToQuickBase(question, answer, {
-                        responseTime: responseTime,
-                        source: 'tester',
-                        testRunId: `test_${Date.now()}`
-                    });
+                    // Write to QuickBase (only if not skipping during test)
+                    if (!document.getElementById('skipQBDuringTest').checked) {
+                        await writeToQuickBase(question, answer, {
+                            responseTime: responseTime,
+                            source: 'tester',
+                            testRunId: `test_${Date.now()}`
+                        });
+                    } else {
+                        addDiagnosticLog('Skipping QB logging - Voiceflow will log instead', 'info');
+                    }
                     
                     // Update UI
                     updateAnswerInTranscript(index, answer, responseTime);
@@ -1429,13 +1437,15 @@ addDiagnosticLog(`Answer preview: ${answer.substring(0, 100)}`, 'info');
                         error: true
                     });
                     
-                    // Write error to QuickBase
-                    await writeToQuickBase(question, errorMsg, {
-                        responseTime: responseTime,
-                        source: 'tester',
-                        testRunId: `test_${Date.now()}`,
-                        adminNotes: `API Error: ${response.status}`
-                    });
+                    // Write error to QuickBase (only if not skipping)
+                    if (!document.getElementById('skipQBDuringTest').checked) {
+                        await writeToQuickBase(question, errorMsg, {
+                            responseTime: responseTime,
+                            source: 'tester',
+                            testRunId: `test_${Date.now()}`,
+                            adminNotes: `API Error: ${response.status}`
+                        });
+                    }
                 }
             } catch (error) {
                 addDiagnosticLog(`Exception Q${index + 1}: ${error.message}`, 'error', error);
@@ -1454,13 +1464,15 @@ addDiagnosticLog(`Answer preview: ${answer.substring(0, 100)}`, 'info');
                     error: true
                 });
                 
-                // Write exception to QuickBase
-                await writeToQuickBase(question, errorMsg, {
-                    responseTime: Date.now() - startTime,
-                    source: 'tester',
-                    testRunId: `test_${Date.now()}`,
-                    adminNotes: `Exception: ${error.message}`
-                });
+                // Write exception to QuickBase (only if not skipping)
+                if (!document.getElementById('skipQBDuringTest').checked) {
+                    await writeToQuickBase(question, errorMsg, {
+                        responseTime: Date.now() - startTime,
+                        source: 'tester',
+                        testRunId: `test_${Date.now()}`,
+                        adminNotes: `Exception: ${error.message}`
+                    });
+                }
             }
             
             updateStats();
