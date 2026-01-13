@@ -675,10 +675,12 @@
         };
 
         // QuickBase Integration
+
         async function writeToQuickBase(question, answer, metadata = {}) {
-            // Check if QB logging is enabled
-            if (!document.getElementById('qbEnabled').checked) {
-                addDiagnosticLog('QuickBase logging disabled - skipping', 'info');
+            // Check if we should skip QB logging during tests
+            const skipQBCheckbox = document.getElementById('skipQBDuringTest');
+            if (skipQBCheckbox && skipQBCheckbox.checked) {
+                addDiagnosticLog('Skipping QB logging - Voiceflow will log instead', 'info');
                 return { success: true, skipped: true };
             }
         
