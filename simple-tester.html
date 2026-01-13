@@ -765,8 +765,8 @@
             
             if (result.success) {
                 if (result.skipped) {
-                    updateQBStatus('⚠️ QB logging is disabled', 'warning');
-                    setStatus('QuickBase logging is disabled - enable it to test', 'warning');
+                    updateQBStatus('⚠️ QB logging is skipped during tests', 'warning');
+                    setStatus('QB logging is skipped - uncheck "Skip QB logging" to test', 'warning');
                 } else {
                     updateQBStatus(`✅ Connection successful! Record ID: ${result.recordId}`, 'success');
                     setStatus('✅ QuickBase connection verified!', 'success');
