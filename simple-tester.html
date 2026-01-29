@@ -684,44 +684,45 @@
                 return { success: true, skipped: true };
             }
         
-            try {
-                addDiagnosticLog('Logging to QuickBase via webhook...', 'info', {
-                    question: question.substring(0, 50) + '...',
-                    answer: answer.substring(0, 50) + '...'
-                });
-        
-                const response = await fetch(WEBHOOKS.logQA, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    let status = metadata.status || 'pending';
-                    if (!metadata.status) {
-                        const lowerAnswer = answer.toLowerCase();
-                        if (
-                            lowerAnswer.includes("don't know") ||
-                            lowerAnswer.includes("do not know") ||
-                            lowerAnswer.includes("no information available") ||
-                            lowerAnswer.includes("cannot find") ||
-                            lowerAnswer.includes("based on the provided chunks there is no information")
-                        ) {
-                            status = 'unknown';
-                        }
-                    }
-                    
-                    body: JSON.stringify({
-                        question: encodeBase64UTF8(question),
-                        question_normalized: normalizeText(question),
-                        answer: answer,
-                        answer_normalized: normalizeText(answer),
-                        source: 'tester',
-                        status: status,  // ← Changed from hardcoded 'pending'
-                        responseTime: metadata.responseTime || 0,
-                        testRunId: metadata.testRunId || `test_${Date.now()}`,
-                        adminNotes: metadata.adminNotes || ''
-                    })
-                });  // ← ADD THIS LINE (closing the fetch call)
-        
+           try {
+    addDiagnosticLog('Logging to QuickBase via webhook...', 'info', {
+        question: question.substring(0, 50) + '...',
+        answer: answer.substring(0, 50) + '...'
+    });
+
+    // Auto-detect status BEFORE the fetch call
+    let status = metadata.status || 'pending';
+    if (!metadata.status) {
+        const lowerAnswer = answer.toLowerCase();
+        if (
+            lowerAnswer.includes("don't know") ||
+            lowerAnswer.includes("do not know") ||
+            lowerAnswer.includes("no information available") ||
+            lowerAnswer.includes("cannot find") ||
+            lowerAnswer.includes("based on the provided chunks there is no information")
+        ) {
+            status = 'unknown';
+        }
+    }
+
+    // Now make the fetch call with the determined status
+    const response = await fetch(WEBHOOKS.logQA, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            question: encodeBase64UTF8(question),
+            question_normalized: normalizeText(question),
+            answer: answer,
+            answer_normalized: normalizeText(answer),
+            source: 'tester',
+            status: status,  // ← Uses the detected status
+            responseTime: metadata.responseTime || 0,
+            testRunId: metadata.testRunId || `test_${Date.now()}`,
+            adminNotes: metadata.adminNotes || ''
+        })
+    });
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);  // ← FIX THIS LINE (add parenthesis)
                 }
