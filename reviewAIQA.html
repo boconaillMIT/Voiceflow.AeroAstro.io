@@ -279,7 +279,10 @@
             background: #d1ecf1;
             color: #0c5460;
         }
-        
+        .badge-unknown {
+            background: #e2e3e5;
+            color: #383d41;
+        }
         /* Modal Styles */
         .modal {
             display: none;
@@ -593,7 +596,7 @@
         </div>
 
         <!-- Stats Bar -->
-        <div class="stats-bar">
+        <div class="stats-bar" style="grid-template-columns: repeat(5, 1fr);">  <!-- Changed from 4 to 5 -->
             <div class="stat-item">
                 <span class="stat-label">Total Records</span>
                 <span class="stat-value" id="statTotal">0</span>
@@ -610,6 +613,10 @@
                 <span class="stat-label">Incorrect</span>
                 <span class="stat-value" id="statIncorrect">0</span>
             </div>
+            <div class="stat-item">  <!-- ADD THIS -->
+                <span class="stat-label">Unknown</span>
+                <span class="stat-value" id="statUnknown">0</span>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -622,6 +629,7 @@
                     <option value="correct">Correct</option>
                     <option value="incorrect">Incorrect</option>
                     <option value="needs_review">Needs Review</option>
+                    <option value="unknown">Unknown</option> 
                 </select>
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
@@ -1237,6 +1245,7 @@ try {
             const total = records.length;
             const correct = records.filter(r => r[FIELD_IDS.status]?.value === 'correct').length;
             const incorrect = records.filter(r => r[FIELD_IDS.status]?.value === 'incorrect').length;
+            const unknown = records.filter(r => r[FIELD_IDS.status]?.value === 'unknown').length;  // ADD THIS
             const unreviewed = records.filter(r => {
                 const status = r[FIELD_IDS.status]?.value;
                 return !status || status === '' || status === 'pending' || status === 'needs_review';
@@ -1246,6 +1255,7 @@ try {
             document.getElementById('statCorrect').textContent = correct;
             document.getElementById('statIncorrect').textContent = incorrect;
             document.getElementById('statPending').textContent = unreviewed;
+            document.getElementById('statUnknown').textContent = unknown;  // ADD THIS
         }
 
         // View individual record
@@ -1369,6 +1379,9 @@ try {
                         <button class="btn btn-secondary" onclick="markNeedsReview(${recordId})">
                             ⚠ Needs Review
                         </button>
+                        <button class="btn btn-secondary" onclick="markAsUnknown(${recordId})">  <!-- ADD THIS -->
+                            ❓ Mark as Unknown
+                        </button>
                         <button class="btn" onclick="closeModal()">
                             Cancel
                         </button>
@@ -1471,7 +1484,33 @@ try {
                 showLoading(false);
             }
         }
-
+        // Mark as unknown
+        async function markAsUnknown(recordId) {
+            const adminNotes = document.getElementById('adminNotesEdit').value;
+        
+            try {
+                showLoading(true);
+                
+                await makeQuickBaseRequest('POST', 'records', {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        [FIELD_IDS.recordId]: { value: recordId },
+                        [FIELD_IDS.status]: { value: 'unknown' },
+                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.reviewed]: { value: true }
+                    }]
+                });
+        
+                showMessage('Marked as unknown!', 'info');
+                closeModal();
+                loadQA();
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error updating record: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
         // Bulk actions
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
