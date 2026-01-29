@@ -695,13 +695,27 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    let status = metadata.status || 'pending';
+                    if (!metadata.status) {
+                        const lowerAnswer = answer.toLowerCase();
+                        if (
+                            lowerAnswer.includes("don't know") ||
+                            lowerAnswer.includes("do not know") ||
+                            lowerAnswer.includes("no information available") ||
+                            lowerAnswer.includes("cannot find") ||
+                            lowerAnswer.includes("based on the provided chunks there is no information")
+                        ) {
+                            status = 'unknown';
+                        }
+                    }
+                    
                     body: JSON.stringify({
-                        question: encodeBase64UTF8(question),                  // Base64 ✅
-                        question_normalized: normalizeText(question),          // Plain ✅
-                        answer: answer,                                        // Plain text ✅
-                        answer_normalized: normalizeText(answer),              // Plain ✅
+                        question: encodeBase64UTF8(question),
+                        question_normalized: normalizeText(question),
+                        answer: answer,
+                        answer_normalized: normalizeText(answer),
                         source: 'tester',
-                        status: 'pending',
+                        status: status,  // ← Changed from hardcoded 'pending'
                         responseTime: metadata.responseTime || 0,
                         testRunId: metadata.testRunId || `test_${Date.now()}`,
                         adminNotes: metadata.adminNotes || ''
