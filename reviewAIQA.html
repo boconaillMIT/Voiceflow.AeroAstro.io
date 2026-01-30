@@ -59,7 +59,36 @@
             color: rgba(255,255,255,0.2);
             font-weight: 300;
         }
-        
+        .header-nav-btn {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    z-index: 10;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #003d5c;
+    border: 2px solid white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.header-nav-btn:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.header-nav-btn:active {
+    transform: translateY(0);
+}
         h1 {
             font-size: 2.2em;
             font-weight: 600;
@@ -282,6 +311,11 @@
         .badge-unknown {
             background: #e2e3e5;
             color: #383d41;
+        }
+        .badge-deleted {
+            background: #f8d7da;
+            color: #721c24;
+            text-decoration: line-through;
         }
         /* Modal Styles */
         .modal {
@@ -588,7 +622,9 @@
             <h1>🧪 Review Q&A Test Results</h1>
             <p class="subtitle">Review, validate, and correct chatbot question-answer pairs from automated testing</p>
         </div>
-
+    <a href="https://aeroastrovfbot.netlify.app/simple-tester.html" class="header-nav-btn">
+        🧪 Test Chatbot
+    </a>
         <div id="statusMessage"></div>
         <div id="loading">
             <div class="spinner"></div>
@@ -617,6 +653,10 @@
                 <span class="stat-label">Unknown</span>
                 <span class="stat-value" id="statUnknown">0</span>
             </div>
+            <div class="stat-item" style="background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);">
+                <span class="stat-label">Deleted</span>
+                <span class="stat-value" id="statDeleted">0</span>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -630,6 +670,7 @@
                     <option value="incorrect">Incorrect</option>
                     <option value="needs_review">Needs Review</option>
                     <option value="unknown">Unknown</option> 
+                    <option value="deleted">Deleted</option> 
                 </select>
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
@@ -1246,7 +1287,8 @@ try {
             const correct = records.filter(r => r[FIELD_IDS.status]?.value === 'correct').length;
             const incorrect = records.filter(r => r[FIELD_IDS.status]?.value === 'incorrect').length;
             const unknown = records.filter(r => r[FIELD_IDS.status]?.value === 'unknown').length;  // ADD THIS
-            const unreviewed = records.filter(r => {
+             const deleted = records.filter(r => r[FIELD_IDS.status]?.value === 'deleted').length;  // ADD THIS
+               const unreviewed = records.filter(r => {
                 const status = r[FIELD_IDS.status]?.value;
                 return !status || status === '' || status === 'pending' || status === 'needs_review';
             }).length;
@@ -1255,7 +1297,8 @@ try {
             document.getElementById('statCorrect').textContent = correct;
             document.getElementById('statIncorrect').textContent = incorrect;
             document.getElementById('statPending').textContent = unreviewed;
-            document.getElementById('statUnknown').textContent = unknown;  // ADD THIS
+            document.getElementById('statUnknown').textContent = unknown;  
+            document.getElementById('statDeleted').textContent = deleted; 
         }
 
         // View individual record
@@ -1382,6 +1425,9 @@ try {
                         <button class="btn btn-secondary" onclick="markAsUnknown(${recordId})">  <!-- ADD THIS -->
                             ❓ Mark as Unknown
                         </button>
+                           <button class="btn btn-danger" onclick="markAsDeleted(${recordId})">  <!-- ADD THIS -->
+                            🗑️ Delete
+                    </button>
                         <button class="btn" onclick="closeModal()">
                             Cancel
                         </button>
@@ -1502,6 +1548,37 @@ try {
                 });
         
                 showMessage('Marked as unknown!', 'info');
+                closeModal();
+                loadQA();
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error updating record: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        // Mark as deleted
+        async function markAsDeleted(recordId) {
+            const adminNotes = document.getElementById('adminNotesEdit').value;
+        
+            if (!confirm('⚠️ Mark this Q&A as deleted? (This will not permanently delete it - you can change the status later or delete it permanently in QuickBase if needed.)')) {
+                return;
+            }
+        
+            try {
+                showLoading(true);
+                
+                await makeQuickBaseRequest('POST', 'records', {
+                    to: QUICKBASE_CONFIG.tableId,
+                    data: [{
+                        [FIELD_IDS.recordId]: { value: recordId },
+                        [FIELD_IDS.status]: { value: 'deleted' },
+                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.reviewed]: { value: true }
+                    }]
+                });
+        
+                showMessage('Marked as deleted!', 'success');
                 closeModal();
                 loadQA();
             } catch (error) {
