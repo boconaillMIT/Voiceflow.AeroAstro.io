@@ -699,6 +699,7 @@
             <span class="bulk-actions-text"><span id="selectedCount">0</span> selected</span>
             <button class="btn btn-success" onclick="bulkMarkCorrect()">✓ Mark as Correct</button>
             <button class="btn btn-danger" onclick="bulkMarkIncorrect()">✗ Mark as Incorrect</button>
+             <button class="btn btn-danger" onclick="bulkMarkDeleted()">🗑️ Delete</button> 
             <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
         </div>
 
@@ -1699,7 +1700,43 @@ try {
             clearSelection();
             loadQA();
         }
+async function bulkMarkDeleted() {
+    const recordIds = getSelectedRecordIds();
+    if (recordIds.length === 0) {
+        showMessage('No records selected', 'error');
+        return;
+    }
 
+    if (!confirm(`⚠️ Mark ${recordIds.length} record(s) as deleted? (This will not permanently delete them - you can change the status later or delete permanently in QuickBase if needed.)`)) {
+        return;
+    }
+
+    showLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const recordId of recordIds) {
+        try {
+            await makeQuickBaseRequest('POST', 'records', {
+                to: QUICKBASE_CONFIG.tableId,
+                data: [{
+                    [FIELD_IDS.recordId]: { value: recordId },
+                    [FIELD_IDS.status]: { value: 'deleted' },
+                    [FIELD_IDS.reviewed]: { value: true }
+                }]
+            });
+            successCount++;
+        } catch (error) {
+            console.error(`Error marking ${recordId}:`, error);
+            errorCount++;
+        }
+    }
+
+    showLoading(false);
+    showMessage(`Marked deleted: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error');
+    clearSelection();
+    loadQA();
+}
         // Utility functions
         function closeModal() {
             document.getElementById('reviewModal').style.display = 'none';
