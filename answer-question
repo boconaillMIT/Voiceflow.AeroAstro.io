@@ -240,9 +240,9 @@
             questionDecoded: 26
         };
         
-        const WEBHOOKS = {
-            submitAnswer: 'https://hook.us2.make.com/YOUR_ANSWER_WEBHOOK_URL'
-        };
+const WEBHOOKS = {
+    submitAnswer: 'https://hook.us2.make.com/fh0skp0c9p239qlqtf5cygt28tps5efz'
+};
         
         let currentRecordId = null;
         
