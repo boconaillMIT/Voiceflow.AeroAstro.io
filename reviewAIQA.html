@@ -874,24 +874,28 @@ let currentAdminName = 'Administrator'; // Will be set from auth
 
 // Get admin name from authenticated user
 function setAdminNameFromAuth() {
-    // The user's name should be available from your authentication system
-    // This depends on how MIT Touchstone passes user info
-    // Common options:
-    
-    // Option 1: From URL parameter (if Touchstone redirects with user info)
-    const urlParams = new URLSearchParams(window.location.search);
-    const userName = urlParams.get('user_name') || urlParams.get('displayName');
-    
-    // Option 2: From session storage (if set during login)
-    const sessionName = sessionStorage.getItem('user_name');
-    
-    // Option 3: From a cookie (if MIT Touchstone sets one)
-    const cookieName = getCookie('mit_user_name');
-    
-    // Use whichever is available
-    currentAdminName = userName || sessionName || cookieName || 'Administrator';
-    
-    console.log('Admin name set to:', currentAdminName);
+    try {
+        // Get user data from localStorage (same as admin.html)
+        const storedData = localStorage.getItem('user_metadata');
+        
+        if (!storedData) {
+            console.warn('No user_metadata found in localStorage');
+            currentAdminName = 'Administrator';
+            return;
+        }
+        
+        const userData = JSON.parse(storedData);
+        console.log('User metadata:', userData);
+        
+        // Use name field (e.g., "Brian O'Conaill")
+        currentAdminName = userData.name || userData.kerberos || 'Administrator';
+        
+        console.log('Admin name set to:', currentAdminName);
+        
+    } catch (error) {
+        console.error('Error reading user metadata:', error);
+        currentAdminName = 'Administrator';
+    }
 }
 
 // Helper to get cookie
