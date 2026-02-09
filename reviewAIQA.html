@@ -790,6 +790,50 @@
             </div>
         </div>
     </div>
+    <!-- Refer Question Modal -->
+<div id="referModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeReferModal()">&times;</span>
+        <h2>Refer Question to Expert</h2>
+        
+        <div class="submission-details">
+            <div class="detail-row">
+                <div class="detail-col-full">
+                    <strong>Question to be answered:</strong>
+                    <div class="question-display" id="referQuestionDisplay"></div>
+                </div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-col-full">
+                    <strong>Recipient Email Address:</strong>
+                    <input type="email" id="referEmail" class="answer-edit" 
+                           placeholder="expert@mit.edu" style="min-height: 50px; width: 100%; padding: 10px;">
+                    <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                        The recipient will receive an email with a link to answer this question
+                    </small>
+                </div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-col-full">
+                    <strong>Add a note (optional):</strong>
+                    <textarea id="referNote" class="notes-textarea" rows="3"
+                              placeholder="Any additional context for the recipient..." style="width: 100%; padding: 10px;"></textarea>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="sendReferral()">
+                    📧 Send Referral Email
+                </button>
+                <button class="btn btn-secondary" onclick="closeReferModal()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
     <script>
         const QUICKBASE_CONFIG = {
             realm: 'mit.quickbase.com',
@@ -825,7 +869,38 @@
         let currentRecord = null;
         let allRecords = []; // Store loaded records
         let currentSort = { column: 'date', order: 'desc' };
+let currentReferralRecord = null;
+let currentAdminName = 'Administrator'; // Will be set from auth
 
+// Get admin name from authenticated user
+function setAdminNameFromAuth() {
+    // The user's name should be available from your authentication system
+    // This depends on how MIT Touchstone passes user info
+    // Common options:
+    
+    // Option 1: From URL parameter (if Touchstone redirects with user info)
+    const urlParams = new URLSearchParams(window.location.search);
+    const userName = urlParams.get('user_name') || urlParams.get('displayName');
+    
+    // Option 2: From session storage (if set during login)
+    const sessionName = sessionStorage.getItem('user_name');
+    
+    // Option 3: From a cookie (if MIT Touchstone sets one)
+    const cookieName = getCookie('mit_user_name');
+    
+    // Use whichever is available
+    currentAdminName = userName || sessionName || cookieName || 'Administrator';
+    
+    console.log('Admin name set to:', currentAdminName);
+}
+
+// Helper to get cookie
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
 // Decode base64 with proper UTF-8 handling
 function decodeBase64UTF8(base64String) {
     try {
@@ -914,7 +989,106 @@ function normalizeText(text) {
     return normalized;
 }
 
+// Open referral modal
+function openReferModal(recordId) {
+    currentReferralRecord = allRecords.find(r => r[FIELD_IDS.recordId].value === recordId);
+    
+    if (!currentReferralRecord) {
+        showMessage('Record not found', 'error');
+        return;
+    }
+    
+    const question = currentReferralRecord[FIELD_IDS.questionDecoded]?.value || 'No question';
+    
+    document.getElementById('referQuestionDisplay').textContent = question;
+    document.getElementById('referEmail').value = '';
+    document.getElementById('referNote').value = '';
+    document.getElementById('referModal').style.display = 'block';
+}
 
+// Close referral modal
+function closeReferModal() {
+    document.getElementById('referModal').style.display = 'none';
+    currentReferralRecord = null;
+}
+
+// Send referral email
+async function sendReferral() {
+    const email = document.getElementById('referEmail').value.trim();
+    const note = document.getElementById('referNote').value.trim();
+    
+    if (!email) {
+        showMessage('Please enter a recipient email address', 'error');
+        document.getElementById('referEmail').focus();
+        return;
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showMessage('Please enter a valid email address', 'error');
+        document.getElementById('referEmail').focus();
+        return;
+    }
+    
+    if (!currentReferralRecord) {
+        showMessage('No record selected', 'error');
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        const recordId = currentReferralRecord[FIELD_IDS.recordId].value;
+        const question = currentReferralRecord[FIELD_IDS.questionDecoded]?.value || 'No question';
+        
+        // Call Make.com webhook to send email
+        const response = await fetch('https://hook.us2.make.com/YOUR_REFER_WEBHOOK_URL', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_name: currentAdminName,
+                recipient_email: email,
+                question: question,
+                record_id: recordId,
+                note: note,
+                answer_url: `https://aeroastrovfbot.netlify.app/answer-question.html?recordId=${recordId}`
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showMessage('Referral email sent successfully!', 'success');
+            
+            // Update QuickBase to add admin note about referral
+            const adminNotes = `Referred to ${email} on ${new Date().toLocaleString()} by ${currentAdminName}`;
+            await makeQuickBaseRequest('POST', 'records', {
+                to: QUICKBASE_CONFIG.tableId,
+                data: [{
+                    [FIELD_IDS.recordId]: { value: recordId },
+                    [FIELD_IDS.adminNotes]: { value: adminNotes }
+                }]
+            });
+            
+            closeReferModal();
+            closeModal();
+            loadQA();
+        } else {
+            throw new Error(result.message || 'Failed to send email');
+        }
+        
+    } catch (error) {
+        console.error('Error sending referral:', error);
+        showMessage('Error sending referral email: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
         
                // encode base64 with proper UTF-8 handling
         function encodeBase64UTF8(text) {
@@ -1023,17 +1197,21 @@ function normalizeText(text) {
         window.onclick = function(event) {
             const reviewModal = document.getElementById('reviewModal');
             const createModal = document.getElementById('createModal');
-            
+                const referModal = document.getElementById('referModal')
             if (event.target == reviewModal) {
                 closeModal();
             }
             if (event.target == createModal) {
                 closeCreateModal();
             }
+                if (event.target == referModal) {  // ADD THIS
+        closeReferModal();
+    }
         }
         
         // Prevent clicks inside textareas from closing modal
         document.addEventListener('DOMContentLoaded', function() {
+                setAdminNameFromAuth(); 
             loadQA();
             // Hide bulk actions bar initially
             document.getElementById('bulkActionsBar').style.display = 'none';
@@ -1425,6 +1603,9 @@ try {
                         </button>
                         <button class="btn btn-secondary" onclick="markAsUnknown(${recordId})">  <!-- ADD THIS -->
                             ❓ Mark as Unknown
+                        </button>
+                            <button class="btn btn-primary" onclick="openReferModal(${recordId})">  <!-- ADD THIS -->
+                            👤 Refer Question
                         </button>
                            <button class="btn btn-danger" onclick="markAsDeleted(${recordId})">  <!-- ADD THIS -->
                             🗑️ Delete
