@@ -308,6 +308,10 @@
             background: #d1ecf1;
             color: #0c5460;
         }
+        .badge-referred {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
         .badge-unknown {
             background: #e2e3e5;
             color: #383d41;
@@ -639,32 +643,36 @@
         </div>
 
         <!-- Stats Bar -->
-        <div class="stats-bar" style="grid-template-columns: repeat(5, 1fr);">  <!-- Changed from 4 to 5 -->
-            <div class="stat-item">
-                <span class="stat-label">Total Records</span>
-                <span class="stat-value" id="statTotal">0</span>
+            <div class="stats-bar" style="grid-template-columns: repeat(7, 1fr);">  <!-- Changed from 5/6 to 7 -->
+                <div class="stat-item">
+                    <span class="stat-label">Total Records</span>
+                    <span class="stat-value" id="statTotal">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Pending Review</span>
+                    <span class="stat-value" id="statPending">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Correct</span>
+                    <span class="stat-value" id="statCorrect">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Incorrect</span>
+                    <span class="stat-value" id="statIncorrect">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Unknown</span>
+                    <span class="stat-value" id="statUnknown">0</span>
+                </div>
+                <div class="stat-item" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">  <!-- ADD THIS -->
+                    <span class="stat-label">Referred</span>
+                    <span class="stat-value" id="statReferred">0</span>
+                </div>
+                <div class="stat-item" style="background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);">
+                    <span class="stat-label">Deleted</span>
+                    <span class="stat-value" id="statDeleted">0</span>
+                </div>
             </div>
-            <div class="stat-item">
-                <span class="stat-label">Pending Review</span>
-                <span class="stat-value" id="statPending">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Correct</span>
-                <span class="stat-value" id="statCorrect">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Incorrect</span>
-                <span class="stat-value" id="statIncorrect">0</span>
-            </div>
-            <div class="stat-item">  <!-- ADD THIS -->
-                <span class="stat-label">Unknown</span>
-                <span class="stat-value" id="statUnknown">0</span>
-            </div>
-            <div class="stat-item" style="background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);">
-                <span class="stat-label">Deleted</span>
-                <span class="stat-value" id="statDeleted">0</span>
-            </div>
-        </div>
 
         <!-- Filters -->
         <div class="controls">
@@ -677,6 +685,7 @@
                     <option value="incorrect">Incorrect</option>
                     <option value="needs_review">Needs Review</option>
                     <option value="unknown">Unknown</option> 
+                    <option value="referred">Referred</option>
                     <option value="deleted">Deleted</option> 
                 </select>
             </div>
@@ -865,7 +874,9 @@
             normalizedQuestion: 18,
             answer_full: 22,
             answerDecoded: 24,      // ← ADD THIS
-            questionDecoded: 26
+            questionDecoded: 26,
+            referredToEmail: 31,     // ADD THIS (use actual field ID)
+            referredDate: 32          // ADD THIS (use actual field ID)
         };
         // Webhook URLs
         const WEBHOOKS = {
@@ -1154,7 +1165,7 @@ async function sendReferral() {
                 
                 const queryBody = {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26, 31, 32],
                     options: {
                         orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
                     }
@@ -1488,6 +1499,7 @@ try {
             document.getElementById('statIncorrect').textContent = incorrect;
             document.getElementById('statPending').textContent = unreviewed;
             document.getElementById('statUnknown').textContent = unknown;  
+              document.getElementById('statReferred').textContent = referred;
             document.getElementById('statDeleted').textContent = deleted; 
         }
 
@@ -1523,7 +1535,8 @@ try {
             const date = new Date(record[FIELD_IDS.dateTime]?.value);
             
             const question = record[FIELD_IDS.questionDecoded]?.value || 'No question';
-            
+            const referredTo = record[FIELD_IDS.referredToEmail]?.value || '';
+            const referredDate = record[FIELD_IDS.referredDate]?.value ? new Date(record[FIELD_IDS.referredDate].value) : null;
             // Use the auto-decoded formula field (Field 24)
             let answer = record[FIELD_IDS.answerDecoded]?.value || 'No answer';
             // Otherwise use as-is (already plain text)
@@ -1572,7 +1585,14 @@ try {
                             <div class="question-display">${question}</div>
                         </div>
                     </div>
-
+${referredTo ? `
+<div class="detail-row">
+    <div class="detail-col-full" style="background: #d1ecf1; padding: 12px; border-radius: 4px;">
+        <strong>📧 Referred To:</strong> ${referredTo}
+        ${referredDate ? ` on ${referredDate.toLocaleDateString()} at ${referredDate.toLocaleTimeString()}` : ''}
+    </div>
+</div>
+` : ''}
                     <div class="detail-row">
                         <div class="detail-col-full">
                             <strong>Answer: <em style="color: #666; font-size: 0.9em; margin-left: 10px; font-weight: normal;">(editable - make changes before marking as correct)</em></strong>
