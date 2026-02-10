@@ -875,8 +875,8 @@
             answer_full: 22,
             answerDecoded: 24,      // ← ADD THIS
             questionDecoded: 26,
-            referredToEmail: 31,     // ADD THIS (use actual field ID)
-            referredDate: 32          // ADD THIS (use actual field ID)
+            referredToEmail: 29,     // ADD THIS (use actual field ID)
+            referredDate: 30          // ADD THIS (use actual field ID)
         };
         // Webhook URLs
         const WEBHOOKS = {
@@ -1165,7 +1165,7 @@ async function sendReferral() {
                 
                 const queryBody = {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26, 31, 32],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26, 29, 30],
                     options: {
                         orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
                     }
