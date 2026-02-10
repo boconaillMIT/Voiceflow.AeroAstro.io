@@ -1517,7 +1517,7 @@ try {
               
                 row.innerHTML = `
                     <td class="checkbox-col">
-                        <input type="checkbox" class="qa-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}>
+                        <input type="checkbox" class="qa-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()">
                     </td>
                     <td>${date.toLocaleDateString()}<br><small>${date.toLocaleTimeString()}</small></td>
                     <td><span class="badge badge-${source}">${source}</span></td>
