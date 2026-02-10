@@ -1517,7 +1517,7 @@ try {
             }
         }
 
-        // Display record details in modal
+
         // Display record details in modal
         function displayRecordDetails(record) {
             const date = new Date(record[FIELD_IDS.dateTime]?.value);
@@ -1542,8 +1542,7 @@ try {
                     <div class="detail-row" style="grid-template-columns: repeat(6, 1fr);">
                         <div class="detail-col">
                             <strong>Date:</strong>
-                            ${date.toLocaleDateString()}<br>
-                            ${date.toLocaleTimeString()}
+                            <span style="font-size: 0.85em;">${date.toLocaleDateString('en-US', {month: 'numeric', day: 'numeric', year: '2-digit'})} ${date.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})}</span>
                         </div>
                         <div class="detail-col">
                             <strong>Source:</strong>
