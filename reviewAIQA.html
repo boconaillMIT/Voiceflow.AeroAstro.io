@@ -1514,8 +1514,7 @@ try {
                 const safeQuestion = question.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 const safePreview = answerPreview.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 
-                const isDisabled = status !== 'pending' ? 'disabled' : '';
-                
+              
                 row.innerHTML = `
                     <td class="checkbox-col">
                         <input type="checkbox" class="qa-checkbox" data-record-id="${recordId}" onchange="updateBulkActions()" ${isDisabled}>
@@ -1854,7 +1853,7 @@ ${referredTo ? `
         // Bulk actions
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
-            const checkboxes = document.querySelectorAll('.qa-checkbox:not([disabled])');
+            const checkboxes = document.querySelectorAll('.qa-checkbox');
             checkboxes.forEach(cb => cb.checked = selectAll.checked);
             updateBulkActions();
         }
