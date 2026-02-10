@@ -461,11 +461,18 @@
         
         .button-group {
             display: flex;
-            gap: 12px;
-            justify-content: flex-end;
+            gap: 10px;  /* Slightly smaller gap */
+            justify-content: flex-start;
+            flex-wrap: wrap;  /* Allow wrapping */
             margin-top: 25px;
             padding-top: 20px;
             border-top: 2px solid #ecf0f1;
+        }
+        
+        .button-group .btn {
+            padding: 8px 16px;  /* Smaller buttons */
+            font-size: 0.85em;
+            white-space: nowrap;
         }
         
         .close {
