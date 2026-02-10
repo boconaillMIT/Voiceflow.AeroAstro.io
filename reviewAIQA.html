@@ -1486,6 +1486,7 @@ try {
         function updateStats(records) {
             const total = records.length;
             const correct = records.filter(r => r[FIELD_IDS.status]?.value === 'correct').length;
+           const referred = records.filter(r => r[FIELD_IDS.status]?.value === 'referred').length;
             const incorrect = records.filter(r => r[FIELD_IDS.status]?.value === 'incorrect').length;
             const unknown = records.filter(r => r[FIELD_IDS.status]?.value === 'unknown').length;  // ADD THIS
              const deleted = records.filter(r => r[FIELD_IDS.status]?.value === 'deleted').length;  // ADD THIS
