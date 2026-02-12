@@ -730,7 +730,7 @@
                     <th class="sortable" onclick="sortTable('source')">Source</th>
                     <th class="sortable" onclick="sortTable('question')">Question</th>
                     <th>Answer Preview</th>
-                    <th class="sortable" onclick="sortTable('responseTime')">Response Time</th>
+<th class="sortable" onclick="sortTable('referral')">Referral</th>
                     <th class="sortable" onclick="sortTable('status')">Status</th>
                     <th>Actions</th>
                 </tr>
@@ -1334,10 +1334,10 @@ function sortTable(column) {
                 valA = (a[FIELD_IDS.question]?.value || '').toLowerCase();
                 valB = (b[FIELD_IDS.question]?.value || '').toLowerCase();
                 break;
-            case 'responseTime':
-                valA = a[FIELD_IDS.responseTime]?.value || 0;
-                valB = b[FIELD_IDS.responseTime]?.value || 0;
-                break;
+case 'referral':
+    valA = (a[FIELD_IDS.referredToEmail]?.value || '').toLowerCase();
+    valB = (b[FIELD_IDS.referredToEmail]?.value || '').toLowerCase();
+    break;
             case 'status':
                 valA = (a[FIELD_IDS.status]?.value || '').toLowerCase();
                 valB = (b[FIELD_IDS.status]?.value || '').toLowerCase();
@@ -1356,13 +1356,13 @@ function sortTable(column) {
         th.classList.remove('sort-asc', 'sort-desc');
     });
     
-    const columnMap = {
-        'date': 1,
-        'source': 2,
-        'question': 3,
-        'responseTime': 5,
-        'status': 6
-    };
+const columnMap = {
+    'date': 1,
+    'source': 2,
+    'question': 3,
+    'referral': 5,
+    'status': 6
+};
     
     const headerIndex = columnMap[column];
     if (headerIndex !== undefined) {
@@ -1503,7 +1503,7 @@ try {
                 let answer = record[FIELD_IDS.answerDecoded]?.value || 'No answer';
                 const source = record[FIELD_IDS.source]?.value || 'unknown';
                 const status = record[FIELD_IDS.status]?.value || 'pending';
-                const responseTime = record[FIELD_IDS.responseTime]?.value || 0;
+                const referredToEmail = record[FIELD_IDS.referredToEmail]?.value || '';
                 const recordId = record[FIELD_IDS.recordId].value;
                 
                 // Strip HTML tags from answer for preview to prevent broken table structure
@@ -1523,7 +1523,7 @@ try {
                     <td><span class="badge badge-${source}">${source}</span></td>
                     <td>${safeQuestion}</td>
                     <td class="preview">${safePreview}</td>
-                    <td>${responseTime}ms</td>
+<td>${referredToEmail ? referredToEmail : '<span style="color: #999;">n/a</span>'}</td>
                     <td><span class="badge badge-${status}">${status}</span></td>
                     <td>
                         <button class="btn btn-primary btn-small" onclick="viewRecord(${recordId})">
