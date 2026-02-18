@@ -254,6 +254,71 @@
             margin-bottom: 10px;
             color: #999;
         }
+
+        /* Batch actions bar - sticky at top */
+.batch-actions {
+    position: sticky;
+    top: 20px;
+    background: white;
+    padding: 20px;
+    border: 2px solid #003d5c;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 100;
+}
+
+.batch-actions h3 {
+    margin-bottom: 15px;
+    color: #003d5c;
+}
+
+.batch-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Checkbox styling */
+.question-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+/* Question header with checkbox */
+.question-header-with-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.question-header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Highlight checked cards */
+.question-card:has(.question-checkbox:checked) {
+    border-color: #003d5c;
+    box-shadow: 0 0 0 2px rgba(0, 61, 92, 0.1);
+}
     </style>
 </head>
 <body>
@@ -271,7 +336,29 @@
                 <input type="email" id="userEmail" readonly style="flex: 1; background: #f0f0f0; cursor: not-allowed;">
             </div>
         </div>
+       <!-- ADD THIS: Batch Actions Bar -->
+        <div id="batchActionsBar" class="batch-actions" style="display: none;">
+            <h3>📦 Batch Submit</h3>
+            <div class="batch-buttons">
+                <button class="btn btn-success" onclick="submitAllAnswers()">
+                    ✓ Submit All Answers
+                </button>
+                <button class="btn btn-primary" onclick="submitSelectedAnswers()">
+                    ✓ Submit Selected Answers
+                </button>
+                <button class="btn btn-secondary" onclick="clearAllSelections()">
+                    Clear Selections
+                </button>
+            </div>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                <span id="selectedAnswersCount">0</span> selected • <span id="totalAnswersCount">0</span> total
+            </p>
+        </div>
         
+        <div id="loadingDiv" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading your questions...</p>
+        </div> 
         <div id="loadingDiv" class="loading" style="display: none;">
             <div class="spinner"></div>
             <p>Loading your questions...</p>
@@ -429,56 +516,66 @@
         }
         
         // Display questions
-        function displayQuestions(questions, email) {
-            const container = document.getElementById('questionsList');
-            
-            if (questions.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <h3>🎉 No pending questions!</h3>
-                        <p>You don't have any questions waiting for your answer.</p>
-                        <br>
-                        <p style="font-size: 0.9em; color: #999;">
-                            Debug: Searched for email: ${email}<br>
-                            Query: Field ${FIELD_IDS.referredToEmail} equals '${email}' AND Status equals 'referred'
-                        </p>
+// Display questions
+function displayQuestions(questions, email) {
+    const container = document.getElementById('questionsList');
+    
+    if (questions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>🎉 No pending questions!</h3>
+                <p>You don't have any questions waiting for your answer.</p>
+                <br>
+                <p style="font-size: 0.9em; color: #999;">
+                    Debug: Searched for email: ${email}<br>
+                    Query: Field ${FIELD_IDS.referredToEmail} equals '${email}' AND Status equals 'referred'
+                </p>
+            </div>
+        `;
+        document.getElementById('batchActionsBar').style.display = 'none';
+        return;
+    }
+    
+    console.log('Displaying', questions.length, 'questions');
+    
+    // Show batch actions bar
+    document.getElementById('batchActionsBar').style.display = 'block';
+    document.getElementById('totalAnswersCount').textContent = questions.length;
+    document.getElementById('selectedAnswersCount').textContent = 0;
+    
+    container.innerHTML = questions.map(q => {
+        const recordId = q[FIELD_IDS.recordId].value;
+        const question = q[FIELD_IDS.questionDecoded]?.value || 'No question';
+        const referredDate = q[FIELD_IDS.referredDate]?.value ? new Date(q[FIELD_IDS.referredDate].value) : null;
+        
+        return `
+            <div class="question-card" id="card-${recordId}">
+                <div class="question-header-with-checkbox">
+                    <div class="question-header-left">
+                        <input type="checkbox" class="question-checkbox" id="checkbox-${recordId}" onchange="updateBatchCount()">
+                        <span class="badge badge-referred">Pending</span>
                     </div>
-                `;
-                return;
-            }
-            
-            console.log('Displaying', questions.length, 'questions');
-            
-            container.innerHTML = questions.map(q => {
-                const recordId = q[FIELD_IDS.recordId].value;
-                const question = q[FIELD_IDS.questionDecoded]?.value || 'No question';
-                const referredDate = q[FIELD_IDS.referredDate]?.value ? new Date(q[FIELD_IDS.referredDate].value) : null;
+                    <span class="question-meta">
+                        ${referredDate ? `Referred: ${referredDate.toLocaleDateString()}` : ''}
+                    </span>
+                </div>
                 
-                return `
-                    <div class="question-card" id="card-${recordId}">
-                        <div class="question-header">
-                            <span class="badge badge-referred">Pending</span>
-                            <span class="question-meta">
-                                ${referredDate ? `Referred: ${referredDate.toLocaleDateString()}` : ''}
-                            </span>
-                        </div>
-                        
-                        <div class="question-text">${question}</div>
-                        
-                        <div class="answer-section">
-                            <label for="answer-${recordId}"><strong>Your Answer:</strong></label>
-                            <textarea id="answer-${recordId}" placeholder="Enter your answer here..." required></textarea>
-                            
-                            <div class="form-actions">
-                                <button class="btn btn-success" onclick="submitAnswer(${recordId}, '${email}')">
-                                    ✓ Submit Answer
-                                </button>
-                            </div>
-                        </div>
+                <div class="question-text">${question}</div>
+                
+                <div class="answer-section">
+                    <label for="answer-${recordId}"><strong>Your Answer:</strong></label>
+                    <textarea id="answer-${recordId}" placeholder="Enter your answer here..." required></textarea>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-success" onclick="submitAnswer(${recordId}, '${email}')">
+                            ✓ Submit This Answer
+                        </button>
                     </div>
-                `;
-            }).join('');
-        }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
         
         // Submit answer
         async function submitAnswer(recordId, email) {
@@ -568,6 +665,165 @@
         function showLoading(show) {
             document.getElementById('loadingDiv').style.display = show ? 'block' : 'none';
         }
+        // Update batch count
+function updateBatchCount() {
+    const checkboxes = document.querySelectorAll('.question-checkbox');
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    document.getElementById('selectedAnswersCount').textContent = checkedCount;
+}
+
+// Clear all selections
+function clearAllSelections() {
+    const checkboxes = document.querySelectorAll('.question-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    updateBatchCount();
+}
+
+// Submit all answers
+async function submitAllAnswers() {
+    const cards = document.querySelectorAll('.question-card');
+    const recordIds = Array.from(cards).map(card => {
+        const id = card.id.replace('card-', '');
+        return parseInt(id);
+    });
+    
+    if (recordIds.length === 0) {
+        showStatus('No questions to submit', 'error');
+        return;
+    }
+    
+    // Check if all have answers
+    const missingAnswers = recordIds.filter(id => {
+        const textarea = document.getElementById(`answer-${id}`);
+        return !textarea || textarea.value.trim() === '';
+    });
+    
+    if (missingAnswers.length > 0) {
+        if (!confirm(`${missingAnswers.length} question(s) have no answer. Submit the ones with answers anyway?`)) {
+            return;
+        }
+    }
+    
+    if (!confirm(`Submit ${recordIds.length - missingAnswers.length} answer(s)?`)) {
+        return;
+    }
+    
+    await batchSubmitAnswers(recordIds);
+}
+
+// Submit selected answers
+async function submitSelectedAnswers() {
+    const checkboxes = document.querySelectorAll('.question-checkbox:checked');
+    const recordIds = Array.from(checkboxes).map(cb => {
+        const id = cb.id.replace('checkbox-', '');
+        return parseInt(id);
+    });
+    
+    if (recordIds.length === 0) {
+        showStatus('No questions selected', 'error');
+        return;
+    }
+    
+    // Check if all selected have answers
+    const missingAnswers = recordIds.filter(id => {
+        const textarea = document.getElementById(`answer-${id}`);
+        return !textarea || textarea.value.trim() === '';
+    });
+    
+    if (missingAnswers.length > 0) {
+        showStatus(`${missingAnswers.length} selected question(s) have no answer. Please fill them in first.`, 'error');
+        return;
+    }
+    
+    if (!confirm(`Submit ${recordIds.length} selected answer(s)?`)) {
+        return;
+    }
+    
+    await batchSubmitAnswers(recordIds);
+}
+
+// Batch submit helper function
+async function batchSubmitAnswers(recordIds) {
+    showLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const recordId of recordIds) {
+        const answerText = document.getElementById(`answer-${recordId}`)?.value.trim();
+        
+        if (!answerText) {
+            errorCount++;
+            continue;
+        }
+        
+        try {
+            const response = await fetch(WEBHOOKS.submitAnswer, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    record_id: recordId,
+                    answer: answerText,
+                    responder_email: currentUserEmail,
+                    notes: '',
+                    submitted_at: new Date().toISOString()
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Mark as submitted
+                const card = document.getElementById(`card-${recordId}`);
+                card.style.background = '#d4edda';
+                card.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <h3 style="color: #155724;">✓ Answer Submitted!</h3>
+                        <p>Thank you for your response.</p>
+                    </div>
+                `;
+                successCount++;
+            } else {
+                errorCount++;
+            }
+            
+        } catch (error) {
+            console.error(`Error submitting answer ${recordId}:`, error);
+            errorCount++;
+        }
+    }
+    
+    showLoading(false);
+    showStatus(`Submitted: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error');
+    
+    // Remove submitted cards after delay
+    setTimeout(() => {
+        recordIds.forEach(id => {
+            const card = document.getElementById(`card-${id}`);
+            if (card && card.style.background === 'rgb(212, 237, 218)') {
+                card.remove();
+            }
+        });
+        
+        // Check if any questions left
+        const remaining = document.querySelectorAll('.question-card').length;
+        if (remaining === 0) {
+            document.getElementById('questionsList').innerHTML = `
+                <div class="empty-state">
+                    <h3>🎉 All done!</h3>
+                    <p>You've answered all your pending questions. Thank you!</p>
+                </div>
+            `;
+            document.getElementById('batchActionsBar').style.display = 'none';
+        } else {
+            updateBatchCount();
+            document.getElementById('totalAnswersCount').textContent = remaining;
+        }
+    }, 2000);
+}
     </script>
 </body>
 </html>
