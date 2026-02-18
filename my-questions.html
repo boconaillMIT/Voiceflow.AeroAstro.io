@@ -299,22 +299,9 @@
         const WEBHOOKS = {
             submitAnswer: 'https://hook.us2.make.com/fh0skp0c9p239qlqtf5cygt28tps5efz'
         };
-        // No need to sanitize - just encode
-        const notes = document.getElementById('notes')?.value.trim() || '';
-        
-        body: JSON.stringify({
-            record_id: recordId,
-            answer: answerText,
-            responder_email: email,
-            notes: notes,  // Send plain text - Make.com will encode
-            submitted_at: new Date().toISOString()
-        })
-        let currentUserEmail = null;
-        
-        // Auto-authenticate on page load
-        window.addEventListener('load', function() {
-            authenticateAndLoadQuestions();
-        });
+    
+
+let currentUserEmail = null;
         
         // Authenticate user and load their questions
         async function authenticateAndLoadQuestions() {
