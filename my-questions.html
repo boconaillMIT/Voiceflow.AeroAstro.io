@@ -301,8 +301,11 @@
         };
     
 
-let currentUserEmail = null;
-        
+        let currentUserEmail = null;
+        // Auto-authenticate on page load
+        window.addEventListener('load', function() {
+            authenticateAndLoadQuestions();
+        });
         // Authenticate user and load their questions
         async function authenticateAndLoadQuestions() {
             try {
