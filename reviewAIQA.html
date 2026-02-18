@@ -924,7 +924,8 @@
             answerDecoded: 24,      // ← ADD THIS
             questionDecoded: 26,
             referredToEmail: 29,     // ADD THIS (use actual field ID)
-            referredDate: 30          // ADD THIS (use actual field ID)
+            referredDate: 30,
+            adminNotesDecoded: 31 
         };
         // Webhook URLs
         const WEBHOOKS = {
@@ -1137,11 +1138,12 @@ async function sendReferral() {
             
             // Update QuickBase to add admin note about referral
             const adminNotes = `Referred to ${email} on ${new Date().toLocaleString()} by ${currentAdminName}`;
+            const base64AdminNotes = encodeBase64UTF8(adminNotes);  // ← ADD THIS
             await makeQuickBaseRequest('POST', 'records', {
                 to: QUICKBASE_CONFIG.tableId,
                 data: [{
                     [FIELD_IDS.recordId]: { value: recordId },
-                    [FIELD_IDS.adminNotes]: { value: adminNotes }
+                    [FIELD_IDS.adminNotes]: { value: base64AdminNotes }  // ← CHANGED
                 }]
             });
             
@@ -1213,7 +1215,7 @@ async function sendReferral() {
                 
                 const queryBody = {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26, 29, 30],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26, 29, 30,31],
                     options: {
                         orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
                     }
@@ -1600,7 +1602,7 @@ try {
             const testRunId = record[FIELD_IDS.testRunId]?.value || 'N/A';
             const flaggedBy = record[FIELD_IDS.flaggedBy]?.value || 'N/A';
             const suggestedCorrection = record[FIELD_IDS.suggestedCorrection]?.value || '';
-            const adminNotes = record[FIELD_IDS.adminNotes]?.value || '';
+            const adminNotes = record[FIELD_IDS.adminNotesDecoded]?.value || '';
             const recordId = record[FIELD_IDS.recordId].value;
         
                       const detailsHtml = `
@@ -1707,17 +1709,17 @@ ${referredTo ? `
         try {
             showLoading(true);
             
-            // Encode answer to base64 for both fields
-           const base64Answer = encodeBase64UTF8(editedAnswer); 
+            const base64Answer = encodeBase64UTF8(editedAnswer);
+            const base64AdminNotes = encodeBase64UTF8(adminNotes);  // ← ADD THIS
             
             await makeQuickBaseRequest('POST', 'records', {
                 to: QUICKBASE_CONFIG.tableId,
                 data: [{
                     [FIELD_IDS.recordId]: { value: recordId },
-                    [FIELD_IDS.answer]: { value: base64Answer },     // Field 7: base64
-                    [22]: { value: base64Answer },                    // Field 22: base64 (FIXED!)
+                    [FIELD_IDS.answer]: { value: base64Answer },
+                    [22]: { value: base64Answer },
                     [FIELD_IDS.status]: { value: 'correct' },
-                    [FIELD_IDS.adminNotes]: { value: adminNotes },
+                    [FIELD_IDS.adminNotes]: { value: base64AdminNotes },  // ← CHANGED
                     [FIELD_IDS.reviewed]: { value: true }
                 }]
             });
@@ -1736,11 +1738,11 @@ ${referredTo ? `
         // Mark as incorrect
         async function markAsIncorrect(recordId) {
             const adminNotes = document.getElementById('adminNotesEdit').value;
-
+     const base64AdminNotes = encodeBase64UTF8(adminNotes);  // ADD
             if (!confirm('Mark this Q&A as incorrect?')) {
                 return;
             }
-
+       
             try {
                 showLoading(true);
                 
@@ -1749,7 +1751,7 @@ ${referredTo ? `
                     data: [{
                         [FIELD_IDS.recordId]: { value: recordId },
                         [FIELD_IDS.status]: { value: 'incorrect' },
-                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.adminNotes]: { value: base64AdminNotes },  // CHANGED
                         [FIELD_IDS.reviewed]: { value: true }
                     }]
                 });
@@ -1768,7 +1770,7 @@ ${referredTo ? `
         // Mark as needs review
         async function markNeedsReview(recordId) {
             const adminNotes = document.getElementById('adminNotesEdit').value;
-
+            const base64AdminNotes = encodeBase64UTF8(adminNotes);  // ADD
             try {
                 showLoading(true);
                 
@@ -1777,7 +1779,7 @@ ${referredTo ? `
                     data: [{
                         [FIELD_IDS.recordId]: { value: recordId },
                         [FIELD_IDS.status]: { value: 'needs_review' },
-                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.adminNotes]: { value: base64AdminNotes },  // CHANGED
                         [FIELD_IDS.reviewed]: { value: false }
                     }]
                 });
@@ -1795,7 +1797,7 @@ ${referredTo ? `
         // Mark as unknown
         async function markAsUnknown(recordId) {
             const adminNotes = document.getElementById('adminNotesEdit').value;
-        
+        const base64AdminNotes = encodeBase64UTF8(adminNotes);  // ADD
             try {
                 showLoading(true);
                 
@@ -1804,7 +1806,7 @@ ${referredTo ? `
                     data: [{
                         [FIELD_IDS.recordId]: { value: recordId },
                         [FIELD_IDS.status]: { value: 'unknown' },
-                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+                        [FIELD_IDS.adminNotes]: { value: base64AdminNotes },  // CHANGED
                         [FIELD_IDS.reviewed]: { value: true }
                     }]
                 });
@@ -1822,7 +1824,7 @@ ${referredTo ? `
         // Mark as deleted
         async function markAsDeleted(recordId) {
             const adminNotes = document.getElementById('adminNotesEdit').value;
-        
+        const base64AdminNotes = encodeBase64UTF8(adminNotes);  // ADD
             if (!confirm('⚠️ Mark this Q&A as deleted? (This will not permanently delete it - you can change the status later or delete it permanently in QuickBase if needed.)')) {
                 return;
             }
@@ -1835,7 +1837,7 @@ ${referredTo ? `
                     data: [{
                         [FIELD_IDS.recordId]: { value: recordId },
                         [FIELD_IDS.status]: { value: 'deleted' },
-                        [FIELD_IDS.adminNotes]: { value: adminNotes },
+        [FIELD_IDS.adminNotes]: { value: base64AdminNotes },  // CHANGED
                         [FIELD_IDS.reviewed]: { value: true }
                     }]
                 });
