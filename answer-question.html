@@ -301,7 +301,7 @@ const WEBHOOKS = {
             event.preventDefault();
             
             const answer = document.getElementById('answer').value.trim();
-            const email = document.getElementById('email').value.trim();
+            const email = currentUserEmail;
             const notes = document.getElementById('notes').value.trim();
             
             if (!answer) {
@@ -310,7 +310,7 @@ const WEBHOOKS = {
             }
             
             if (!email) {
-                showStatus('Please provide your email address', 'error');
+                showStatus('Unable to determine your email. Please log in to the chatbot first.', 'error');
                 return;
             }
             
