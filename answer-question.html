@@ -240,7 +240,22 @@ const WEBHOOKS = {
 };
         
         let currentRecordId = null;
+        let currentUserEmail = null;  // ← ADD THIS
+        function getUserEmail() {
+    try {
+        const storedData = localStorage.getItem('user_metadata');
+        if (!storedData) {
+            console.warn('No user_metadata found in localStorage');
+            return null;
+        }
         
+        const userData = JSON.parse(storedData);
+        return userData.email || (userData.kerberos ? userData.kerberos + '@mit.edu' : null);
+    } catch (error) {
+        console.error('Error reading user metadata:', error);
+        return null;
+    }
+}
         // Get record ID from URL
         function getRecordIdFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -371,7 +386,15 @@ const WEBHOOKS = {
         }
         
         // Initialize
-        window.addEventListener('load', loadQuestion);
+window.addEventListener('load', function() {
+    currentUserEmail = getUserEmail();
+    if (currentUserEmail) {
+        console.log('User email detected:', currentUserEmail);
+    } else {
+        console.warn('No user email found - user may need to log in to chatbot first');
+    }
+    loadQuestion();
+});
     </script>
 </body>
 </html>
