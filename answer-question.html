@@ -786,7 +786,12 @@ async function submitForward() {
         showLoading(false);
     }
 }
-
+function showLoading(show) {
+    const loadingDiv = document.getElementById('loadingDiv');
+    if (loadingDiv) {
+        loadingDiv.style.display = show ? 'block' : 'none';
+    }
+}
 // Check circular forwarding
 function checkCircularForwarding(forwardingHistory, emailToCheck) {
     if (!forwardingHistory) return null;
