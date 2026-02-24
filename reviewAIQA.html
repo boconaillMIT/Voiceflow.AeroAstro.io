@@ -2021,83 +2021,87 @@ function closeBulkReferModal() {
     document.getElementById('bulkReferModal').style.display = 'none';
 }
 
-// Send bulk referral
-async function sendBulkReferral() {
-    const email = document.getElementById('bulkReferEmail').value.trim();
-    const note = document.getElementById('bulkReferNote').value.trim();
-    const recordIds = getSelectedRecordIds();
-    
-    if (!email) {
-        showMessage('Please enter a recipient email address', 'error');
-        document.getElementById('bulkReferEmail').focus();
-        return;
-    }
-    
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showMessage('Please enter a valid email address', 'error');
-        document.getElementById('bulkReferEmail').focus();
-        return;
-    }
-    
-    if (recordIds.length === 0) {
-        showMessage('No records selected', 'error');
-        return;
-    }
-    
-    if (!confirm(`Refer ${recordIds.length} question(s) to ${email}?`)) {
-        return;
-    }
-    
-    showLoading(true);
-    let successCount = 0;
-    let errorCount = 0;
-    
-    for (const recordId of recordIds) {
+
+    // Send bulk referral
+    async function sendBulkReferral() {
+        const email = document.getElementById('bulkReferEmail').value.trim();
+        const note = document.getElementById('bulkReferNote').value.trim();
+        const recordIds = getSelectedRecordIds();
+        
+        if (!email) {
+            showMessage('Please enter a recipient email address', 'error');
+            document.getElementById('bulkReferEmail').focus();
+            return;
+        }
+        
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showMessage('Please enter a valid email address', 'error');
+            document.getElementById('bulkReferEmail').focus();
+            return;
+        }
+        
+        if (recordIds.length === 0) {
+            showMessage('No records selected', 'error');
+            return;
+        }
+        
+        if (!confirm(`Refer ${recordIds.length} question(s) to ${email}?`)) {
+            return;
+        }
+        
+        showLoading(true);
+        
         try {
-            // Get the record details
-            const record = allRecords.find(r => r[FIELD_IDS.recordId].value == recordId);
-            if (!record) continue;
+            // Gather all questions into one array
+            const questions = recordIds.map(recordId => {
+                const record = allRecords.find(r => r[FIELD_IDS.recordId].value == recordId);
+                return {
+                    record_id: recordId,
+                    question: record[FIELD_IDS.questionDecoded]?.value || 'No question'
+                };
+            });
             
-            const question = record[FIELD_IDS.questionDecoded]?.value || 'No question';
-            
-            // Call webhook to send referral
-            const response = await fetch('https://hook.us2.make.com/p5uu0q1cqxuythkybc8bt2oxv1ud7788', {
+            // ONE webhook call with ALL questions
+            const response = await fetch('https://hook.us2.make.com/BULK_WEBHOOK_URL_HERE', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     admin_name: currentAdminName,
                     recipient_email: email,
-                    question: question,
-                    record_id: recordId,
+                    questions: questions,  // Array of all questions
                     note: note,
-                    answer_url: `https://aeroastrovfbot.netlify.app/answer-question.html?recordId=${recordId}`
+                    referred_date: new Date().toISOString()
                 })
             });
             
-            if (response.ok) {
-                successCount++;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showMessage(`Referred ${recordIds.length} question(s) to ${email} successfully!`, 'success');
+                closeBulkReferModal();
+                clearSelection();
+                
+                // Reload to show updated statuses
+                setTimeout(() => {
+                    loadQA();
+                }, 1000);
             } else {
-                errorCount++;
+                throw new Error(result.message || 'Failed to send referrals');
             }
             
         } catch (error) {
-            console.error(`Error referring ${recordId}:`, error);
-            errorCount++;
+            console.error('Error sending bulk referral:', error);
+            showMessage('Error sending referrals: ' + error.message, 'error');
+        } finally {
+            showLoading(false);
         }
     }
-    
-    showLoading(false);
-    showMessage(`Referred: ${successCount}, Failed: ${errorCount}`, successCount > 0 ? 'success' : 'error');
-    closeBulkReferModal();
-    clearSelection();
-    
-    // Reload to show updated statuses
-    setTimeout(() => {
-        loadQA();
-    }, 1000);
-}
         // Utility functions
         function closeModal() {
             document.getElementById('reviewModal').style.display = 'none';
