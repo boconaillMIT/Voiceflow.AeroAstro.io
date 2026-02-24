@@ -381,7 +381,43 @@
             </div>
         </div>
     </div>
-    
+                    <!-- Forward Modal -->
+        <div id="forwardModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeForwardModal()">&times;</span>
+                <h2>Forward Question to Another Expert</h2>
+                
+                <div class="modal-body">
+                    <div class="warning-box">
+                        ⚠️ You're about to forward this question. The new recipient will be 
+                        notified via email and can answer or forward it further.
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Forward to Email Address: *</label>
+                        <input type="email" id="forwardEmail" required>
+                        <small style="color: #666; font-size: 0.85em;">Enter the email of the person best suited to answer this</small>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Reason for forwarding (optional):</label>
+                        <textarea id="forwardReason" rows="3" 
+                                  placeholder="E.g., 'Jane handles faculty support questions'"></textarea>
+                    </div>
+                    
+                    <div id="forwardError" class="error-message" style="display: none;"></div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="submitForward()">
+                            📧 Forward Question
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeForwardModal()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     <script>
         const QUICKBASE_CONFIG = {
             realm: 'mit.quickbase.com',
@@ -779,43 +815,7 @@ window.addEventListener('click', function(event) {
     }
 });
 
-                <!-- Forward Modal -->
-        <div id="forwardModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeForwardModal()">&times;</span>
-                <h2>Forward Question to Another Expert</h2>
-                
-                <div class="modal-body">
-                    <div class="warning-box">
-                        ⚠️ You're about to forward this question. The new recipient will be 
-                        notified via email and can answer or forward it further.
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Forward to Email Address: *</label>
-                        <input type="email" id="forwardEmail" required>
-                        <small style="color: #666; font-size: 0.85em;">Enter the email of the person best suited to answer this</small>
-                    </div>
-                    
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label>Reason for forwarding (optional):</label>
-                        <textarea id="forwardReason" rows="3" 
-                                  placeholder="E.g., 'Jane handles faculty support questions'"></textarea>
-                    </div>
-                    
-                    <div id="forwardError" class="error-message" style="display: none;"></div>
-                    
-                    <div class="modal-actions">
-                        <button class="btn btn-primary" onclick="submitForward()">
-                            📧 Forward Question
-                        </button>
-                        <button class="btn btn-secondary" onclick="closeForwardModal()">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+
     </script>
     
 </body>
