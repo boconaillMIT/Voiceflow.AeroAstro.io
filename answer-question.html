@@ -490,7 +490,7 @@
                 },
                 body: JSON.stringify({
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 26, 10, 8, 9, 29, 32, 33, 34],
+                    select: [3, 26, 10, 8, 9, 29, 31, 32, 33],
                     where: `{${FIELD_IDS.recordId}.EX.${recordId}}`
                 })
             });
