@@ -528,7 +528,25 @@
             
             // Display referral trail
             displayReferralTrail(forwardingHistory, currentExpert);
-            
+            // Check if user is the current expert
+            if (currentExpert.toLowerCase() !== currentUserEmail.toLowerCase()) {
+                // Question is not assigned to this user
+                document.getElementById('answerForm').style.display = 'none';
+                document.getElementById('formDiv').innerHTML = `
+                    <div class="question-box">
+                        <div class="question-label">Question</div>
+                        <div class="question-text">${question}</div>
+                    </div>
+                    <div style="text-align: center; padding: 40px; background: #fff3cd; border-radius: 8px; margin-top: 20px;">
+                        <h3 style="color: #856404;">⚠️ This question has been forwarded</h3>
+                        <p>This question was forwarded to <strong>${currentExpert}</strong></p>
+                        <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                            You can view the history below, but only the current assignee can answer or forward it.
+                        </p>
+                    </div>
+                    ${document.getElementById('referralTrail').outerHTML}
+                `;
+            }
             document.getElementById('loadingDiv').style.display = 'none';
             document.getElementById('formDiv').style.display = 'block';
             
