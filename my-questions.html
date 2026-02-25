@@ -319,6 +319,151 @@
     border-color: #003d5c;
     box-shadow: 0 0 0 2px rgba(0, 61, 92, 0.1);
 }
+        /* Forward button */
+.btn-secondary {
+    background: #607d8b;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #546e7a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* History toggle */
+.history-toggle {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 0.9em;
+    color: #003d5c;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.history-toggle:hover {
+    background: #e9ecef;
+}
+
+.history-content {
+    margin-top: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #003d5c;
+}
+
+.trail-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: white;
+    border-left: 3px solid #17a2b8;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.trail-item:last-child {
+    border-left-color: #27ae60;
+    background: #f0f9f0;
+}
+
+.trail-date {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 3px;
+}
+
+.trail-action {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.trail-reason {
+    font-size: 0.85em;
+    color: #555;
+    font-style: italic;
+    margin-top: 3px;
+}
+
+.trail-empty {
+    color: #999;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-content {
+    background: white;
+    margin: 10% auto;
+    padding: 0;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+    background: linear-gradient(135deg, #003d5c 0%, #1e5a7a 50%, #4a90b8 100%);
+    color: white;
+    padding: 20px 30px;
+    margin: 0;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+.warning-box {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.close {
+    color: white;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.close:hover {
+    opacity: 1;
+}
     </style>
 </head>
 <body>
@@ -380,14 +525,21 @@
             status: 9,
             referredToEmail: 29,
             referredDate: 30,
-            dateTime: 10
+            dateTime: 10,
+            forwardingHistory: 31,
+            originalReferrer: 32,
+            referralCount: 33
         };
         
         const WEBHOOKS = {
-            submitAnswer: 'https://hook.us2.make.com/fh0skp0c9p239qlqtf5cygt28tps5efz'
+            submitAnswer: 'https://hook.us2.make.com/fh0skp0c9p239qlqtf5cygt28tps5efz',
+            forwardQuestion: 'https://hook.us2.make.com/mspef72121uk77otrfi4odn88vrgwe4m'
         };
     
-
+        // Forward modal state
+        let currentForwardRecordId = null;
+        let currentForwardHistory = '';
+        let currentForwardCount = 0;
         let currentUserEmail = null;
         // Auto-authenticate on page load
         window.addEventListener('load', function() {
@@ -474,7 +626,7 @@
             try {
                 const queryBody = {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 26, 9, 29, 30, 10],
+                    select: [3, 26, 9, 29, 30, 10, 31, 32, 33],
                     where: `{${FIELD_IDS.referredToEmail}.EX.'${email}'}AND{${FIELD_IDS.status}.EX.'referred'}`,
                     options: {
                         orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
@@ -543,38 +695,52 @@ function displayQuestions(questions, email) {
     document.getElementById('totalAnswersCount').textContent = questions.length;
     document.getElementById('selectedAnswersCount').textContent = 0;
     
-    container.innerHTML = questions.map(q => {
-        const recordId = q[FIELD_IDS.recordId].value;
-        const question = q[FIELD_IDS.questionDecoded]?.value || 'No question';
-        const referredDate = q[FIELD_IDS.referredDate]?.value ? new Date(q[FIELD_IDS.referredDate].value) : null;
-        
-        return `
-            <div class="question-card" id="card-${recordId}">
-                <div class="question-header-with-checkbox">
-                    <div class="question-header-left">
-                        <input type="checkbox" class="question-checkbox" id="checkbox-${recordId}" onchange="updateBatchCount()">
-                        <span class="badge badge-referred">Pending</span>
-                    </div>
-                    <span class="question-meta">
-                        ${referredDate ? `Referred: ${referredDate.toLocaleDateString()}` : ''}
-                    </span>
+container.innerHTML = questions.map(q => {
+    const recordId = q[FIELD_IDS.recordId].value;
+    const question = q[FIELD_IDS.questionDecoded]?.value || 'No question';
+    const referredDate = q[FIELD_IDS.referredDate]?.value ? new Date(q[FIELD_IDS.referredDate].value) : null;
+    const forwardingHistory = q[FIELD_IDS.forwardingHistory]?.value || '';
+    const referralCount = q[FIELD_IDS.referralCount]?.value || 0;
+    
+    return `
+        <div class="question-card" id="card-${recordId}" 
+             data-history="${encodeURIComponent(forwardingHistory)}"
+             data-count="${referralCount}">
+            <div class="question-header-with-checkbox">
+                <div class="question-header-left">
+                    <input type="checkbox" class="question-checkbox" id="checkbox-${recordId}" onchange="updateBatchCount()">
+                    <span class="badge badge-referred">Pending</span>
                 </div>
+                <span class="question-meta">
+                    ${referredDate ? `Referred: ${referredDate.toLocaleDateString()}` : ''}
+                </span>
+            </div>
+            
+            <div class="question-text">${question}</div>
+            
+            <div class="answer-section">
+                <label for="answer-${recordId}"><strong>Your Answer:</strong></label>
+                <textarea id="answer-${recordId}" placeholder="Enter your answer here..." required></textarea>
                 
-                <div class="question-text">${question}</div>
-                
-                <div class="answer-section">
-                    <label for="answer-${recordId}"><strong>Your Answer:</strong></label>
-                    <textarea id="answer-${recordId}" placeholder="Enter your answer here..." required></textarea>
-                    
-                    <div class="form-actions">
-                        <button class="btn btn-success" onclick="submitAnswer(${recordId}, '${email}')">
-                            ✓ Submit This Answer
-                        </button>
-                    </div>
+                <div class="form-actions">
+                    <button class="btn btn-success" onclick="submitAnswer(${recordId}, '${email}')">
+                        ✓ Submit This Answer
+                    </button>
+                    <button class="btn btn-secondary" onclick="openForwardModalBulk(${recordId})">
+                        ↗️ Forward Question
+                    </button>
                 </div>
             </div>
-        `;
-    }).join('');
+            
+            <div class="history-toggle" onclick="toggleHistory(${recordId})">
+                <span id="history-toggle-${recordId}">Show History ▼</span>
+            </div>
+            <div id="history-${recordId}" class="history-content" style="display: none;">
+                <!-- Populated when toggled -->
+            </div>
+        </div>
+    `;
+}).join('');
 }
         
         // Submit answer
@@ -824,6 +990,269 @@ async function batchSubmitAnswers(recordIds) {
         }
     }, 2000);
 }
+        // Toggle history display
+function toggleHistory(recordId) {
+    const historyDiv = document.getElementById(`history-${recordId}`);
+    const toggleSpan = document.getElementById(`history-toggle-${recordId}`);
+    
+    if (historyDiv.style.display === 'none') {
+        // Get history from card data attribute
+        const card = document.getElementById(`card-${recordId}`);
+        const history = decodeURIComponent(card.dataset.history || '');
+        
+        // Display history
+        displayHistoryContent(recordId, history);
+        historyDiv.style.display = 'block';
+        toggleSpan.textContent = 'Hide History ▲';
+    } else {
+        historyDiv.style.display = 'none';
+        toggleSpan.textContent = 'Show History ▼';
+    }
+}
+
+// Display history in the expanded section
+function displayHistoryContent(recordId, forwardingHistory) {
+    const historyDiv = document.getElementById(`history-${recordId}`);
+    
+    if (!forwardingHistory || forwardingHistory.trim() === '') {
+        historyDiv.innerHTML = `
+            <div class="trail-empty">
+                No forwarding history. This question was originally assigned to you.
+            </div>
+        `;
+        return;
+    }
+    
+    // Parse history (split by ➤ separator)
+    const entries = forwardingHistory.split(' ➤ ').filter(e => e.trim());
+    
+    const trailHTML = entries.map((entry, index) => {
+        const parts = entry.split('|').map(p => p.trim());
+        const dateTime = parts[0] || '';
+        const action = parts[1] || '';
+        const reason = parts[2] || '';
+        
+        return `
+            <div class="trail-item">
+                <div class="trail-date">${dateTime}</div>
+                <div class="trail-action">${action}</div>
+                ${reason ? `<div class="trail-reason">"${reason}"</div>` : ''}
+            </div>
+        `;
+    }).join('');
+    
+    historyDiv.innerHTML = trailHTML + `
+        <div class="trail-item">
+            <div class="trail-action">→ Currently assigned to you</div>
+        </div>
+    `;
+}
+
+// Open forward modal
+function openForwardModalBulk(recordId) {
+    const card = document.getElementById(`card-${recordId}`);
+    currentForwardRecordId = recordId;
+    currentForwardHistory = decodeURIComponent(card.dataset.history || '');
+    currentForwardCount = parseInt(card.dataset.count || '0');
+    
+    document.getElementById('forwardModal').style.display = 'block';
+    document.getElementById('forwardEmail').value = '';
+    document.getElementById('forwardReason').value = '';
+    document.getElementById('forwardError').style.display = 'none';
+}
+
+// Close forward modal
+function closeForwardModal() {
+    document.getElementById('forwardModal').style.display = 'none';
+    currentForwardRecordId = null;
+}
+
+// Submit forward
+async function submitForward() {
+    const forwardEmail = document.getElementById('forwardEmail').value.trim();
+    const forwardReason = document.getElementById('forwardReason').value.trim();
+    const errorDiv = document.getElementById('forwardError');
+    
+    // Validation
+    if (!forwardEmail) {
+        errorDiv.textContent = 'Please enter an email address';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(forwardEmail)) {
+        errorDiv.textContent = 'Please enter a valid email address';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (forwardEmail.toLowerCase() === currentUserEmail.toLowerCase()) {
+        errorDiv.textContent = 'You cannot forward a question to yourself';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // Check circular forwarding (WARN but don't block)
+    const previousRecipient = checkCircularForwarding(currentForwardHistory, forwardEmail);
+    if (previousRecipient) {
+        if (!confirm(`⚠️ Please note ${previousRecipient} has already passed on this question. Are you sure you want to send it to them again?`)) {
+            return;
+        }
+    }
+    
+    // Check excessive forwarding (BLOCK at 8)
+    const MAX_FORWARDS = 8;
+    if (currentForwardCount >= MAX_FORWARDS) {
+        errorDiv.textContent = `This question has been forwarded ${currentForwardCount} times already. Please contact an administrator instead of forwarding further.`;
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (!confirm(`Forward this question to ${forwardEmail}?`)) {
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        // Get question text
+        const card = document.getElementById(`card-${currentForwardRecordId}`);
+        const questionText = card.querySelector('.question-text').textContent;
+        
+        // Call forward webhook
+        const response = await fetch(WEBHOOKS.forwardQuestion, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                record_id: currentForwardRecordId,
+                question: questionText,
+                from_email: currentUserEmail,
+                to_email: forwardEmail,
+                reason: forwardReason,
+                forwarded_at: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showStatus('✓ Question forwarded successfully!', 'success');
+            closeForwardModal();
+            
+            // Remove the card from the list
+            card.style.background = '#e3f2fd';
+            card.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <h3 style="color: #1976d2;">✓ Question Forwarded</h3>
+                    <p>This question has been forwarded to ${forwardEmail}</p>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                card.remove();
+                
+                // Update counters
+                const remaining = document.querySelectorAll('.question-card').length;
+                document.getElementById('totalAnswersCount').textContent = remaining;
+                updateBatchCount();
+                
+                if (remaining === 0) {
+                    document.getElementById('questionsList').innerHTML = `
+                        <div class="empty-state">
+                            <h3>🎉 No pending questions!</h3>
+                            <p>You've answered or forwarded all your pending questions.</p>
+                        </div>
+                    `;
+                    document.getElementById('batchActionsBar').style.display = 'none';
+                }
+            }, 2000);
+            
+        } else {
+            throw new Error(result.message || 'Failed to forward question');
+        }
+        
+    } catch (error) {
+        console.error('Error forwarding question:', error);
+        errorDiv.textContent = 'Error forwarding question: ' + error.message;
+        errorDiv.style.display = 'block';
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Check circular forwarding (returns email if found in history)
+function checkCircularForwarding(forwardingHistory, emailToCheck) {
+    if (!forwardingHistory) return null;
+    
+    // Parse history and extract all emails
+    const entries = forwardingHistory.split(' ➤ ');
+    const emailPattern = /to ([^\s|]+@[^\s|]+)|by ([^\s|]+@[^\s|]+)/gi;
+    
+    for (const entry of entries) {
+        let match;
+        while ((match = emailPattern.exec(entry)) !== null) {
+            const foundEmail = (match[1] || match[2]).toLowerCase();
+            if (foundEmail === emailToCheck.toLowerCase()) {
+                return emailToCheck;
+            }
+        }
+    }
+    
+    return null;
+}
+
+// Close modal on outside click
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('forwardModal');
+    if (event.target === modal) {
+        closeForwardModal();
+    }
+});
     </script>
+    <!-- Forward Modal -->
+    <div id="forwardModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeForwardModal()">&times;</span>
+            <h2>Forward Question to Another Expert</h2>
+            
+            <div class="modal-body">
+                <div class="warning-box">
+                    ⚠️ You're about to forward this question. The new recipient will be 
+                    notified via email and can answer or forward it further.
+                </div>
+                
+                <div class="form-group">
+                    <label>Forward to Email Address: *</label>
+                    <input type="email" id="forwardEmail" required style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    <small style="color: #666; font-size: 0.85em;">Enter the email of the person best suited to answer this</small>
+                </div>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Reason for forwarding (optional):</label>
+                    <textarea id="forwardReason" rows="3" 
+                              placeholder="E.g., 'Jane handles faculty support questions'"
+                              style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;"></textarea>
+                </div>
+                
+                <div id="forwardError" class="error-message" style="display: none;"></div>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="submitForward()">
+                        📧 Forward Question
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeForwardModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
 </body>
 </html>
