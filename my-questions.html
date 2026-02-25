@@ -1164,7 +1164,7 @@ async function submitForward() {
                         question: questionText,
                         from_email: currentUserEmail,
                         to_email: forwardEmail,
-                        reason: forwardReason,
+                        reason: encodeBase64UTF8(forwardReason),
                         forwarded_at: new Date().toISOString()
                     })
                 });
@@ -1297,6 +1297,19 @@ function openBatchForwardModal(recordIds) {
     const modalTitle = document.querySelector('#forwardModal h2');
     modalTitle.textContent = `Forward ${recordIds.length} Questions to Another Expert`;
 }
+// Base64 encoding functions
+function encodeBase64UTF8(str) {
+    return btoa(unescape(encodeURIComponent(str || '')));
+}
+
+function decodeBase64UTF8(str) {
+    try {
+        return decodeURIComponent(escape(atob(str || '')));
+    } catch (e) {
+        return str;
+    }
+}
+        
     </script>
     <!-- Forward Modal -->
     <div id="forwardModal" class="modal">
