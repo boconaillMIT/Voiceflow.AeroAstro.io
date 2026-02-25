@@ -584,11 +584,12 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        record_id: currentRecordId,
-                        answer: answer,
-                        responder_email: email,
-                        notes: notes,
-                        submitted_at: new Date().toISOString()
+                        record_id: recordId,
+                        question: questionText,
+                        from_email: currentUserEmail,
+                        to_email: forwardEmail,
+                        reason: encodeBase64UTF8(forwardReason),
+                        forwarded_at: new Date().toISOString()
                     })
                 });
                 
@@ -837,7 +838,18 @@ window.addEventListener('click', function(event) {
         closeForwardModal();
     }
 });
+// Base64 encoding functions
+function encodeBase64UTF8(str) {
+    return btoa(unescape(encodeURIComponent(str || '')));
+}
 
+function decodeBase64UTF8(str) {
+    try {
+        return decodeURIComponent(escape(atob(str || '')));
+    } catch (e) {
+        return str;
+    }
+}
 
     </script>
     
