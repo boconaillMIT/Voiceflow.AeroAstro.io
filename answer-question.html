@@ -671,7 +671,7 @@ function displayReferralTrail(forwardingHistory, currentExpert) {
         return;
     }
     
-    const entries = forwardingHistory.split('\n').filter(e => e.trim());
+    const entries = forwardingHistory.split(' ➤ ').filter(e => e.trim());
     
     const trailHTML = entries.map((entry, index) => {
         const parts = entry.split('|').map(p => p.trim());
