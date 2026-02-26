@@ -528,6 +528,26 @@
             
             // Display referral trail
             displayReferralTrail(forwardingHistory, currentExpert);
+
+            // Check if user has authenticated
+            if (!currentUserEmail) {
+                document.getElementById('loadingDiv').style.display = 'none';
+                document.getElementById('formDiv').innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: #fff3cd; border-radius: 8px; margin-top: 20px;">
+                        <h3 style="color: #856404;">🔒 Authentication Required</h3>
+                        <p>You need to log in to the chatbot first to answer questions.</p>
+                        <br>
+                        <a href="https://aeroastrovfbot.netlify.app/" class="btn btn-primary" style="text-decoration: none;">
+                            Log in to Chatbot
+                        </a>
+                        <br><br>
+                        <p style="font-size: 0.9em; color: #666;">
+                            After logging in, come back to this page and refresh.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
             // Check if user is the current expert
             if (currentExpert.toLowerCase() !== currentUserEmail.toLowerCase()) {
                 // Question is not assigned to this user
@@ -631,13 +651,35 @@
         }
 
         // Initialize
+// Initialize
 window.addEventListener('load', function() {
     currentUserEmail = getUserEmail();
     if (currentUserEmail) {
         console.log('User email detected:', currentUserEmail);
+        loadQuestion();
     } else {
-        console.warn('No user email found - user may need to log in to chatbot first');
+        console.warn('No user email found - user needs to log in to chatbot first');
+        document.getElementById('loadingDiv').style.display = 'none';
+        document.getElementById('formDiv').style.display = 'block';
+        document.getElementById('formDiv').innerHTML = `
+            <div style="text-align: center; padding: 40px; background: #f8d7da; border-radius: 8px;">
+                <h3 style="color: #721c24;">🔒 Authentication Required</h3>
+                <p>You must log in to the chatbot before you can answer questions.</p>
+                <br>
+                <a href="https://aeroastrovfbot.netlify.app/" class="btn btn-primary" style="text-decoration: none; display: inline-block;">
+                    Log in to Chatbot
+                </a>
+                <br><br>
+                <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
+                    <strong>Instructions:</strong><br>
+                    1. Click the button above to go to the chatbot<br>
+                    2. Log in with your MIT credentials<br>
+                    3. Come back to this page and refresh (F5)
+                </p>
+            </div>
+        `;
     }
+});
     loadQuestion();
 });
         // Display question metadata
