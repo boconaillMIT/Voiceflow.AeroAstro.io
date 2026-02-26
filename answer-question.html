@@ -688,7 +688,8 @@ async function initiateLogin() {
                         question: document.getElementById('questionText').textContent,
                         from_email: currentUserEmail,
                         to_email: forwardEmail,
-                        reason: forwardReason,  // ← WRONG, not encoded
+                        reason: encodeBase64UTF8(forwardReason),  // ← Encode it
+                        reason_plain: forwardReason,              // ← Add plain text for email
                         forwarded_at: new Date().toISOString()
                     })
                 });
