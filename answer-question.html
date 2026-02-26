@@ -685,10 +685,12 @@ async function initiateLogin() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         record_id: currentRecordId,
-                        answer: answer,                   // ← CORRECT
-                        responder_email: email,           // ← CORRECT
-                        notes: notes,                     // ← CORRECT
-                        submitted_at: new Date().toISOString()  // ← CORRECT
+                        question: document.getElementById('questionText').textContent,
+                        from_email: currentUserEmail,
+                        to_email: forwardEmail,
+                        reason: encodeBase64UTF8(forwardReason),  // ← Encode it
+                        reason_plain: forwardReason,              // ← Add plain text for email
+                        forwarded_at: new Date().toISOString()
                     })
                 });
                 
@@ -760,7 +762,7 @@ async function initiateLogin() {
             }
         });
 
-});
+
         // Display question metadata
 function displayQuestionMetadata(dateAsked, source, status, originalReferrer) {
     const metaDiv = document.createElement('div');
@@ -1015,46 +1017,7 @@ function decodeBase64UTF8(base64String) {
             if (!email || !email.includes('@')) return false;
             return email.toLowerCase().endsWith('@mit.edu');
         }
-        // Initiate OAuth login
-async function initiateLogin() {
-    try {
-        // Generate and store PKCE values
-        const codeVerifier = generateRandomString(128);
-        const codeChallenge = await generateCodeChallenge(codeVerifier);
-        const state = generateRandomString(32);
-        
-        // Store in sessionStorage
-        sessionStorage.setItem('pkce_code_verifier', codeVerifier);
-        sessionStorage.setItem('oauth_state', state);
-        
-        // Store the current record ID so we can return to it
-        const recordId = getRecordIdFromURL();
-        if (recordId) {
-            sessionStorage.setItem('return_record_id', recordId);  // ← ALSO store record ID
-            sessionStorage.setItem('return_page', 'answer-question');  // ← HERE
-        }
-        
-        // Build OAuth URL
-        const params = new URLSearchParams({
-            client_id: OAUTH_CONFIG.clientId,
-            redirect_uri: OAUTH_CONFIG.redirectUri,
-            response_type: 'code',
-            scope: OAUTH_CONFIG.scope,
-            state: state,
-            code_challenge: codeChallenge,
-            code_challenge_method: 'S256'
-        });
-        
-        const authUrl = `${OAUTH_CONFIG.authEndpoint}?${params.toString()}`;
-        
-        // Redirect to OAuth
-        window.location.href = authUrl;
-        
-    } catch (error) {
-        console.error('Login initiation error:', error);
-        showError('Authentication error. Please try again.');
-    }
-}
+
     </script>
     
 </body>
