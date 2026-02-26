@@ -738,7 +738,12 @@ async function submitForward() {
         errorDiv.style.display = 'block';
         return;
     }
-    
+    // ADD THIS:
+if (!validateMITEmail(forwardEmail)) {
+    errorDiv.textContent = 'Email must be an MIT address (must end with @mit.edu)';
+    errorDiv.style.display = 'block';
+    return;
+}
     if (forwardEmail.toLowerCase() === currentUserEmail.toLowerCase()) {
         errorDiv.textContent = 'You cannot forward a question to yourself';
         errorDiv.style.display = 'block';
@@ -884,7 +889,11 @@ function decodeBase64UTF8(base64String) {
                 return text; // Return original if encode fails
             }
         }
-
+        // Validate MIT email address
+        function validateMITEmail(email) {
+            if (!email || !email.includes('@')) return false;
+            return email.toLowerCase().endsWith('@mit.edu');
+        }
     </script>
     
 </body>
