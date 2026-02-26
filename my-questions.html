@@ -806,7 +806,7 @@ function displayQuestions(questions) {
             }
             
             const card = document.getElementById(`card-${recordId}`);
-            const btn = card.querySelector('.btn-success');
+            const btn = card.querySelector('.btn-primary');  // ← CORRECT CLASS
             btn.disabled = true;
             btn.textContent = 'Submitting...';
             
