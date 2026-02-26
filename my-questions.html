@@ -424,7 +424,33 @@
     margin: 0;
     border-radius: 12px 12px 0 0;
 }
+.question-actions {
+    margin-top: 15px;
+}
 
+.answer-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95em;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 100px;
+    margin-bottom: 10px;
+}
+
+.answer-input:focus {
+    outline: none;
+    border-color: #003d5c;
+    box-shadow: 0 0 0 3px rgba(0, 61, 92, 0.1);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
 .modal-body {
     padding: 30px;
 }
@@ -463,6 +489,16 @@
 
 .close:hover {
     opacity: 1;
+}
+        .form-group {
+    margin: 15px 0;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
 }
     </style>
 </head>
@@ -510,10 +546,6 @@
             <div class="spinner"></div>
             <p>Loading your questions...</p>
         </div> 
-        <div id="loadingDiv" class="loading" style="display: none;">
-            <div class="spinner"></div>
-            <p>Loading your questions...</p>
-        </div>
         
         <div id="questionsList"></div>
     </div>
@@ -741,10 +773,10 @@ function displayQuestions(questions) {
                     <textarea class="answer-input" id="answer-${recordId}" 
                               placeholder="Enter your answer here..." rows="4"></textarea>
                     <div class="action-buttons">
-                        <button class="btn btn-primary" onclick="submitSingleAnswer(${recordId})">
+                        <button class="btn btn-primary" onclick="submitAnswer(${recordId}, '${currentUserEmail}')">
                             ✓ Submit Answer
                         </button>
-                        <button class="btn btn-secondary" onclick="openForwardModalSingle(${recordId})">
+                        <button class="btn btn-secondary" onclick="openForwardModalBulk(${recordId})">
                             ↗️ Forward Question
                         </button>
                     </div>
@@ -752,6 +784,16 @@ function displayQuestions(questions) {
             </div>
         `;
     }).join('');
+    // Show/hide batch actions bar and update counts
+    const totalCount = questions.length;
+    document.getElementById('totalAnswersCount').textContent = totalCount;
+    document.getElementById('selectedAnswersCount').textContent = 0;
+    
+    if (totalCount > 0) {
+        document.getElementById('batchActionsBar').style.display = 'block';
+    } else {
+        document.getElementById('batchActionsBar').style.display = 'none';
+    }
 }
         
         // Submit answer
@@ -1425,5 +1467,4 @@ function decodeBase64UTF8(base64String) {
     </div>
 </body>
 </html>
-</body>
-</html>
+
