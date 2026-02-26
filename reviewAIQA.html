@@ -1142,6 +1142,7 @@ async function sendReferral() {
                 recipient_email: email,
                 admin_name: currentAdminName,
                 referral_note: encodeBase64UTF8(note),  // ← Encode it
+                 referral_note_plain: note,  // ADD THIS - plain text for email
                 referred_date: new Date().toISOString()
             })
         });
@@ -2072,6 +2073,7 @@ function closeBulkReferModal() {
                 recipient_email: email,
                 questions: questions,
                 note: encodeBase64UTF8(note),  // ← Encode it
+                    note_plain: note,  // ADD THIS - plain text for email
                 referred_date: new Date().toISOString()
             })
                 
