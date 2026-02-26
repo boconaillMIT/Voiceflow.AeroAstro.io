@@ -488,6 +488,9 @@
                 <button class="btn btn-success" onclick="submitAllAnswers()">
                     ✓ Submit All Answers
                 </button>
+                <button class="btn btn-secondary" onclick="forwardAllQuestions()">
+                    ↗️ Forward All Questions
+                </button>
                 <button class="btn btn-primary" onclick="submitSelectedAnswers()">
                     ✓ Submit Selected Answers
                 </button>
@@ -591,7 +594,21 @@
                 showAuthError();
             }
         }
-        
+        // Forward all questions
+        function forwardAllQuestions() {
+            const allCards = document.querySelectorAll('.question-card');
+            const recordIds = Array.from(allCards).map(card => {
+                const id = card.id.replace('card-', '');
+                return parseInt(id);
+            });
+            
+            if (recordIds.length === 0) {
+                showStatus('No questions available', 'error');
+                return;
+            }
+            
+            openBatchForwardModal(recordIds);
+        }
         // Show authentication error
         function showAuthError() {
             const container = document.getElementById('questionsList');
@@ -673,78 +690,68 @@
         
         // Display questions
 // Display questions
-function displayQuestions(questions, email) {
+function displayQuestions(questions) {
     const container = document.getElementById('questionsList');
     
     if (questions.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <h3>🎉 No pending questions!</h3>
-                <p>You don't have any questions waiting for your answer.</p>
-                <br>
-                <p style="font-size: 0.9em; color: #999;">
-                    Debug: Searched for email: ${email}<br>
-                    Query: Field ${FIELD_IDS.referredToEmail} equals '${email}' AND Status equals 'referred'
-                </p>
+                <p>You've answered or forwarded all your pending questions.</p>
             </div>
         `;
-        document.getElementById('batchActionsBar').style.display = 'none';
         return;
     }
     
-    console.log('Displaying', questions.length, 'questions');
-    
-    // Show batch actions bar
-    document.getElementById('batchActionsBar').style.display = 'block';
-    document.getElementById('totalAnswersCount').textContent = questions.length;
-    document.getElementById('selectedAnswersCount').textContent = 0;
-    
-container.innerHTML = questions.map(q => {
-    const recordId = q[FIELD_IDS.recordId].value;
-    const question = q[FIELD_IDS.questionDecoded]?.value || 'No question';
-    const referredDate = q[FIELD_IDS.referredDate]?.value ? new Date(q[FIELD_IDS.referredDate].value) : null;
-    const forwardingHistory = q[FIELD_IDS.forwardingHistory]?.value || '';
-    const referralCount = q[FIELD_IDS.referralCount]?.value || 0;
-    
-    return `
-        <div class="question-card" id="card-${recordId}" 
-             data-history="${encodeURIComponent(forwardingHistory)}"
-             data-count="${referralCount}">
-            <div class="question-header-with-checkbox">
-                <div class="question-header-left">
-                    <input type="checkbox" class="question-checkbox" id="checkbox-${recordId}" onchange="updateBatchCount()">
-                    <span class="badge badge-referred">Pending</span>
+    container.innerHTML = questions.map(q => {
+        const recordId = q[FIELD_IDS.recordId].value;
+        const question = q[FIELD_IDS.questionDecoded]?.value || 'No question';
+        const status = q[FIELD_IDS.status]?.value || 'pending';
+        const referredDate = q[FIELD_IDS.referredDate]?.value ? new Date(q[FIELD_IDS.referredDate].value) : null;
+        const forwardingHistory = q[FIELD_IDS.forwardingHistory]?.value || '';
+        const referralCount = q[FIELD_IDS.referralCount]?.value || 0;
+        
+        const statusLabel = status.replace('_', ' ').toUpperCase();
+        const dateStr = referredDate ? referredDate.toLocaleDateString() : 'N/A';
+        
+        return `
+            <div class="question-card" id="card-${recordId}" 
+                 data-history="${encodeURIComponent(forwardingHistory)}"
+                 data-count="${referralCount}">
+                <div class="question-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" class="question-checkbox" id="checkbox-${recordId}" 
+                               onchange="updateBatchCount()">
+                        <label for="checkbox-${recordId}" style="font-size: 0.85em; color: #666; cursor: pointer;">Select</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
+                        <span style="font-size: 0.85em; color: #666;">Status:</span>
+                        <span class="status-badge status-${status}">${statusLabel}</span>
+                        <span style="font-size: 0.85em; color: #666;">Referred: ${dateStr}</span>
+                    </div>
                 </div>
-                <span class="question-meta">
-                    ${referredDate ? `Referred: ${referredDate.toLocaleDateString()}` : ''}
-                </span>
-            </div>
-            
-            <div class="question-text">${question}</div>
-            
-            <div class="answer-section">
-                <label for="answer-${recordId}"><strong>Your Answer:</strong></label>
-                <textarea id="answer-${recordId}" placeholder="Enter your answer here..." required></textarea>
-                
-                <div class="form-actions">
-                    <button class="btn btn-success" onclick="submitAnswer(${recordId}, '${email}')">
-                        ✓ Submit This Answer
+                <div class="question-text">${question}</div>
+                ${forwardingHistory ? `
+                    <button class="history-toggle" onclick="toggleHistory(${recordId})">
+                        <span id="toggle-${recordId}">Show History ▼</span>
                     </button>
-                    <button class="btn btn-secondary" onclick="openForwardModalBulk(${recordId})">
-                        ↗️ Forward Question
-                    </button>
+                    <div class="history-content" id="history-${recordId}" style="display: none;"></div>
+                ` : ''}
+                <div class="question-actions">
+                    <textarea class="answer-input" id="answer-${recordId}" 
+                              placeholder="Enter your answer here..." rows="4"></textarea>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="submitSingleAnswer(${recordId})">
+                            ✓ Submit Answer
+                        </button>
+                        <button class="btn btn-secondary" onclick="openForwardModalSingle(${recordId})">
+                            ↗️ Forward Question
+                        </button>
+                    </div>
                 </div>
             </div>
-            
-            <div class="history-toggle" onclick="toggleHistory(${recordId})">
-                <span id="history-toggle-${recordId}">Show History ▼</span>
-            </div>
-            <div id="history-${recordId}" class="history-content" style="display: none;">
-                <!-- Populated when toggled -->
-            </div>
-        </div>
-    `;
-}).join('');
+        `;
+    }).join('');
 }
         
         // Submit answer
@@ -848,7 +855,11 @@ function clearAllSelections() {
     checkboxes.forEach(cb => cb.checked = false);
     updateBatchCount();
 }
-
+// Validate MIT email address
+function validateMITEmail(email) {
+    if (!email || !email.includes('@')) return false;
+    return email.toLowerCase().endsWith('@mit.edu');
+}
 // Submit all answers
 async function submitAllAnswers() {
     const cards = document.querySelectorAll('.question-card');
@@ -1081,9 +1092,11 @@ function closeForwardModal() {
     currentForwardRecordId = null;
     window.batchForwardRecordIds = null;
     
-    // Reset modal title
+    // Reset modal title and button
     const modalTitle = document.querySelector('#forwardModal h2');
+    const submitButton = document.querySelector('#forwardModal .btn-primary');
     modalTitle.textContent = 'Forward Question to Another Expert';
+    submitButton.textContent = '📧 Forward Question';
 }
 
 // Submit forward
@@ -1110,7 +1123,12 @@ async function submitForward() {
         errorDiv.style.display = 'block';
         return;
     }
-    
+    // ADD THIS:
+if (!validateMITEmail(forwardEmail)) {
+    errorDiv.textContent = 'Email must be an MIT address (must end with @mit.edu)';
+    errorDiv.style.display = 'block';
+    return;
+}
     if (forwardEmail.toLowerCase() === currentUserEmail.toLowerCase()) {
         errorDiv.textContent = 'You cannot forward questions to yourself';
         errorDiv.style.display = 'block';
@@ -1299,20 +1317,29 @@ function forwardSelectedQuestions() {
 }
 
 // Open batch forward modal
+
 function openBatchForwardModal(recordIds) {
-    // Store the record IDs for batch processing
     window.batchForwardRecordIds = recordIds;
     
-    // Open the same modal but update the title
     document.getElementById('forwardModal').style.display = 'block';
     document.getElementById('forwardEmail').value = '';
     document.getElementById('forwardReason').value = '';
     document.getElementById('forwardError').style.display = 'none';
     
-    // Update modal title to indicate batch
+    // Update modal title and button text
     const modalTitle = document.querySelector('#forwardModal h2');
-    modalTitle.textContent = `Forward ${recordIds.length} Questions to Another Expert`;
+    const submitButton = document.querySelector('#forwardModal .btn-primary');
+    
+    if (recordIds.length > 1) {
+        modalTitle.textContent = `Forward ${recordIds.length} Questions to Another Expert`;
+        submitButton.textContent = '📧 Forward Questions';
+    } else {
+        modalTitle.textContent = 'Forward Question to Another Expert';
+        submitButton.textContent = '📧 Forward Question';
+    }
 }
+
+        
 function decodeBase64UTF8(base64String) {
     try {
         // Decode base64 to binary string
