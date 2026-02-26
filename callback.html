@@ -28,20 +28,6 @@
       font-size: 16px;
       margin-bottom: 20px;
     }
-    .continue-btn {
-      background: #667eea;
-      color: white;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 15px;
-      font-size: 16px;
-    }
-    .continue-btn:disabled {
-      background: #bdc3c7;
-      cursor: not-allowed;
-    }
     .spinner {
       border: 3px solid #f3f3f3;
       border-top: 3px solid #667eea;
@@ -61,53 +47,9 @@
   <div class="processing-container">
     <div class="processing-message" id="status">Processing your login...</div>
     <div class="spinner" id="spinner"></div>
-    
-    <button class="continue-btn" id="continue-btn" style="display: none;" onclick="continueToChat()" disabled>
-      Continue to Chat (5s)
-    </button>
   </div>
 
   <script>
-    let finalUserData = null;
-    let countdownTimer = null;
-
-    function startCountdown() {
-      let seconds = 5;
-      const btn = document.getElementById('continue-btn');
-      
-      countdownTimer = setInterval(() => {
-        btn.textContent = `Continue to Chat (${seconds}s)`;
-        seconds--;
-        
-        if (seconds < 0) {
-          clearInterval(countdownTimer);
-          btn.textContent = 'Continue to Chat';
-          btn.disabled = false;
-          btn.style.background = '#667eea';
-        }
-      }, 1000);
-    }
-
-    function continueToChat() {
-      if (finalUserData) {
-        const chatbotParams = new URLSearchParams({
-          name: finalUserData.name || '',
-          firstName: finalUserData.firstName || '',
-          lastName: finalUserData.lastName || '',
-          kerberos: finalUserData.kerberos || '',
-          email: finalUserData.email || '',
-          title: finalUserData.title || '',
-          department: finalUserData.department || '',
-          groups: finalUserData.groups ? finalUserData.groups.join(',') : '',
-          loginTime: finalUserData.loginTime || '',
-          authenticated: 'true'
-        });
-
-        const chatbotUrl = `/chatbot.html?${chatbotParams.toString()}`;
-        window.location.href = chatbotUrl;
-      }
-    }
-
     (async () => {
       try {
         // Get URL parameters
@@ -125,9 +67,9 @@
           return;
         }
 
-        // Get stored values from localStorage
-        const verifier = localStorage.getItem('pkce_verifier');
-        const savedState = localStorage.getItem('pkce_state');
+        // Get stored values from sessionStorage (changed from localStorage)
+        const verifier = sessionStorage.getItem('pkce_code_verifier');
+        const savedState = sessionStorage.getItem('oauth_state');
 
         // Validate OAuth parameters
         if (!code || !state || !verifier || state !== savedState) {
@@ -160,9 +102,7 @@
         userData.title = safe(userData.title);
         userData.department = safe(userData.department);
 
-        finalUserData = userData;
-
-        // Store complete user metadata
+        // Store complete user metadata in localStorage (persists across pages)
         localStorage.setItem('user_metadata', JSON.stringify(userData));
         
         // Verify storage
@@ -171,14 +111,45 @@
           console.warn('Failed to store user metadata');
         }
 
-        // Show success message and redirect immediately
-        document.getElementById('status').textContent = 'Login successful! Redirecting to chatbot...';
+        // Clean up OAuth session data
+        sessionStorage.removeItem('pkce_code_verifier');
+        sessionStorage.removeItem('oauth_state');
+
+        // Check if we need to return to a specific page
+        const returnPage = sessionStorage.getItem('return_page');
+        const returnRecordId = sessionStorage.getItem('return_record_id');
+
+        // Clear the return page markers
+        sessionStorage.removeItem('return_page');
+        sessionStorage.removeItem('return_record_id');
+
+        // Show success message
+        document.getElementById('status').textContent = 'Login successful! Redirecting...';
         document.getElementById('status').style.color = '#27ae60';
         document.getElementById('spinner').style.display = 'none';
         
-        // Redirect immediately without button or countdown
+        // Redirect based on where the user came from
         setTimeout(() => {
-          continueToChat();
+          if (returnPage === 'answer-question' && returnRecordId) {
+            window.location.href = `/answer-question.html?recordId=${returnRecordId}`;
+          } else if (returnPage === 'my-questions') {
+            window.location.href = '/my-questions.html';
+          } else {
+            // Default: redirect to chatbot with URL parameters
+            const chatbotParams = new URLSearchParams({
+              name: userData.name || '',
+              firstName: userData.firstName || '',
+              lastName: userData.lastName || '',
+              kerberos: userData.kerberos || '',
+              email: userData.email || '',
+              title: userData.title || '',
+              department: userData.department || '',
+              groups: userData.groups ? userData.groups.join(',') : '',
+              loginTime: userData.loginTime || '',
+              authenticated: 'true'
+            });
+            window.location.href = `/chatbot.html?${chatbotParams.toString()}`;
+          }
         }, 500);
 
       } catch (err) {
