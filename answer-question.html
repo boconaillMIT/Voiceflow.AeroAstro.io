@@ -441,7 +441,87 @@
             submitAnswer: 'https://hook.us2.make.com/fh0skp0c9p239qlqtf5cygt28tps5efz',
             forwardQuestion: 'https://hook.us2.make.com/mspef72121uk77otrfi4odn88vrgwe4m'
         };
+ // OAuth Configuration (same as login.html)
+const OAUTH_CONFIG = {
+    clientId: '0oau0gmdr7C5GxVcq697',
+    redirectUri: 'https://aeroastrovfbot.netlify.app/callback.html',
+    authEndpoint: 'https://mitprod.okta.com/oauth2/default/v1/authorize',
+    scope: 'openid profile email'
+};
+
+// Generate random string for PKCE
+function generateRandomString(length) {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    let result = '';
+    const randomValues = new Uint8Array(length);
+    crypto.getRandomValues(randomValues);
+    for (let i = 0; i < length; i++) {
+        result += charset[randomValues[i] % charset.length];
+    }
+    return result;
+}
+
+// SHA256 hash
+async function sha256(plain) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    return crypto.subtle.digest('SHA-256', data);
+}
+
+// Base64 URL encode
+function base64urlencode(arr) {
+    return btoa(String.fromCharCode.apply(null, new Uint8Array(arr)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
+
+// Generate code challenge
+async function generateCodeChallenge(verifier) {
+    const hashed = await sha256(verifier);
+    return base64urlencode(hashed);
+}
+
+// Initiate OAuth login
+async function initiateLogin() {
+    try {
+        // Generate and store PKCE values
+        const codeVerifier = generateRandomString(128);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+        const state = generateRandomString(32);
         
+        // Store in sessionStorage
+        sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+        sessionStorage.setItem('oauth_state', state);
+        
+        // Store the current record ID so we can return to it
+        const recordId = getRecordIdFromURL();
+        if (recordId) {
+            sessionStorage.setItem('return_record_id', recordId);
+            sessionStorage.setItem('return_page', 'answer-question');
+        }
+        
+        // Build OAuth URL
+        const params = new URLSearchParams({
+            client_id: OAUTH_CONFIG.clientId,
+            redirect_uri: OAUTH_CONFIG.redirectUri,
+            response_type: 'code',
+            scope: OAUTH_CONFIG.scope,
+            state: state,
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256'
+        });
+        
+        const authUrl = `${OAUTH_CONFIG.authEndpoint}?${params.toString()}`;
+        
+        // Redirect to OAuth
+        window.location.href = authUrl;
+        
+    } catch (error) {
+        console.error('Login initiation error:', error);
+        showError('Authentication error. Please try again.');
+    }
+}       
         let currentRecordId = null;
         let currentUserEmail = null;  // ← ADD THIS
         let currentForwardingHistory = '';
@@ -651,35 +731,34 @@
         }
 
         // Initialize
-// Initialize
-window.addEventListener('load', function() {
-    currentUserEmail = getUserEmail();
-    if (currentUserEmail) {
-        console.log('User email detected:', currentUserEmail);
-        loadQuestion();
-    } else {
-        console.warn('No user email found - user needs to log in to chatbot first');
-        document.getElementById('loadingDiv').style.display = 'none';
-        document.getElementById('formDiv').style.display = 'block';
-        document.getElementById('formDiv').innerHTML = `
-            <div style="text-align: center; padding: 40px; background: #f8d7da; border-radius: 8px;">
-                <h3 style="color: #721c24;">🔒 Authentication Required</h3>
-                <p>You must log in to the chatbot before you can answer questions.</p>
-                <br>
-                <a href="https://aeroastrovfbot.netlify.app/" class="btn btn-primary" style="text-decoration: none; display: inline-block;">
-                    Log in to Chatbot
-                </a>
-                <br><br>
-                <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
-                    <strong>Instructions:</strong><br>
-                    1. Click the button above to go to the chatbot<br>
-                    2. Log in with your MIT credentials<br>
-                    3. Come back to this page and refresh (F5)
-                </p>
-            </div>
-        `;
-    }
-});
+        window.addEventListener('load', function() {
+            currentUserEmail = getUserEmail();
+            
+            if (currentUserEmail) {
+                console.log('User email detected:', currentUserEmail);
+                loadQuestion();
+            } else {
+                console.warn('No user email found - initiating authentication');
+                
+                // Show loading state while checking auth
+                document.getElementById('loadingDiv').style.display = 'none';
+                document.getElementById('formDiv').style.display = 'block';
+                document.getElementById('formDiv').innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: #d1ecf1; border-radius: 8px;">
+                        <h3 style="color: #0c5460;">🔒 Authentication Required</h3>
+                        <p>You need to log in with your MIT credentials to answer this question.</p>
+                        <br>
+                        <button class="btn btn-primary" onclick="initiateLogin()">
+                            🔐 Log in with MIT Touchstone
+                        </button>
+                        <br><br>
+                        <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
+                            You'll be redirected to MIT's login page, then back here to answer the question.
+                        </p>
+                    </div>
+                `;
+            }
+        });
     loadQuestion();
 });
         // Display question metadata
@@ -936,6 +1015,46 @@ function decodeBase64UTF8(base64String) {
             if (!email || !email.includes('@')) return false;
             return email.toLowerCase().endsWith('@mit.edu');
         }
+        // Initiate OAuth login
+async function initiateLogin() {
+    try {
+        // Generate and store PKCE values
+        const codeVerifier = generateRandomString(128);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+        const state = generateRandomString(32);
+        
+        // Store in sessionStorage
+        sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+        sessionStorage.setItem('oauth_state', state);
+        
+        // Store the current record ID so we can return to it
+        const recordId = getRecordIdFromURL();
+        if (recordId) {
+            sessionStorage.setItem('return_record_id', recordId);  // ← ALSO store record ID
+            sessionStorage.setItem('return_page', 'answer-question');  // ← HERE
+        }
+        
+        // Build OAuth URL
+        const params = new URLSearchParams({
+            client_id: OAUTH_CONFIG.clientId,
+            redirect_uri: OAUTH_CONFIG.redirectUri,
+            response_type: 'code',
+            scope: OAUTH_CONFIG.scope,
+            state: state,
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256'
+        });
+        
+        const authUrl = `${OAUTH_CONFIG.authEndpoint}?${params.toString()}`;
+        
+        // Redirect to OAuth
+        window.location.href = authUrl;
+        
+    } catch (error) {
+        console.error('Login initiation error:', error);
+        showError('Authentication error. Please try again.');
+    }
+}
     </script>
     
 </body>
