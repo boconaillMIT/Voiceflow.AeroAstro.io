@@ -991,7 +991,26 @@ function decodeBase64UTF8(base64String) {
         return base64String; // Return original if decode fails
     }
 }
-
+               // encode base64 with proper UTF-8 handling
+        function encodeBase64UTF8(text) {
+            try {
+                // Encode text as UTF-8 bytes
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(text);
+                
+                // Convert bytes to binary string
+                let binaryString = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    binaryString += String.fromCharCode(bytes[i]);
+                }
+                
+                // Encode binary string to base64
+                return btoa(binaryString);
+            } catch (e) {
+                console.error('Base64 encode error:', e);
+                return text; // Return original if encode fails
+            }
+        }
 // Normalize text for searching (matches Voiceflow normalization)
 function normalizeText(text) {
     if (!text) return '';
@@ -1118,12 +1137,12 @@ async function sendReferral() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                admin_name: currentAdminName,
-                recipient_email: email,
-                question: question,
                 record_id: recordId,
-                note: note,
-                answer_url: `https://aeroastrovfbot.netlify.app/answer-question.html?recordId=${recordId}`
+                question: question,
+                recipient_email: email,
+                admin_name: currentAdminName,
+                referral_note: encodeBase64UTF8(note),  // ← Encode it
+                referred_date: new Date().toISOString()
             })
         });
         
@@ -1162,26 +1181,7 @@ async function sendReferral() {
     }
 }
         
-               // encode base64 with proper UTF-8 handling
-        function encodeBase64UTF8(text) {
-            try {
-                // Encode text as UTF-8 bytes
-                const encoder = new TextEncoder();
-                const bytes = encoder.encode(text);
-                
-                // Convert bytes to binary string
-                let binaryString = '';
-                for (let i = 0; i < bytes.length; i++) {
-                    binaryString += String.fromCharCode(bytes[i]);
-                }
-                
-                // Encode binary string to base64
-                return btoa(binaryString);
-            } catch (e) {
-                console.error('Base64 encode error:', e);
-                return text; // Return original if encode fails
-            }
-        }
+
         
         // QuickBase API wrapper
         async function makeQuickBaseRequest(method, endpoint, body) {
@@ -2067,12 +2067,13 @@ function closeBulkReferModal() {
             const response = await fetch('https://hook.us2.make.com/7xlpxj7r2wws48qg26iawapbo5biwnog', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    admin_name: currentAdminName,
-                    recipient_email: email,
-                    questions: questions,  // Array of all questions
-                    note: note,
-                    referred_date: new Date().toISOString()
+            body: JSON.stringify({
+                admin_name: currentAdminName,
+                recipient_email: email,
+                questions: questions,
+                note: encodeBase64UTF8(note),  // ← Encode it
+                referred_date: new Date().toISOString()
+            })
                 })
             });
             
