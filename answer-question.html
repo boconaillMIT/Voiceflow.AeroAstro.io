@@ -679,7 +679,16 @@ function displayReferralTrail(forwardingHistory, currentExpert) {
         const parts = entry.split('|').map(p => p.trim());
         const dateTime = parts[0] || '';
         const action = parts[1] || '';
-        const reason = parts[2] || '';
+        let reason = parts[2] || '';
+        
+        // Decode base64 for both "Reason: " and "Note: "
+        if (reason.startsWith('Reason: ')) {
+            const encodedReason = reason.substring(8); // Remove "Reason: " prefix
+            reason = 'Reason: ' + decodeBase64UTF8(encodedReason);
+        } else if (reason.startsWith('Note: ')) {
+            const encodedNote = reason.substring(6); // Remove "Note: " prefix
+            reason = 'Note: ' + decodeBase64UTF8(encodedNote);
+        }
         
         const isLatest = index === entries.length - 1;
         
