@@ -589,6 +589,7 @@
                         from_email: currentUserEmail,
                         to_email: forwardEmail,
                         reason: encodeBase64UTF8(forwardReason),
+                            reason_plain: forwardReason,
                         forwarded_at: new Date().toISOString()
                     })
                 });
