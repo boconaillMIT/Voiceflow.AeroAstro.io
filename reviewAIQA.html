@@ -1120,7 +1120,12 @@ async function sendReferral() {
         document.getElementById('referEmail').focus();
         return;
     }
-    
+    // ADD THIS:
+if (!validateMITEmail(email)) {
+    showMessage('Email must be an MIT address (must end with @mit.edu)', 'error');
+    document.getElementById('referEmail').focus();
+    return;
+}
     if (!currentReferralRecord) {
         showMessage('No record selected', 'error');
         return;
@@ -2042,7 +2047,12 @@ function closeBulkReferModal() {
             document.getElementById('bulkReferEmail').focus();
             return;
         }
-        
+        // ADD THIS:
+        if (!validateMITEmail(email)) {
+            showMessage('Email must be an MIT address (must end with @mit.edu)', 'error');
+            document.getElementById('referEmail').focus();
+            return;
+        }
         if (recordIds.length === 0) {
             showMessage('No records selected', 'error');
             return;
@@ -2133,7 +2143,11 @@ function closeBulkReferModal() {
             }
         }
 
-
+// Validate MIT email address
+function validateMITEmail(email) {
+    if (!email || !email.includes('@')) return false;
+    return email.toLowerCase().endsWith('@mit.edu');
+}
     </script>
 </body>
 </html>
