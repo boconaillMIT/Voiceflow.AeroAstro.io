@@ -536,7 +536,8 @@
         
         const WEBHOOKS = {
             submitAnswer: 'https://hook.us2.make.com/fh0skp0c9p239qlqtf5cygt28tps5efz',
-            forwardQuestion: 'https://hook.us2.make.com/mspef72121uk77otrfi4odn88vrgwe4m'
+            forwardQuestion: 'https://hook.us2.make.com/mspef72121uk77otrfi4odn88vrgwe4m',
+            bulkForward: 'https://hook.us2.make.com/epei0wbijr6bui0vphmvfxbazzhw7ded'
         };
     
         // Forward modal state
@@ -1093,8 +1094,8 @@ async function submitForward() {
     const errorDiv = document.getElementById('forwardError');
     
     // Determine if this is batch or single
-    const isBatch = window.batchForwardRecordIds && window.batchForwardRecordIds.length > 0;
-    const recordIds = isBatch ? window.batchForwardRecordIds : [currentForwardRecordId];
+    const isBatch = window.batchForwardRecordIds && window.batchForwardRecordIds.length > 1;
+    const recordIds = isBatch ? window.batchForwardRecordIds : (window.batchForwardRecordIds || [currentForwardRecordId]);
     
     // Validation
     if (!forwardEmail) {
@@ -1116,37 +1117,6 @@ async function submitForward() {
         return;
     }
     
-    // For batch, check all questions for circular/excessive
-    if (isBatch) {
-        for (const recordId of recordIds) {
-            const card = document.getElementById(`card-${recordId}`);
-            const history = decodeURIComponent(card.dataset.history || '');
-            const count = parseInt(card.dataset.count || '0');
-            
-            // Check excessive forwarding
-            if (count >= 8) {
-                errorDiv.textContent = `Question #${recordId} has already been forwarded 8 times. Please remove it from selection.`;
-                errorDiv.style.display = 'block';
-                return;
-            }
-        }
-    } else {
-        // Single question validation
-        const previousRecipient = checkCircularForwarding(currentForwardHistory, forwardEmail);
-        if (previousRecipient) {
-            if (!confirm(`⚠️ Please note ${previousRecipient} has already passed on this question. Are you sure you want to send it to them again?`)) {
-                return;
-            }
-        }
-        
-        const MAX_FORWARDS = 8;
-        if (currentForwardCount >= MAX_FORWARDS) {
-            errorDiv.textContent = `This question has been forwarded ${currentForwardCount} times already. Please contact an administrator instead of forwarding further.`;
-            errorDiv.style.display = 'block';
-            return;
-        }
-    }
-    
     const confirmMessage = isBatch 
         ? `Forward ${recordIds.length} questions to ${forwardEmail}?`
         : `Forward this question to ${forwardEmail}?`;
@@ -1157,63 +1127,98 @@ async function submitForward() {
     
     try {
         showLoading(true);
-        let successCount = 0;
-        let errorCount = 0;
         
-        // Process each question
-        for (const recordId of recordIds) {
+        if (isBatch) {
+            // BATCH: Send all questions in ONE call
+            const questions = recordIds.map(recordId => {
+                const card = document.getElementById(`card-${recordId}`);
+                return {
+                    record_id: recordId,
+                    question: card.querySelector('.question-text').textContent
+                };
+            });
+            
+            const response = await fetch(WEBHOOKS.bulkForward, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    from_email: currentUserEmail,
+                    to_email: forwardEmail,
+                    questions: questions,
+                    reason: encodeBase64UTF8(forwardReason),
+                    reason_plain: forwardReason,
+                    forwarded_at: new Date().toISOString()
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Mark all as forwarded
+                recordIds.forEach(recordId => {
+                    const card = document.getElementById(`card-${recordId}`);
+                    if (card) {
+                        card.style.background = '#e3f2fd';
+                        card.innerHTML = `
+                            <div style="text-align: center; padding: 20px;">
+                                <h3 style="color: #1976d2;">✓ Question Forwarded</h3>
+                                <p>Forwarded to ${forwardEmail}</p>
+                            </div>
+                        `;
+                    }
+                });
+                
+                showStatus(`Forwarded ${recordIds.length} questions successfully!`, 'success');
+            } else {
+                throw new Error(result.message || 'Failed to forward questions');
+            }
+            
+        } else {
+            // SINGLE: Use existing single forward webhook
+            const recordId = recordIds[0];
             const card = document.getElementById(`card-${recordId}`);
             const questionText = card.querySelector('.question-text').textContent;
             
-            try {
-                const response = await fetch(WEBHOOKS.forwardQuestion, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        record_id: recordId,
-                        question: questionText,
-                        from_email: currentUserEmail,
-                        to_email: forwardEmail,
-                        reason: encodeBase64UTF8(forwardReason),
-                            reason_plain: forwardReason,  // ADD THIS - plain text for email
-                        forwarded_at: new Date().toISOString()
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    successCount++;
-                    // Mark card as forwarded
-                    card.style.background = '#e3f2fd';
-                    card.innerHTML = `
-                        <div style="text-align: center; padding: 20px;">
-                            <h3 style="color: #1976d2;">✓ Question Forwarded</h3>
-                            <p>Forwarded to ${forwardEmail}</p>
-                        </div>
-                    `;
-                } else {
-                    errorCount++;
-                }
-            } catch (error) {
-                console.error(`Error forwarding question ${recordId}:`, error);
-                errorCount++;
+            const response = await fetch(WEBHOOKS.forwardQuestion, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    record_id: recordId,
+                    question: questionText,
+                    from_email: currentUserEmail,
+                    to_email: forwardEmail,
+                    reason: encodeBase64UTF8(forwardReason),
+                    reason_plain: forwardReason,
+                    forwarded_at: new Date().toISOString()
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                card.style.background = '#e3f2fd';
+                card.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <h3 style="color: #1976d2;">✓ Question Forwarded</h3>
+                        <p>Forwarded to ${forwardEmail}</p>
+                    </div>
+                `;
+                showStatus('Question forwarded successfully!', 'success');
+            } else {
+                throw new Error(result.message || 'Failed to forward question');
             }
         }
         
         showLoading(false);
         closeForwardModal();
-        
-        // Show results
-        const message = isBatch
-            ? `Forwarded ${successCount} question(s) successfully${errorCount > 0 ? `. ${errorCount} failed.` : ''}`
-            : '✓ Question forwarded successfully!';
-        
-        showStatus(message, successCount > 0 ? 'success' : 'error');
         
         // Remove forwarded cards after delay
         setTimeout(() => {
