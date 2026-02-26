@@ -838,18 +838,44 @@ window.addEventListener('click', function(event) {
         closeForwardModal();
     }
 });
-// Base64 encoding functions
-function encodeBase64UTF8(str) {
-    return btoa(unescape(encodeURIComponent(str || '')));
-}
-
-function decodeBase64UTF8(str) {
+function decodeBase64UTF8(base64String) {
     try {
-        return decodeURIComponent(escape(atob(str || '')));
+        // Decode base64 to binary string
+        const binaryString = atob(base64String);
+
+        // Convert binary string to byte array
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Decode UTF-8 bytes to proper text
+        return new TextDecoder('utf-8').decode(bytes);
     } catch (e) {
-        return str;
+        console.warn('Base64 decode error:', e);
+        return base64String; // Return original if decode fails
     }
 }
+               // encode base64 with proper UTF-8 handling
+        function encodeBase64UTF8(text) {
+            try {
+                // Encode text as UTF-8 bytes
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(text);
+
+                // Convert bytes to binary string
+                let binaryString = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    binaryString += String.fromCharCode(bytes[i]);
+                }
+
+                // Encode binary string to base64
+                return btoa(binaryString);
+            } catch (e) {
+                console.error('Base64 encode error:', e);
+                return text; // Return original if encode fails
+            }
+        }
 
     </script>
     
