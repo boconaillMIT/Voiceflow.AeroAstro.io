@@ -1006,24 +1006,29 @@ async function batchSubmitAnswers(recordIds) {
     }, 2000);
 }
         // Toggle history display
-function toggleHistory(recordId) {
-    const historyDiv = document.getElementById(`history-${recordId}`);
-    const toggleSpan = document.getElementById(`history-toggle-${recordId}`);
-    
-    if (historyDiv.style.display === 'none') {
-        // Get history from card data attribute
-        const card = document.getElementById(`card-${recordId}`);
-        const history = decodeURIComponent(card.dataset.history || '');
-        
-        // Display history
-        displayHistoryContent(recordId, history);
-        historyDiv.style.display = 'block';
-        toggleSpan.textContent = 'Hide History ▲';
-    } else {
-        historyDiv.style.display = 'none';
-        toggleSpan.textContent = 'Show History ▼';
-    }
-}
+        // Toggle history display
+        function toggleHistory(recordId) {
+            const historyDiv = document.getElementById(`history-${recordId}`);
+            const toggleSpan = document.getElementById(`toggle-${recordId}`);
+            
+            if (!historyDiv || !toggleSpan) {
+                console.error(`History elements not found for record ${recordId}`);
+                return;
+            }
+            
+            if (historyDiv.style.display === 'none') {
+                // Show history
+                const card = document.getElementById(`card-${recordId}`);
+                const history = decodeURIComponent(card.dataset.history || '');
+                displayHistoryContent(recordId, history);
+                historyDiv.style.display = 'block';
+                toggleSpan.textContent = 'Hide History ▲';
+            } else {
+                // Hide history
+                historyDiv.style.display = 'none';
+                toggleSpan.textContent = 'Show History ▼';
+            }
+        }
 
 // Display history in the expanded section
 function displayHistoryContent(recordId, forwardingHistory) {
