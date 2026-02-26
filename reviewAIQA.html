@@ -2074,7 +2074,7 @@ function closeBulkReferModal() {
                 note: encodeBase64UTF8(note),  // ← Encode it
                 referred_date: new Date().toISOString()
             })
-                })
+                
             });
             
             if (!response.ok) {
@@ -2131,12 +2131,7 @@ function closeBulkReferModal() {
             }
         }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadQA();
-            // Hide bulk actions bar initially
-            document.getElementById('bulkActionsBar').style.display = 'none';
-        });
+
     </script>
 </body>
 </html>
