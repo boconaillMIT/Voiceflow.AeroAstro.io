@@ -683,14 +683,14 @@ async function initiateLogin() {
                 const response = await fetch(WEBHOOKS.submitAnswer, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        record_id: currentRecordId,
-                        question: document.getElementById('questionText').textContent,
-                        from_email: currentUserEmail,
-                        to_email: forwardEmail,
-                        reason: encodeBase64UTF8(forwardReason),  // ← Encode it
-                        reason_plain: forwardReason,              // ← Add plain text for email
-                        forwarded_at: new Date().toISOString()
+    
+                        body: JSON.stringify({
+                            record_id: currentRecordId,
+                            answer: answer,                           // ← CORRECT
+                            responder_email: email,                   // ← CORRECT  
+                            notes: notes,                             // ← CORRECT
+                            submitted_at: new Date().toISOString()    // ← CORRECT
+                        })
                     })
                 });
                 
