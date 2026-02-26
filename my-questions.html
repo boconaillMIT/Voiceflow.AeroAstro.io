@@ -1029,11 +1029,21 @@ function displayHistoryContent(recordId, forwardingHistory) {
     // Parse history (split by ➤ separator)
     const entries = forwardingHistory.split(' ➤ ').filter(e => e.trim());
     
-    const trailHTML = entries.map((entry, index) => {
-        const parts = entry.split('|').map(p => p.trim());
-        const dateTime = parts[0] || '';
-        const action = parts[1] || '';
-        const reason = parts[2] || '';
+
+const trailHTML = entries.map((entry, index) => {
+    const parts = entry.split('|').map(p => p.trim());
+    const dateTime = parts[0] || '';
+    const action = parts[1] || '';
+    let reason = parts[2] || '';
+    
+    // Decode base64 for both "Reason: " and "Note: "
+    if (reason.startsWith('Reason: ')) {
+        const encodedReason = reason.substring(8);
+        reason = 'Reason: ' + decodeBase64UTF8(encodedReason);
+    } else if (reason.startsWith('Note: ')) {
+        const encodedNote = reason.substring(6);
+        reason = 'Note: ' + decodeBase64UTF8(encodedNote);
+    }
         
         return `
             <div class="trail-item">
