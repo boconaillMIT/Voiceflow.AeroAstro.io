@@ -642,24 +642,24 @@
             openBatchForwardModal(recordIds);
         }
         // Show authentication error
+        // Show authentication required message
         function showAuthError() {
             const container = document.getElementById('questionsList');
             container.innerHTML = `
                 <div class="empty-state">
                     <h3>🔒 Authentication Required</h3>
-                    <p>Please log in to the AeroAstro chatbot first to access your questions.</p>
+                    <p>Please log in with your MIT credentials to access your questions.</p>
                     <br>
-                    <a href="https://aeroastrovfbot.netlify.app/" class="btn btn-primary">
-                        Go to Chatbot Login
-                    </a>
+                    <button class="btn btn-primary" onclick="initiateLogin()">
+                        🔐 Log in with MIT Touchstone
+                    </button>
                     <br><br>
-                    <p style="font-size: 0.9em; color: #999;">
-                        Debug: No user_metadata found in localStorage
+                    <p style="font-size: 0.9em; color: #999; margin-top: 20px;">
+                        You'll be redirected to MIT's login page, then back here.
                     </p>
                 </div>
             `;
             
-            // Hide the email input section since they need to authenticate
             document.querySelector('.email-section').style.display = 'none';
         }
         
@@ -720,7 +720,42 @@
             }
         }
         
-        // Display questions
+// Initiate OAuth login
+async function initiateLogin() {
+    try {
+        // Generate and store PKCE values
+        const codeVerifier = generateRandomString(128);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+        const state = generateRandomString(32);
+        
+        // Store in sessionStorage
+        sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+        sessionStorage.setItem('oauth_state', state);
+        
+        // Store return page info so callback knows where to redirect
+        sessionStorage.setItem('return_page', 'my-questions');  // ← HERE
+        
+        // Build OAuth URL
+        const params = new URLSearchParams({
+            client_id: OAUTH_CONFIG.clientId,
+            redirect_uri: OAUTH_CONFIG.redirectUri,
+            response_type: 'code',
+            scope: OAUTH_CONFIG.scope,
+            state: state,
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256'
+        });
+        
+        const authUrl = `${OAUTH_CONFIG.authEndpoint}?${params.toString()}`;
+        
+        // Redirect to OAuth
+        window.location.href = authUrl;
+        
+    } catch (error) {
+        console.error('Login initiation error:', error);
+        showStatus('Authentication error. Please try again.', 'error');
+    }
+}
 // Display questions
 function displayQuestions(questions) {
     const container = document.getElementById('questionsList');
