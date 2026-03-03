@@ -56,16 +56,15 @@ exports.handler = async function(event) {
     }
 
     // Decode base64 answer
-    const answerRaw = bestRecord[QB_ANS_ID]?.value || '';
-    const answer = Buffer.from(answerRaw, 'base64').toString('utf-8');
+const answer = bestRecord[QB_ANS_ID]?.value || '';
 
-    return respond(200, {
-      success: true,
-      record_id: bestRecord[QB_FIELD_ID]?.value,
-      score: Math.round(bestScore * 10000) / 10000,
-      matched_question: bestRecord[QB_QUEST_ID]?.value || null,
-      answer: answer
-    });
+return respond(200, {
+  success: true,
+  record_id: bestRecord[QB_FIELD_ID]?.value,
+  score: Math.round(bestScore * 10000) / 10000,
+  matched_question: bestRecord[QB_QUEST_ID]?.value || null,
+  answer: answer
+});
 
   } catch (err) {
     return respond(500, { success: false, error: err.message });
