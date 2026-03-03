@@ -6,6 +6,11 @@ const QB_QUEST_ID = 26;
 const QB_ANS_ID   = 22;
 const EMBED_MODEL = 'text-embedding-3-small';
 
+// Simple in-memory cache
+let recordsCache = null;
+let cacheExpiry = 0;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return respond(405, { success: false, error: 'Method not allowed' });
@@ -18,14 +23,6 @@ exports.handler = async function(event) {
       : event.body;
     const body = JSON.parse(rawBody);
     question = body.question;
-    //if (!question) throw new Error('Missing question');
-    
-    // ADD THESE DEBUG LINES:
-    console.error('=== NETLIFY DEBUG ===');
-    console.error('Raw event.body:', event.body);
-    console.error('Parsed question:', question);
-    console.error('Question length:', question.length);
-    console.error('Full parsed body:', JSON.stringify(body));
     if (!question) throw new Error('Missing question');
   } catch (e) {
     return respond(400, { success: false, error: 'Invalid body: ' + e.message });
@@ -39,7 +36,9 @@ exports.handler = async function(event) {
 
   try {
     const queryEmbedding = await getEmbedding(question, OPENAI_KEY);
-    const records = await fetchQBRecords(QB_TOKEN);
+    
+    // Use cached records if available and fresh
+    const records = await getCachedRecords(QB_TOKEN);
     if (!records || records.length === 0) {
       return respond(200, { success: false, error: 'No QB records found' });
     }
@@ -63,26 +62,42 @@ exports.handler = async function(event) {
       return respond(200, { success: false, error: 'No similarity match found' });
     }
 
-    // Decode base64 answer
     const answer = bestRecord[QB_ANS_ID]?.value || '';
     const answerDecoded = Buffer.from(answer, 'base64').toString('utf-8');
-    console.log('=== NETLIFY DEBUG ===');
-    console.log('Raw event.body:', event.body);
-    console.log('Parsed question:', question);
-    console.log('Question length:', question.length);
+    
     return respond(200, {
       success: true,
       record_id: bestRecord[QB_FIELD_ID]?.value,
       score: Math.round(bestScore * 10000) / 10000,
       matched_question: bestRecord[QB_QUEST_ID]?.value || null,
       answer: answer,
-      answer_decoded: answerDecoded
+      answer_decoded: answerDecoded,
+      cache_used: recordsCache !== null && Date.now() < cacheExpiry
     });
 
   } catch (err) {
     return respond(500, { success: false, error: err.message });
   }
 };
+
+// Cache management function
+async function getCachedRecords(token) {
+  const now = Date.now();
+  
+  // Return cached data if still valid
+  if (recordsCache && now < cacheExpiry) {
+    console.log('✅ Using cached records (age: ' + (now - (cacheExpiry - CACHE_DURATION)) + 'ms)');
+    return recordsCache;
+  }
+  
+  // Cache expired or doesn't exist - fetch fresh data
+  console.log('🔄 Cache expired or empty, fetching fresh records from QuickBase...');
+  recordsCache = await fetchQBRecords(token);
+  cacheExpiry = now + CACHE_DURATION;
+  console.log(`📦 Cached ${recordsCache?.length || 0} records for ${CACHE_DURATION/60000} minutes`);
+  
+  return recordsCache;
+}
 
 async function getEmbedding(text, apiKey) {
   const res = await fetch('https://api.openai.com/v1/embeddings', {
