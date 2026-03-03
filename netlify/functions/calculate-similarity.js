@@ -52,15 +52,12 @@ const userEmbeddingArray = typeof userEmbedding === 'string'
 
     // Calculate similarity for each record
     const results = qbRecords.map(record => {
-      // Parse the embedding string back to array
       const embedding = record.embedding.split(',').map(num => parseFloat(num.trim()));
-      const similarity = cosineSimilarity(userEmbeddingArray, embedding);
-      
       return {
         record_id: record.record_id,
         question: record.question,
-        answer: record.answer,
-        similarity: similarity
+        answer: Buffer.from(record.answer, 'base64').toString('utf-8'), // decode here
+        similarity: cosineSimilarity(userEmbedding, embedding)
       };
     });
 
