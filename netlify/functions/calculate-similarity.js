@@ -10,6 +10,11 @@ exports.handler = async (event) => {
   try {
     const { userEmbedding, qbRecords } = JSON.parse(event.body);
 
+    // Add this line after parsing:
+const userEmbeddingArray = typeof userEmbedding === 'string'
+  ? userEmbedding.split(',').map(num => parseFloat(num.trim()))
+  : userEmbedding;
+    
     // Validate input
     if (!userEmbedding || !Array.isArray(userEmbedding)) {
       return {
@@ -48,7 +53,7 @@ exports.handler = async (event) => {
     const results = qbRecords.map(record => {
       // Parse the embedding string back to array
       const embedding = record.embedding.split(',').map(num => parseFloat(num.trim()));
-      const similarity = cosineSimilarity(userEmbedding, embedding);
+      const similarity = cosineSimilarity(userEmbeddingArray, embedding);
       
       return {
         record_id: record.record_id,
