@@ -18,7 +18,7 @@ exports.handler = async function(event) {
       : event.body;
     const body = JSON.parse(rawBody);
     question = body.question;
-    if (!question) throw new Error('Missing question');
+    //if (!question) throw new Error('Missing question');
     
     // ADD THESE DEBUG LINES:
     console.error('=== NETLIFY DEBUG ===');
