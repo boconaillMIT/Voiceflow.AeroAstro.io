@@ -18,11 +18,14 @@ exports.handler = async function(event) {
       : event.body;
     const body = JSON.parse(rawBody);
     question = body.question;
-    // ADD THESE LINES:
+    if (!question) throw new Error('Missing question');
+    
+    // ADD THESE DEBUG LINES:
     console.error('=== NETLIFY DEBUG ===');
     console.error('Raw event.body:', event.body);
     console.error('Parsed question:', question);
     console.error('Question length:', question.length);
+    console.error('Full parsed body:', JSON.stringify(body));
     if (!question) throw new Error('Missing question');
   } catch (e) {
     return respond(400, { success: false, error: 'Invalid body: ' + e.message });
