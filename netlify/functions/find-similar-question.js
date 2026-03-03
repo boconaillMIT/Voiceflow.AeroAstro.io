@@ -1,5 +1,3 @@
-// netlify/functions/find-similar-question.js
-
 const QB_REALM    = 'mit.quickbase.com';
 const QB_TABLE    = 'bvhhfa58i';
 const QB_FIELD_ID = 3;   // record ID
