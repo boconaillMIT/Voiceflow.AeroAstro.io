@@ -69,16 +69,12 @@ const userEmbeddingArray = typeof userEmbedding === 'string'
     const THRESHOLD = 0.85; // Minimum similarity to consider a match
 
     if (bestMatch && bestMatch.similarity >= THRESHOLD) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          found: true,
-          answer: bestMatch.answer,
-          question_matched: bestMatch.question,
-          confidence: bestMatch.similarity,
-          record_id: bestMatch.record_id
-        })
-      };
+      return res.json({
+        found: true,
+        record_id: bestMatch.record_id,
+        question_matched: bestMatch.question,
+        confidence: bestMatch.similarity
+      });
     } else {
       return {
         statusCode: 200,
