@@ -68,8 +68,8 @@
         }
 
         // Get stored values from sessionStorage (changed from localStorage)
-        const verifier = sessionStorage.getItem('pkce_code_verifier');
-        const savedState = sessionStorage.getItem('oauth_state');
+      const verifier = localStorage.getItem('pkce_verifier');
+      const savedState = localStorage.getItem('pkce_state');
 
         // Validate OAuth parameters
         if (!code || !state || !verifier || state !== savedState) {
@@ -112,8 +112,8 @@
         }
 
         // Clean up OAuth session data
-        sessionStorage.removeItem('pkce_code_verifier');
-        sessionStorage.removeItem('oauth_state');
+      localStorage.removeItem('pkce_verifier');
+      localStorage.removeItem('pkce_state');
 
         // Check if we need to return to a specific page
         const returnPage = sessionStorage.getItem('return_page');
