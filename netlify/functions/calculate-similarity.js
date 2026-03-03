@@ -1,74 +1,95 @@
-const QB_REALM    = 'mit.quickbase.com';
-const QB_TABLE    = 'bvi4py32v';
-const QB_FIELD_ID = 3;
-const QB_EMBED_ID = 36;
-const QB_QUEST_ID = 26;
-const EMBED_MODEL = 'text-embedding-3-small';
-
-exports.handler = async function(event) {
+exports.handler = async (event) => {
+  // Only allow POST requests
   if (event.httpMethod !== 'POST') {
-    return respond(405, { success: false, error: 'Method not allowed' });
-  }
-
-  let question;
-  try {
-    const body = JSON.parse(event.body);
-    question = body.question;
-    if (!question) throw new Error('Missing question');
-  } catch (e) {
-    return respond(400, { success: false, error: 'Invalid body: ' + e.message });
-  }
-
-  const OPENAI_KEY = process.env.OPENAI_API_KEY;
-  const QB_TOKEN   = process.env.QB_TOKEN;
-  if (!OPENAI_KEY || !QB_TOKEN) {
-    return respond(500, { success: false, error: 'Missing env vars' });
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
   }
 
   try {
-    const queryEmbedding = await getEmbedding(question, OPENAI_KEY);
-    const records = await fetchQBRecords(QB_TOKEN);
-    if (!records || records.length === 0) {
-      return respond(200, { success: false, error: 'No QB records found' });
+    const cleanBody = event.body.replace(/[\x00-\x1F\x7F]/g, ' ');
+    const { userEmbedding, qbRecords } = JSON.parse(cleanBody);
+
+    // Add this line after parsing:
+const userEmbeddingArray = typeof userEmbedding === 'string'
+  ? userEmbedding.split(',').map(num => parseFloat(num.trim()))
+  : userEmbedding;
+    
+    // Validate input
+    if (!userEmbedding || !Array.isArray(userEmbedding)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Invalid userEmbedding' })
+      };
     }
 
-    let bestScore = -1, bestRecordId = null, bestQuestion = null;
+    if (!qbRecords || !Array.isArray(qbRecords)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Invalid qbRecords' })
+      };
+    }
 
-    for (const record of records) {
-      const embeddingRaw = record[QB_EMBED_ID]?.value;
-      if (!embeddingRaw) continue;
-      const vector = typeof embeddingRaw === 'string'
-        ? embeddingRaw.split(',').map(Number)
-        : embeddingRaw;
-      const score = cosineSimilarity(queryEmbedding, vector);
-      if (score > bestScore) {
-        bestScore = score;
-        bestRecordId = record[QB_FIELD_ID]?.value;
-        bestQuestion = record[QB_QUEST_ID]?.value || null;
+    // Calculate cosine similarity
+    function cosineSimilarity(a, b) {
+      if (a.length !== b.length) return 0;
+      
+      let dotProduct = 0;
+      let normA = 0;
+      let normB = 0;
+      
+      for (let i = 0; i < a.length; i++) {
+        dotProduct += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
       }
+      
+      if (normA === 0 || normB === 0) return 0;
+      
+      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
-    if (bestRecordId === null) {
-      return respond(200, { success: false, error: 'No similarity match found' });
-    }
-
-    return respond(200, {
-      success: true,
-      record_id: bestRecordId,
-      score: Math.round(bestScore * 10000) / 10000,
-      matched_question: bestQuestion
+    // Calculate similarity for each record
+    const results = qbRecords.map(record => {
+      const embedding = record.embedding.split(',').map(num => parseFloat(num.trim()));
+      return {
+        record_id: record.record_id,
+        question: record.question,
+        answer: Buffer.from(record.answer, 'base64').toString('utf-8'), // decode here
+        similarity: cosineSimilarity(userEmbedding, embedding)
+      };
     });
 
-  } catch (err) {
-    return respond(500, { success: false, error: err.message });
+    // Sort by similarity (highest first)
+    results.sort((a, b) => b.similarity - a.similarity);
+
+    // Get best match
+    const bestMatch = results[0];
+    const THRESHOLD = 0.85; // Minimum similarity to consider a match
+
+    if (bestMatch && bestMatch.similarity >= THRESHOLD) {
+      return res.json({
+        found: true,
+        record_id: bestMatch.record_id,
+        question_matched: bestMatch.question,
+        confidence: bestMatch.similarity
+      });
+    } else {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          found: false,
+          best_similarity: bestMatch ? bestMatch.similarity : 0
+        })
+      };
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message })
+    };
   }
 };
-
-async function getEmbedding(text, apiKey) {
-  const res = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: EMBED_MODEL, input: text })
-  });
-  if (!res.ok) throw new Error('OpenAI error: ' + await res.text());
-  c
