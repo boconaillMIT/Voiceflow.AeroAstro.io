@@ -1,5 +1,5 @@
 const QB_REALM    = 'mit.quickbase.com';
-const QB_TABLE    = 'bvhhfa58i';
+const QB_TABLE    = 'bvi4py32v';
 const QB_FIELD_ID = 3;   // record ID
 const QB_EMBED_ID = 36;  // embedding vector
 const QB_QUEST_ID = 26;  // question text
