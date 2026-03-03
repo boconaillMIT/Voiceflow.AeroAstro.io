@@ -58,7 +58,10 @@ exports.handler = async function(event) {
     // Decode base64 answer
     const answer = bestRecord[QB_ANS_ID]?.value || '';
     const answerDecoded = Buffer.from(answer, 'base64').toString('utf-8');
-    
+    console.log('=== NETLIFY DEBUG ===');
+    console.log('Raw event.body:', event.body);
+    console.log('Parsed question:', question);
+    console.log('Question length:', question.length);
     return respond(200, {
       success: true,
       record_id: bestRecord[QB_FIELD_ID]?.value,
