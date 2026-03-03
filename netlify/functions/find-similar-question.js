@@ -101,17 +101,3 @@ function cosineSimilarity(a, b) {
 function respond(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
-```
-
-**Deployment steps:**
-
-1. **Rotate your OpenAI key first** (platform.openai.com → API Keys)
-2. Save this file as `netlify/functions/find-similar-question.js` in your repo
-3. In Netlify dashboard → Site configuration → Environment variables, add:
-   - `OPENAI_API_KEY` = your new key
-   - `QB_TOKEN` = `b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h`
-4. Push to GitHub — Netlify auto-deploys
-
-**In Make.com**, replace your entire modules 7–10 with a single HTTP module POSTing to:
-```
-https://aeroastrovfbot.netlify.app/.netlify/functions/find-similar-question
