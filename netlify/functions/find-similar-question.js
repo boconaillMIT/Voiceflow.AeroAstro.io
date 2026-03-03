@@ -1,8 +1,9 @@
 const QB_REALM    = 'mit.quickbase.com';
 const QB_TABLE    = 'bvi4py32v';
-const QB_FIELD_ID = 3;   // record ID
-const QB_EMBED_ID = 36;  // embedding vector
-const QB_QUEST_ID = 26;  // question text
+const QB_FIELD_ID = 3;
+const QB_EMBED_ID = 36;
+const QB_QUEST_ID = 26;
+const QB_ANS_ID   = 22;
 const EMBED_MODEL = 'text-embedding-3-small';
 
 exports.handler = async function(event) {
@@ -11,8 +12,8 @@ exports.handler = async function(event) {
   }
 
   let question;
-try {
-    const rawBody = event.isBase64Encoded 
+  try {
+    const rawBody = event.isBase64Encoded
       ? Buffer.from(event.body, 'base64').toString('utf-8')
       : event.body;
     const body = JSON.parse(rawBody);
@@ -35,7 +36,7 @@ try {
       return respond(200, { success: false, error: 'No QB records found' });
     }
 
-    let bestScore = -1, bestRecordId = null, bestQuestion = null;
+    let bestScore = -1, bestRecord = null;
 
     for (const record of records) {
       const embeddingRaw = record[QB_EMBED_ID]?.value;
@@ -46,20 +47,24 @@ try {
       const score = cosineSimilarity(queryEmbedding, vector);
       if (score > bestScore) {
         bestScore = score;
-        bestRecordId = record[QB_FIELD_ID]?.value;
-        bestQuestion = record[QB_QUEST_ID]?.value || null;
+        bestRecord = record;
       }
     }
 
-    if (bestRecordId === null) {
+    if (!bestRecord) {
       return respond(200, { success: false, error: 'No similarity match found' });
     }
 
+    // Decode base64 answer
+    const answerRaw = bestRecord[QB_ANS_ID]?.value || '';
+    const answer = Buffer.from(answerRaw, 'base64').toString('utf-8');
+
     return respond(200, {
       success: true,
-      record_id: bestRecordId,
+      record_id: bestRecord[QB_FIELD_ID]?.value,
       score: Math.round(bestScore * 10000) / 10000,
-      matched_question: bestQuestion
+      matched_question: bestRecord[QB_QUEST_ID]?.value || null,
+      answer: answer
     });
 
   } catch (err) {
@@ -86,7 +91,7 @@ async function fetchQBRecords(token) {
       'Authorization': `QB-USER-TOKEN ${token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ from: QB_TABLE, select: [QB_FIELD_ID, QB_EMBED_ID, QB_QUEST_ID] })
+    body: JSON.stringify({ from: QB_TABLE, select: [QB_FIELD_ID, QB_EMBED_ID, QB_QUEST_ID, QB_ANS_ID] })
   });
   if (!res.ok) throw new Error('QuickBase error: ' + await res.text());
   return (await res.json()).data;
