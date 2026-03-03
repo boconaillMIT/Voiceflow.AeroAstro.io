@@ -8,7 +8,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { userEmbedding, qbRecords } = JSON.parse(event.body);
+    const cleanBody = event.body.replace(/[\x00-\x1F\x7F]/g, ' ');
+    const { userEmbedding, qbRecords } = JSON.parse(cleanBody);
 
     // Add this line after parsing:
 const userEmbeddingArray = typeof userEmbedding === 'string'
