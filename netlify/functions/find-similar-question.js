@@ -1,0 +1,119 @@
+// netlify/functions/find-similar-question.js
+
+const QB_REALM    = 'mit.quickbase.com';
+const QB_TABLE    = 'bvhhfa58i';
+const QB_FIELD_ID = 3;   // record ID
+const QB_EMBED_ID = 36;  // embedding vector
+const QB_QUEST_ID = 26;  // question text
+const EMBED_MODEL = 'text-embedding-3-small';
+
+exports.handler = async function(event) {
+  if (event.httpMethod !== 'POST') {
+    return respond(405, { success: false, error: 'Method not allowed' });
+  }
+
+  let question;
+  try {
+    const body = JSON.parse(event.body);
+    question = body.question;
+    if (!question) throw new Error('Missing question');
+  } catch (e) {
+    return respond(400, { success: false, error: 'Invalid body: ' + e.message });
+  }
+
+  const OPENAI_KEY = process.env.OPENAI_API_KEY;
+  const QB_TOKEN   = process.env.QB_TOKEN;
+  if (!OPENAI_KEY || !QB_TOKEN) {
+    return respond(500, { success: false, error: 'Missing env vars' });
+  }
+
+  try {
+    const queryEmbedding = await getEmbedding(question, OPENAI_KEY);
+    const records = await fetchQBRecords(QB_TOKEN);
+    if (!records || records.length === 0) {
+      return respond(200, { success: false, error: 'No QB records found' });
+    }
+
+    let bestScore = -1, bestRecordId = null, bestQuestion = null;
+
+    for (const record of records) {
+      const embeddingRaw = record[QB_EMBED_ID]?.value;
+      if (!embeddingRaw) continue;
+      const vector = typeof embeddingRaw === 'string'
+        ? embeddingRaw.split(',').map(Number)
+        : embeddingRaw;
+      const score = cosineSimilarity(queryEmbedding, vector);
+      if (score > bestScore) {
+        bestScore = score;
+        bestRecordId = record[QB_FIELD_ID]?.value;
+        bestQuestion = record[QB_QUEST_ID]?.value || null;
+      }
+    }
+
+    if (bestRecordId === null) {
+      return respond(200, { success: false, error: 'No similarity match found' });
+    }
+
+    return respond(200, {
+      success: true,
+      record_id: bestRecordId,
+      score: Math.round(bestScore * 10000) / 10000,
+      matched_question: bestQuestion
+    });
+
+  } catch (err) {
+    return respond(500, { success: false, error: err.message });
+  }
+};
+
+async function getEmbedding(text, apiKey) {
+  const res = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: EMBED_MODEL, input: text })
+  });
+  if (!res.ok) throw new Error('OpenAI error: ' + await res.text());
+  const data = await res.json();
+  return data.data[0].embedding;
+}
+
+async function fetchQBRecords(token) {
+  const res = await fetch('https://api.quickbase.com/v1/records/query', {
+    method: 'POST',
+    headers: {
+      'QB-Realm-Hostname': QB_REALM,
+      'Authorization': `QB-USER-TOKEN ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ from: QB_TABLE, select: [QB_FIELD_ID, QB_EMBED_ID, QB_QUEST_ID] })
+  });
+  if (!res.ok) throw new Error('QuickBase error: ' + await res.text());
+  return (await res.json()).data;
+}
+
+function cosineSimilarity(a, b) {
+  if (a.length !== b.length) return 0;
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i]; normA += a[i] * a[i]; normB += b[i] * b[i];
+  }
+  return (normA === 0 || normB === 0) ? 0 : dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+function respond(statusCode, body) {
+  return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+```
+
+**Deployment steps:**
+
+1. **Rotate your OpenAI key first** (platform.openai.com → API Keys)
+2. Save this file as `netlify/functions/find-similar-question.js` in your repo
+3. In Netlify dashboard → Site configuration → Environment variables, add:
+   - `OPENAI_API_KEY` = your new key
+   - `QB_TOKEN` = `b4bqn2_bkcg_0_cjj8hwibg9qrcyx9fm2qiqa5h`
+4. Push to GitHub — Netlify auto-deploys
+
+**In Make.com**, replace your entire modules 7–10 with a single HTTP module POSTing to:
+```
+https://aeroastrovfbot.netlify.app/.netlify/functions/find-similar-question
