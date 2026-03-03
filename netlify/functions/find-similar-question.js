@@ -11,8 +11,11 @@ exports.handler = async function(event) {
   }
 
   let question;
-  try {
-    const body = JSON.parse(event.body);
+try {
+    const rawBody = event.isBase64Encoded 
+      ? Buffer.from(event.body, 'base64').toString('utf-8')
+      : event.body;
+    const body = JSON.parse(rawBody);
     question = body.question;
     if (!question) throw new Error('Missing question');
   } catch (e) {
