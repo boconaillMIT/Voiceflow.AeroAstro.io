@@ -1731,6 +1731,15 @@ ${referredTo ? `
             });
     
             showMessage('Marked as correct!', 'success');
+            fetch('https://aeroastrovfbot.netlify.app/.netlify/functions/generate-embedding', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    record_id: recordId,
+                    question: document.getElementById('answerEdit') ? 
+            currentRecord[FIELD_IDS.questionDecoded]?.value : ''
+    })
+}).catch(e => console.warn('Embedding generation failed silently:', e));
             closeModal();
             loadQA();
         } catch (error) {
