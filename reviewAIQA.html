@@ -1738,8 +1738,8 @@ ${referredTo ? `
                     record_id: recordId,
                     question: document.getElementById('answerEdit') ? 
             currentRecord[FIELD_IDS.questionDecoded]?.value : ''
-    })
-}).catch(e => console.warn('Embedding generation failed silently:', e));
+                })
+            }).catch(e => console.warn('Embedding generation failed silently:', e));
             closeModal();
             loadQA();
         } catch (error) {
