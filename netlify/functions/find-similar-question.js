@@ -5,7 +5,7 @@ const QB_EMBED_ID = 36;
 const QB_QUEST_ID = 26;
 const QB_ANS_ID   = 22;
 const EMBED_MODEL = 'text-embedding-3-small';
-const FLOOR_THRESHOLD = 0.80;
+const FLOOR_THRESHOLD = 0.82;
 
 // Simple in-memory cache
 let recordsCache = null;
