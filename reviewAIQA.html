@@ -1465,6 +1465,14 @@ try {
                 showMessage(`Q&A already exists! Use count incremented to ${result.useCount}.`, 'info');
             } else {
                 showMessage(`Q&A created successfully! Record ID: ${result.recordId}`, 'success');
+                // Trigger embedding generation in background
+                const question = document.getElementById('newQuestion').value.trim();
+                fetch('https://aeroastrovfbot.netlify.app/.netlify/functions/generate-embedding', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ record_id: result.recordId, question: question })
+                }).catch(e => console.warn('Embedding generation failed silently:', e));
+            
             }
             closeCreateModal();
             loadQA();
