@@ -1157,7 +1157,7 @@ if (!validateMITEmail(email)) {
         }
         
         const result = await response.json();
-        
+        console.log('Webhook result:', result);
         if (result.success) {
             showMessage('Referral email sent successfully!', 'success');
             
