@@ -5,7 +5,9 @@ const QB_EMBED_ID = 36;
 const QB_QUEST_ID = 26;
 const QB_ANS_ID   = 22;
 const EMBED_MODEL = 'text-embedding-3-small';
-const FLOOR_THRESHOLD = 0.82;
+const FLOOR_THRESHOLD = 0.70;
+const HIGH_THRESHOLD = 0.92;
+const MEDIUM_THRESHOLD = 0.82;
 
 // Simple in-memory cache
 let recordsCache = null;
@@ -70,6 +72,7 @@ exports.handler = async function(event) {
     
     return respond(200, {
       success: true,
+      tier: bestScore >= HIGH_THRESHOLD ? 'high' : bestScore >= MEDIUM_THRESHOLD ? 'medium' : 'confirm',
       record_id: bestRecord[QB_FIELD_ID]?.value,
       score: Math.round(bestScore * 10000) / 10000,
       matched_question: bestRecord[QB_QUEST_ID]?.value || null,
