@@ -110,6 +110,11 @@ exports.handler = async function(event) {
       const embeddingData = await embeddingRes.json();
       const embedding = embeddingData.data[0].embedding;
       const embeddingString = embedding.join(',');
+// After generating embedding
+console.log('Embedding generated, length:', embedding.length);
+
+
+
 
       // Encode answer and question to base64
       const answerBase64 = Buffer.from(answer).toString('base64');
@@ -140,6 +145,8 @@ exports.handler = async function(event) {
           fieldsToReturn: [QB_FIELD_ID]
         })
       });
+     // After QB create
+console.log('QB create response:', JSON.stringify(createData));
       if (!createRes.ok) throw new Error('QB Create error: ' + await createRes.text());
       const createData = await createRes.json();
       const newRecordId = createData.metadata?.createdRecordIds?.[0];
@@ -151,6 +158,8 @@ exports.handler = async function(event) {
         new_record_id: newRecordId,
         variants: updated
       });
+    // After getting newRecordId
+    console.log('New record ID:', newRecordId);
     }
 
     return respond(200, {
