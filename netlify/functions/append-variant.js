@@ -1,14 +1,15 @@
 const QB_REALM = 'mit.quickbase.com';
 const QB_TABLE = 'bvi4py32v';
-const QB_VARIANTS_FIELD = 37;
 const QB_FIELD_ID = 3;
+const QB_VARIANTS_FIELD = 37;
+const EMBED_MODEL = 'text-embedding-3-small';
 
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return respond(405, { success: false, error: 'Method not allowed' });
   }
 
-  let record_id, new_variant;
+  let record_id, new_variant, create_record, answer;
   try {
     const rawBody = event.isBase64Encoded
       ? Buffer.from(event.body, 'base64').toString('utf-8')
@@ -16,6 +17,8 @@ exports.handler = async function(event) {
     const body = JSON.parse(rawBody);
     record_id = body.record_id;
     new_variant = body.new_variant;
+    create_record = body.create_record || false;
+    answer = body.answer || '';
     if (!record_id) throw new Error('Missing record_id');
     if (!new_variant) throw new Error('Missing new_variant');
   } catch (e) {
@@ -23,6 +26,7 @@ exports.handler = async function(event) {
   }
 
   const QB_TOKEN = process.env.QB_TOKEN;
+  const OPENAI_KEY = process.env.OPENAI_API_KEY;
   if (!QB_TOKEN) {
     return respond(500, { success: false, error: 'Missing QB_TOKEN env var' });
   }
@@ -59,10 +63,9 @@ exports.handler = async function(event) {
       });
     }
 
-    // Step 3: Append new variant
+    // Step 3: Append new variant to field 37
     const updated = existing ? `${existing}|${new_variant}` : new_variant;
 
-    // Step 4: PUT updated variants back
     const putRes = await fetch('https://api.quickbase.com/v1/records', {
       method: 'POST',
       headers: {
@@ -82,6 +85,73 @@ exports.handler = async function(event) {
       })
     });
     if (!putRes.ok) throw new Error('QB PUT error: ' + await putRes.text());
+
+    // Step 4: If create_record=true, create a new QB record for this variant
+    if (create_record && answer) {
+      if (!OPENAI_KEY) throw new Error('Missing OPENAI_API_KEY for embedding');
+
+      // Normalize the variant question
+      const normalizedVariant = new_variant
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Generate embedding for the variant
+      const embeddingRes = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_KEY}`
+        },
+        body: JSON.stringify({ model: EMBED_MODEL, input: new_variant })
+      });
+      if (!embeddingRes.ok) throw new Error('OpenAI error: ' + await embeddingRes.text());
+      const embeddingData = await embeddingRes.json();
+      const embedding = embeddingData.data[0].embedding;
+      const embeddingString = embedding.join(',');
+
+      // Encode answer and question to base64
+      const answerBase64 = Buffer.from(answer).toString('base64');
+      const questionBase64 = Buffer.from(new_variant).toString('base64');
+
+      // Create new QB record
+      const createRes = await fetch('https://api.quickbase.com/v1/records', {
+        method: 'POST',
+        headers: {
+          'QB-Realm-Hostname': QB_REALM,
+          'Authorization': `QB-USER-TOKEN ${QB_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          to: QB_TABLE,
+          data: [
+            {
+              "6":  { value: questionBase64 },      // Question (base64)
+              "7":  { value: answerBase64 },         // Answer (base64)
+              "22": { value: answerBase64 },         // Answer_full (base64)
+              "9":  { value: 'correct' },            // Status
+              "8":  { value: 'production' },         // Source
+              "16": { value: true },                 // Reviewed
+              "18": { value: normalizedVariant },    // normalized_question
+              "36": { value: embeddingString }       // question_embedding
+            }
+          ],
+          fieldsToReturn: [QB_FIELD_ID]
+        })
+      });
+      if (!createRes.ok) throw new Error('QB Create error: ' + await createRes.text());
+      const createData = await createRes.json();
+      const newRecordId = createData.metadata?.createdRecordIds?.[0];
+
+      return respond(200, {
+        success: true,
+        action: 'appended_and_created',
+        record_id: record_id,
+        new_record_id: newRecordId,
+        variants: updated
+      });
+    }
 
     return respond(200, {
       success: true,
