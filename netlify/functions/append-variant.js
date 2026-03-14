@@ -152,7 +152,6 @@ exports.handler = async function(event) {
       if (!createRes.ok) throw new Error('QB Create error: ' + await createRes.text());
       const createData = await createRes.json();
       const newRecordId = createData.metadata?.createdRecordIds?.[0];
-
       return respond(200, {
         success: true,
         action: 'appended_and_created',
@@ -160,6 +159,14 @@ exports.handler = async function(event) {
         new_record_id: newRecordId,
         variants: updated
       });
+    }  // ← closes if (create_record && answer)
+
+    return respond(200, {
+      success: true,
+      action: 'appended',
+      record_id: record_id,
+      variants: updated
+    });
 
   } catch (err) {
     return respond(500, { success: false, error: err.message });
