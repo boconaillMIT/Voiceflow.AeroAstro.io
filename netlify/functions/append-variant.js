@@ -132,24 +132,24 @@ console.log('Embedding generated, length:', embedding.length);
           to: QB_TABLE,
           data: [
             {
-              "6":  { value: questionBase64 },      // Question (base64)
-              "7":  { value: answerBase64 },         // Answer (base64)
-              "22": { value: answerBase64 },         // Answer_full (base64)
-              "9":  { value: 'correct' },            // Status
-              "8":  { value: 'production' },         // Source
-              "16": { value: true },                 // Reviewed
-              "18": { value: normalizedVariant },    // normalized_question
-              "36": { value: embeddingString }       // question_embedding
+              "6":  { value: questionBase64 },
+              "7":  { value: answerBase64 },
+              "22": { value: answerBase64 },
+              "9":  { value: 'correct' },
+              "8":  { value: 'production' },
+              "16": { value: true },
+              "18": { value: normalizedVariant },
+              "36": { value: embeddingString }
             }
           ],
           fieldsToReturn: [QB_FIELD_ID]
         })
       });
-     // After QB create
-console.log('QB create response:', JSON.stringify(createData));
       if (!createRes.ok) throw new Error('QB Create error: ' + await createRes.text());
       const createData = await createRes.json();
+      console.log('QB create response:', JSON.stringify(createData));
       const newRecordId = createData.metadata?.createdRecordIds?.[0];
+      console.log('New record ID:', newRecordId);
 
       return respond(200, {
         success: true,
@@ -158,8 +158,6 @@ console.log('QB create response:', JSON.stringify(createData));
         new_record_id: newRecordId,
         variants: updated
       });
-    // After getting newRecordId
-    console.log('New record ID:', newRecordId);
     }
 
     return respond(200, {
