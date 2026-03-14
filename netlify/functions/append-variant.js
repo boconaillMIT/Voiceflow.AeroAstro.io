@@ -117,33 +117,33 @@ console.log('Embedding generated, length:', embedding.length);
 
 
       // Encode answer and question to base64
-      const answerBase64 = Buffer.from(answer).toString('base64');
-      const questionBase64 = Buffer.from(new_variant).toString('base64');
-
+      // answer is already base64 encoded (coming from Voiceflow/QB)
+      // so use it directly, just decode for normalization
+      const answerDecoded = Buffer.from(answer, 'base64').toString('utf-8');
+      const normalizedAnswer = answerDecoded
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      
       // Create new QB record
-      const createRes = await fetch('https://api.quickbase.com/v1/records', {
-        method: 'POST',
-        headers: {
-          'QB-Realm-Hostname': QB_REALM,
-          'Authorization': `QB-USER-TOKEN ${QB_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          to: QB_TABLE,
-          data: [
-            {
-              "6":  { value: questionBase64 },
-              "7":  { value: answerBase64 },
-              "22": { value: answerBase64 },
-              "9":  { value: 'correct' },
-              "8":  { value: 'production' },
-              "16": { value: true },
-              "18": { value: normalizedVariant },
-              "36": { value: embeddingString }
-            }
-          ],
-          fieldsToReturn: [QB_FIELD_ID]
-        })
+      body: JSON.stringify({
+        to: QB_TABLE,
+        data: [
+          {
+            "6":  { value: questionBase64 },      // Question (base64)
+            "7":  { value: answer },              // Answer (already base64)
+            "22": { value: answer },              // Answer_full (already base64)
+            "23": { value: normalizedAnswer },    // Answer Normalized Plain
+            "9":  { value: 'correct' },
+            "8":  { value: 'production' },
+            "16": { value: true },
+            "18": { value: normalizedVariant },
+            "36": { value: embeddingString }
+          }
+        ],
+        fieldsToReturn: [QB_FIELD_ID]
+      })
       });
       if (!createRes.ok) throw new Error('QB Create error: ' + await createRes.text());
       const createData = await createRes.json();
