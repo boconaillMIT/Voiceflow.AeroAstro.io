@@ -17,7 +17,7 @@ exports.handler = async function(event) {
     const body = JSON.parse(rawBody);
     record_id = body.record_id;
     new_variant = body.new_variant;
-    create_record = body.create_record || false;
+    create_record = body.create_record === true || body.create_record === 'true';
     answer = body.answer || '';
     if (!record_id) throw new Error('Missing record_id');
     if (!new_variant) throw new Error('Missing new_variant');
