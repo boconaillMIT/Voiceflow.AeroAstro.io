@@ -110,46 +110,48 @@ exports.handler = async function(event) {
       const embeddingData = await embeddingRes.json();
       const embedding = embeddingData.data[0].embedding;
       const embeddingString = embedding.join(',');
-// After generating embedding
-console.log('Embedding generated, length:', embedding.length);
 
-
-
-
-      // Encode answer and question to base64
       // answer is already base64 encoded (coming from Voiceflow/QB)
-      // so use it directly, just decode for normalization
+      // decode for normalization only
       const answerDecoded = Buffer.from(answer, 'base64').toString('utf-8');
       const normalizedAnswer = answerDecoded
-          .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-      
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // encode question to base64
+      const questionBase64 = Buffer.from(new_variant).toString('base64');
+
       // Create new QB record
-      body: JSON.stringify({
-        to: QB_TABLE,
-        data: [
-          {
-            "6":  { value: questionBase64 },      // Question (base64)
-            "7":  { value: answer },              // Answer (already base64)
-            "22": { value: answer },              // Answer_full (already base64)
-            "23": { value: normalizedAnswer },    // Answer Normalized Plain
-            "9":  { value: 'correct' },
-            "8":  { value: 'production' },
-            "16": { value: true },
-            "18": { value: normalizedVariant },
-            "36": { value: embeddingString }
-          }
-        ],
-        fieldsToReturn: [QB_FIELD_ID]
-      })
+      const createRes = await fetch('https://api.quickbase.com/v1/records', {
+        method: 'POST',
+        headers: {
+          'QB-Realm-Hostname': QB_REALM,
+          'Authorization': `QB-USER-TOKEN ${QB_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          to: QB_TABLE,
+          data: [
+            {
+              "6":  { value: questionBase64 },
+              "7":  { value: answer },
+              "22": { value: answer },
+              "23": { value: normalizedAnswer },
+              "9":  { value: 'correct' },
+              "8":  { value: 'production' },
+              "16": { value: true },
+              "18": { value: normalizedVariant },
+              "36": { value: embeddingString }
+            }
+          ],
+          fieldsToReturn: [QB_FIELD_ID]
+        })
       });
       if (!createRes.ok) throw new Error('QB Create error: ' + await createRes.text());
       const createData = await createRes.json();
-      console.log('QB create response:', JSON.stringify(createData));
       const newRecordId = createData.metadata?.createdRecordIds?.[0];
-      console.log('New record ID:', newRecordId);
 
       return respond(200, {
         success: true,
@@ -158,14 +160,6 @@ console.log('Embedding generated, length:', embedding.length);
         new_record_id: newRecordId,
         variants: updated
       });
-    }
-
-    return respond(200, {
-      success: true,
-      action: 'appended',
-      record_id: record_id,
-      variants: updated
-    });
 
   } catch (err) {
     return respond(500, { success: false, error: err.message });
