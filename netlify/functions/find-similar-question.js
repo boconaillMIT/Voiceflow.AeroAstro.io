@@ -74,7 +74,7 @@ exports.handler = async function(event) {
       success: true,
       tier: bestScore >= HIGH_THRESHOLD ? 'high' : bestScore >= MEDIUM_THRESHOLD ? 'medium' : 'confirm',
       record_id: bestRecord[QB_FIELD_ID]?.value,
-      score: Math.round(bestScore * 10000) / 10000,
+      best_score: Math.round(bestScore * 10000) / 10000,  // ← renamed from score
       matched_question: bestRecord[QB_QUEST_ID]?.value || null,
       answer: answer,
       answer_decoded: answerDecoded,
