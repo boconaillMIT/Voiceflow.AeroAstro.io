@@ -70,16 +70,17 @@ exports.handler = async function(event) {
     const answer = bestRecord[QB_ANS_ID]?.value || '';
     const answerDecoded = Buffer.from(answer, 'base64').toString('utf-8');
     
-    return respond(200, {
-      success: true,
-      tier: bestScore >= HIGH_THRESHOLD ? 'high' : bestScore >= MEDIUM_THRESHOLD ? 'medium' : 'confirm',
-      record_id: bestRecord[QB_FIELD_ID]?.value,
-      best_score: Math.round(bestScore * 10000) / 10000,  // ← renamed from score
-      matched_question: bestRecord[QB_QUEST_ID]?.value || null,
-      answer: answer,
-      answer_decoded: answerDecoded,
-      cache_used: recordsCache !== null && Date.now() < cacheExpiry
-    });
+   return respond(200, {
+     success: true,
+     tier: bestScore >= HIGH_THRESHOLD ? 'high' : bestScore >= MEDIUM_THRESHOLD ? 'medium' : 'confirm',
+     record_id: bestRecord[QB_FIELD_ID]?.value,
+     score: Math.round(bestScore * 10000) / 10000,
+     best_score: Math.round(bestScore * 10000) / 10000,
+     matched_question: bestRecord[QB_QUEST_ID]?.value || null,
+     answer: answer,
+     answer_decoded: answerDecoded,
+     cache_used: recordsCache !== null && Date.now() < cacheExpiry
+   });
 
   } catch (err) {
     return respond(500, { success: false, error: err.message });
