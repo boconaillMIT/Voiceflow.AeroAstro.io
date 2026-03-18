@@ -1271,6 +1271,15 @@
         // Start testing
         async function startTest() {
             if (isTesting) return;
+
+            document.getElementById('transcript').innerHTML = '';
+            qaResults = [];
+            currentQuestionIndex = 0;
+            // Reset question item styles
+            questions.forEach((q, index) => {
+                const item = document.getElementById(`question-${index}`);
+                if (item) item.className = 'question-item';
+            });
             
             // Auto-detect working endpoint if not set
             if (!workingEndpoint) {
@@ -1746,9 +1755,8 @@
             
 
             // Check QB config
-            const qbEnabled = document.getElementById('qbEnabled').checked;
-            
-            if (qbEnabled) {
+            const skipQB = document.getElementById('skipQBDuringTest').checked;
+            if (!skipQB) {
                 addDiagnosticLog('QuickBase logging enabled (via webhook)', 'success');
                 updateQBStatus('📊 QuickBase ready - will log via webhook', 'success');
             } else {
