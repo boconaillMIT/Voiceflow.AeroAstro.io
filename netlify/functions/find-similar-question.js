@@ -9,7 +9,7 @@ const FLOOR_THRESHOLD = 0.70;
 const HIGH_THRESHOLD = 0.92;
 const MEDIUM_THRESHOLD = 0.82;
  
-// Simple in-memory cache
+// Simple in-memory cache 
 let recordsCache = null;
 let cacheExpiry = 0;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
