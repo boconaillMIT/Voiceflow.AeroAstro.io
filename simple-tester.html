@@ -1315,7 +1315,10 @@
                 await askQuestionSilent('turn off sources');
                 await sleep(1000); // Wait before next question
             }
-            
+            // ADD THIS:
+            addDiagnosticLog('Enabling testing mode...', 'info');
+            await askQuestionSilent('testing mode');
+            await sleep(500);
             // Process questions
             for (let i = 0; i < questions.length; i++) {
                 if (!isTesting) break;
