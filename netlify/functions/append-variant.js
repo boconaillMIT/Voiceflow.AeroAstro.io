@@ -9,7 +9,7 @@ exports.handler = async function(event) {
     return respond(405, { success: false, error: 'Method not allowed' });
   }
 
-  let record_id, new_variant, create_record, answer;
+  let record_id, new_variant, create_record;
   try {
     const rawBody = event.isBase64Encoded
       ? Buffer.from(event.body, 'base64').toString('utf-8')
@@ -18,7 +18,7 @@ exports.handler = async function(event) {
     record_id = body.record_id;
     new_variant = body.new_variant;
     create_record = body.create_record === true || body.create_record === 'true';
-    answer = body.answer || '';
+
     if (!record_id) throw new Error('Missing record_id');
     if (!new_variant) throw new Error('Missing new_variant');
   } catch (e) {
@@ -42,7 +42,7 @@ exports.handler = async function(event) {
       },
       body: JSON.stringify({
         from: QB_TABLE,
-        select: [QB_FIELD_ID, QB_VARIANTS_FIELD],
+        select: [QB_FIELD_ID, QB_VARIANTS_FIELD, 22],
         where: `{3.EX.${record_id}}`
       })
     });
@@ -52,7 +52,8 @@ exports.handler = async function(event) {
     if (!record) throw new Error('Record not found: ' + record_id);
 
     const existing = record[QB_VARIANTS_FIELD]?.value || '';
-
+    const answer = record[22]?.value || ''; 
+    
     // Step 2: Check for duplicate before appending
     const variantsList = existing ? existing.split('|') : [];
     if (variantsList.includes(new_variant)) {
