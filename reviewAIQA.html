@@ -925,7 +925,9 @@
             questionDecoded: 26,
             referredToEmail: 29,     // ADD THIS (use actual field ID)
             referredDate: 30,
-            adminNotesDecoded: 31 
+            adminNotesDecoded: 31,
+            fuzzyMatch: 38,
+            matchedRecordId: 39
         };
         // Webhook URLs
         const WEBHOOKS = {
@@ -1221,7 +1223,7 @@ if (!validateMITEmail(email)) {
                 
                 const queryBody = {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26, 29, 30,31],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26, 29, 30,31,39],
                     options: {
                         orderBy: [{ fieldId: FIELD_IDS.dateTime, order: 'DESC' }]
                     }
@@ -1488,13 +1490,7 @@ try {
     }
 }
 
-        // Show message helper (if not already exists)
-        function showMessage(message, type) {
-            // Check if showMessage already exists in your code
-            // If not, add this simple version:
-            alert(message);
-            // Or implement a nicer toast notification
-        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -1578,7 +1574,7 @@ try {
                 showLoading(true);
                 const response = await makeQuickBaseRequest('POST', 'records/query', {
                     from: QUICKBASE_CONFIG.tableId,
-                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26],
+                    select: [3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 24, 26,38,39],
                     where: `{${FIELD_IDS.recordId}.EX.${recordId}}`
                 });
 
@@ -1617,8 +1613,10 @@ try {
             const flaggedBy = record[FIELD_IDS.flaggedBy]?.value || 'N/A';
             const suggestedCorrection = record[FIELD_IDS.suggestedCorrection]?.value || '';
             const adminNotes = record[FIELD_IDS.adminNotesDecoded]?.value || '';
+            
             const recordId = record[FIELD_IDS.recordId].value;
-        
+            const isFuzzyMatch = record[FIELD_IDS.fuzzyMatch]?.value;
+            const matchedRecordId = record[FIELD_IDS.matchedRecordId]?.value;
                       const detailsHtml = `
                 <div class="submission-details">
                     <div class="detail-row" style="grid-template-columns: repeat(6, 1fr);">
@@ -1655,10 +1653,20 @@ try {
                         </div>
                     </div>
 ${referredTo ? `
+
 <div class="detail-row">
     <div class="detail-col-full" style="background: #d1ecf1; padding: 12px; border-radius: 4px;">
         <strong>📧 Referred To:</strong> ${referredTo}
         ${referredDate ? ` on ${referredDate.toLocaleDateString()} at ${referredDate.toLocaleTimeString()}` : ''}
+    </div>
+</div>
+` : ''}
+${isFuzzyMatch ? `
+<div class="detail-row">
+    <div class="detail-col-full" style="background: #fff3cd; padding: 12px; border-radius: 4px;">
+        <strong>🔍 Fuzzy Match:</strong> This question was matched to record 
+        <a href="https://mit.quickbase.com/db/bvi4py32v?a=dr&rid=${matchedRecordId}" target="_blank">#${matchedRecordId}</a>. 
+        Marking as correct will append this as a variant.
     </div>
 </div>
 ` : ''}
@@ -1739,6 +1747,24 @@ ${referredTo ? `
             });
     
             showMessage('Marked as correct!', 'success');
+
+
+        // If this is a fuzzy match record, append the variant to the matched record
+        const matchedRecordId = currentRecord[FIELD_IDS.matchedRecordId]?.value;
+        const isFuzzyMatch = currentRecord[FIELD_IDS.fuzzyMatch]?.value;
+            
+            if (matchedRecordId && isFuzzyMatch === true) {
+                const normalizedQ = currentRecord[FIELD_IDS.normalizedQuestion]?.value || '';
+                fetch('https://aeroastrovfbot.netlify.app/.netlify/functions/append-variant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        record_id: matchedRecordId,
+                        new_variant: normalizedQ,
+                        create_record: 'true'
+                    })
+                }).catch(e => console.warn('Append variant failed silently:', e));
+            }
             fetch('https://aeroastrovfbot.netlify.app/.netlify/functions/generate-embedding', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
