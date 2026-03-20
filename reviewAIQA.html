@@ -921,9 +921,10 @@
             useCount: 17,
             normalizedQuestion: 18,
             answer_full: 22,
-            answerDecoded: 24,      // ← ADD THIS
+            answerNormalizedPlain: 23,  
+            answerDecoded: 24,      
             questionDecoded: 26,
-            referredToEmail: 29,     // ADD THIS (use actual field ID)
+            referredToEmail: 29,     
             referredDate: 30,
             adminNotesDecoded: 31,
             fuzzyMatch: 38,
@@ -1739,7 +1740,8 @@ ${isFuzzyMatch ? `
                 data: [{
                     [FIELD_IDS.recordId]: { value: recordId },
                     [FIELD_IDS.answer]: { value: base64Answer },
-                    [22]: { value: base64Answer },
+                    [FIELD_IDS.answer_full]: { value: base64Answer },
+                    [FIELD_IDS.answerNormalizedPlain]: { value: normalizeText(editedAnswer) },
                     [FIELD_IDS.status]: { value: 'correct' },
                     [FIELD_IDS.adminNotes]: { value: base64AdminNotes },  // ← CHANGED
                     [FIELD_IDS.reviewed]: { value: true }
