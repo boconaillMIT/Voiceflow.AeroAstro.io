@@ -1655,22 +1655,24 @@ try {
                     </div>
 ${referredTo ? `
 
-<div class="detail-row">
-    <div class="detail-col-full" style="background: #d1ecf1; padding: 12px; border-radius: 4px;">
-        <strong>📧 Referred To:</strong> ${referredTo}
-        ${referredDate ? ` on ${referredDate.toLocaleDateString()} at ${referredDate.toLocaleTimeString()}` : ''}
+    <div class="detail-row">
+        <div class="detail-col-full" style="background: #d1ecf1; padding: 12px; border-radius: 4px;">
+            <strong>📧 Referred To:</strong> ${referredTo}
+            ${referredDate ? ` on ${referredDate.toLocaleDateString()} at ${referredDate.toLocaleTimeString()}` : ''}
+        </div>
     </div>
-</div>
-` : ''}
-${isFuzzyMatch ? `
-<div class="detail-row">
-    <div class="detail-col-full" style="background: #fff3cd; padding: 12px; border-radius: 4px;">
-        <strong>🔍 Fuzzy Match:</strong> This question was matched to record 
-        <a href="https://mit.quickbase.com/db/bvi4py32v?a=dr&rid=${matchedRecordId}" target="_blank">#${matchedRecordId}</a>. 
-        Marking as correct will append this as a variant.
-    </div>
-</div>
-` : ''}
+    ` : ''}
+            ${isFuzzyMatch ? `
+            <div class="detail-row">
+                <div class="detail-col-full" style="background: #fff3cd; padding: 12px; border-radius: 4px;">
+                    <strong>🔍 Fuzzy Match:</strong> This question was matched to record 
+                    <a href="https://mit.quickbase.com/db/bvi4py32v?a=dr&rid=${matchedRecordId}" target="_blank">#${matchedRecordId}</a>. 
+                    ${status === 'correct' 
+                        ? 'This variant was confirmed by the user and has been added to the knowledge base.' 
+                        : 'Marking as correct will append this as a variant.'}
+                </div>
+            </div>
+            ` : ''}
                     <div class="detail-row">
                         <div class="detail-col-full">
                             <strong>Answer: <em style="color: #666; font-size: 0.9em; margin-left: 10px; font-weight: normal;">(editable - make changes before marking as correct)</em></strong>
