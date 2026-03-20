@@ -56,37 +56,40 @@ exports.handler = async function(event) {
     
     // Step 2: Check for duplicate before appending
     const variantsList = existing ? existing.split('|') : [];
-    if (variantsList.includes(new_variant)) {
-      return respond(200, {
-        success: true,
-        action: 'skipped',
-        reason: 'Variant already exists'
-      });
+    const isDuplicate = variantsList.includes(new_variant);
+    const updated = isDuplicate ? existing : (existing ? `${existing}|${new_variant}` : new_variant);
+
+    if (isDuplicate && !create_record) {
+        return respond(200, {
+            success: true,
+            action: 'skipped',
+            reason: 'Variant already exists'
+        });
     }
 
     // Step 3: Append new variant to field 37
-    const updated = existing ? `${existing}|${new_variant}` : new_variant;
-
-    const putRes = await fetch('https://api.quickbase.com/v1/records', {
-      method: 'POST',
-      headers: {
-        'QB-Realm-Hostname': QB_REALM,
-        'Authorization': `QB-USER-TOKEN ${QB_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        to: QB_TABLE,
-        data: [
-          {
-            "3": { value: record_id },
-            [QB_VARIANTS_FIELD]: { value: updated }
-          }
-        ],
-        fieldsToReturn: [QB_FIELD_ID, QB_VARIANTS_FIELD]
-      })
-    });
-    if (!putRes.ok) throw new Error('QB PUT error: ' + await putRes.text());
-
+    if (!isDuplicate) {
+   
+        const putRes = await fetch('https://api.quickbase.com/v1/records', {
+          method: 'POST',
+          headers: {
+            'QB-Realm-Hostname': QB_REALM,
+            'Authorization': `QB-USER-TOKEN ${QB_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: QB_TABLE,
+            data: [
+              {
+                "3": { value: record_id },
+                [QB_VARIANTS_FIELD]: { value: updated }
+              }
+            ],
+            fieldsToReturn: [QB_FIELD_ID, QB_VARIANTS_FIELD]
+          })
+        });
+        if (!putRes.ok) throw new Error('QB PUT error: ' + await putRes.text());
+    }
     // Step 4: If create_record=true, create a new QB record for this variant
     if (create_record && answer) {
       if (!OPENAI_KEY) throw new Error('Missing OPENAI_API_KEY for embedding');
@@ -165,10 +168,10 @@ exports.handler = async function(event) {
     }  // ← closes if (create_record && answer)
 
     return respond(200, {
-      success: true,
-      action: 'appended',
-      record_id: record_id,
-      variants: updated
+        success: true,
+        action: isDuplicate ? 'created_only' : 'appended',
+        record_id: record_id,
+        variants: updated
     });
 
   } catch (err) {
