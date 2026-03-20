@@ -144,7 +144,9 @@ exports.handler = async function(event) {
               "8":  { value: 'production' },
               "16": { value: true },
               "18": { value: normalizedVariant },
-              "36": { value: embeddingString }
+              "36": { value: embeddingString },
+              "38": { value: true },
+              "39": { value: record_id }
             }
           ],
           fieldsToReturn: [QB_FIELD_ID]
