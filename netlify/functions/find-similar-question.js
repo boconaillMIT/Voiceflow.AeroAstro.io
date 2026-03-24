@@ -7,7 +7,7 @@ const QB_ANS_ID   = 22;
 const EMBED_MODEL = 'text-embedding-3-small';
 const FLOOR_THRESHOLD = 0.70;
 const HIGH_THRESHOLD = 0.92;
-const MEDIUM_THRESHOLD = 0.82;
+const MEDIUM_THRESHOLD = 0.85;
  
 // Simple in-memory cache 
 let recordsCache = null;
