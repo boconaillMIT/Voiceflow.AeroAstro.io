@@ -924,6 +924,7 @@
             answerNormalizedPlain: 23,  
             answerDecoded: 24,      
             questionDecoded: 26,
+            aiAnswer: 27,
             referredToEmail: 29,     
             referredDate: 30,
             adminNotesDecoded: 31,
@@ -1804,7 +1805,8 @@ ${referredTo ? `
                     data: [{
                         [FIELD_IDS.recordId]: { value: recordId },
                         [FIELD_IDS.status]: { value: 'incorrect' },
-                        [FIELD_IDS.adminNotes]: { value: base64AdminNotes },  // CHANGED
+                        [FIELD_IDS.adminNotes]: { value: base64AdminNotes },
+                        [27]: { value: normalizeText(document.getElementById('answerEdit').value) },  // ← ADD THIS
                         [FIELD_IDS.reviewed]: { value: true }
                     }]
                 });
