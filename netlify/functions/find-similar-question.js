@@ -13,7 +13,7 @@ const MEDIUM_THRESHOLD = 0.85;
 let recordsCache = null;
 let cacheExpiry = 0;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-
+ 
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return respond(405, { success: false, error: 'Method not allowed' });
